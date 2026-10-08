@@ -1,0 +1,12 @@
+{
+  "name": "games-scripts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test \"connections/test/*.test.mjs\""
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.0"
+  },
+  "packageManager": "pnpm@9.15.0"
+}
