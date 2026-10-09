@@ -11,6 +11,13 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [0.7.0] - 2026-10-08
+#### Changed
+- Maybe colors split the tile's outline like a pie instead of adding corner dots: yellow-or-green is half yellow, half green; three options get a third each. A tile is either decided (one color) or split; only decided tiles count toward Go, auto-fill and the 4-per-color limit. With **?** on, tapping a color adds it to or removes it from the selected tiles' options; down to one option, the tile is decided again.
+- When a color is solved it drops out of every split, so a yellow-or-green tile becomes green once yellow is solved.
+- Maybe dots saved by 0.6 become splits.
+- The open palette has two rows: the colors and Go on top, the tools below. On phones it stays one row (colors, ⌫, ↶, ?, Go), with sort, 📜, ⚙ and hide behind **⋯**.
+
 ### [0.6.2] - 2026-10-08
 #### Fixed
 - ⌫ on tiles that only have maybe dots now clears them, instead of appearing to do nothing.

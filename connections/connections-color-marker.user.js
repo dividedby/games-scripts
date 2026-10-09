@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Mark NYT Connections tiles with the color you think they are, then submit them in order (built for reverse-rainbow solves)
-// @version      0.6.2
+// @version      0.7.0
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -89,8 +89,9 @@
   } catch {}
 
   let marks = ls.get(marksKey(), {});
-  // "maybe" colors: { word: [colors] } — candidates on top of the main mark; they never count
-  // toward Go, auto-fill or the 4-per-color limit
+  // "maybe" colors: { word: [colors] } — an undecided tile's candidate colors (shown as a split
+  // outline). A tile is either decided (one color, in marks) or undecided (here), never both;
+  // only decided tiles count toward Go, auto-fill and the 4-per-color limit.
   let maybes = ls.get(maybeKey(), {});
   // wrong guesses for this puzzle, oldest first: { w: [4 words, sorted], away: was it "One away" }
   const loadGuesses = () => {
@@ -115,8 +116,8 @@
     { key: 'oneAway',   def: false, label: 'Mark "One away" guesses', help: 'Red letters on tiles from one-away guesses' },
     { key: 'history',   def: false, label: 'Guess history', help: '📜 lists your wrong guesses',
       tip: '📜 on the palette lists your wrong guesses, with one-aways flagged. Repeating one reminds you whether it was one away' },
-    { key: 'maybes',    def: false, label: 'Maybe colors', help: '? adds extra "maybe" color dots to tiles',
-      tip: 'With ? on, colors you tap are added to the selected tiles as small "maybe" dots, as many per tile as you like. They never count toward Go, auto-fill or the 4-per-color limit' },
+    { key: 'maybes',    def: false, label: 'Maybe colors', help: '? lets a tile be several colors at once',
+      tip: 'With ? on, colors you tap are added to the selected tiles\' options, splitting the outline between them (yellow or green: half each). Split tiles don\'t count toward Go, auto-fill or the 4-per-color limit until one color is left' },
     { key: 'autoFill',  def: true,  label: 'Auto-fill the last group', help: 'The last 4 tiles get the last color',
       tip: 'Once three colors have 4 tiles, the last 4 get the remaining color' },
     { key: 'reconcile', def: true,  label: 'Fix my colors after a solve', help: 'Swap colors to match solved groups',
@@ -125,7 +126,7 @@
     { key: 'orderWarn', def: true,  label: 'Ask before going out of order', help: '"Sure?" before submitting out of order' },
     { key: 'letters',   def: false, label: 'Show color letters', help: 'Y/G/B/P letters, for colorblind players' },
     { key: 'keys',      def: true,  label: 'Keyboard shortcuts', help: '1–4, 0, Z undo, G go, Esc',
-      tip: '1–4 colors, 0 erase, Z undo, G go, Esc cancel; with maybe colors on, M maybe mode and Shift+1–4 add a maybe' },
+      tip: '1–4 colors, 0 erase, Z undo, G go, Esc cancel; with maybe colors on, M maybe mode and Shift+1–4 add or remove an option' },
     { key: 'left',      def: false, label: 'Palette on the left', help: 'Move the palette to the bottom-left' },
   ];
   const DEFAULTS = Object.fromEntries(SETTINGS.map(o => [o.key, o.def]));
@@ -190,7 +191,7 @@
   // the marks. The page-level CSS below only positions things.
   const pageCss = document.createElement('style');
   pageCss.textContent = `
-    [data-ccm], [data-ccm-away] { position: relative; }
+    [data-ccm], [data-ccm-away], [data-ccm-split] { position: relative; }
     ccm-mark { position: absolute; inset: 0; display: block; pointer-events: none; border-radius: inherit; z-index: 1; }
   `;
   document.head.appendChild(pageCss);
@@ -203,13 +204,12 @@
       border-radius: 6px; background: var(--c); border: 1px solid rgba(0,0,0,.35);
       font: 800 10px/10px system-ui, sans-serif; color: #111; text-align: center;
     }
-    .dot.letter { min-width: 16px; height: 16px; border-radius: 8px; line-height: 14px; top: 5px; right: 5px; }
-    .maybes { position: absolute; top: 6px; left: 6px; display: flex; gap: 3px; }
-    .maybes span {
-      width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; background: var(--c); border: 1.5px solid rgba(0,0,0,.55);
-      font: 800 8px/8px system-ui, sans-serif; color: #111; text-align: center;
+    .dot.letter { min-width: 16px; height: 16px; padding: 0 3px; border-radius: 8px; line-height: 14px; top: 5px; right: 5px; }
+    .pie {
+      position: absolute; inset: 0; border-radius: inherit; padding: 5px; background: var(--g);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
     }
-    .maybes.letter span { width: 14px; height: 14px; line-height: 11px; }
     .away {
       position: absolute; left: 6px; bottom: 6px; font: 700 10px/1 system-ui, sans-serif; letter-spacing: 1px;
       color: #fff; background: #c0392b; border-radius: 4px; padding: 2px 3px;
@@ -274,7 +274,15 @@
     .ccm-maybe { font-weight: 800; }
     #ccm-panel.maybemode .ccm-maybe { background: var(--fg); color: var(--bg); border-color: var(--fg); }
     #ccm-panel.maybemode button.swatch { border: 2px dashed var(--fg); }
-    #ccm-panel { flex-wrap: wrap; justify-content: flex-end; max-width: calc(100vw - 24px); box-sizing: border-box; }
+    /* Open palette, two rows: the colors and Go on top, the tools below (a zero-height
+       ::after item breaks the line). CSS order only; the buttons' DOM order never changes. */
+    #ccm-panel { flex-wrap: wrap; max-width: calc(100vw - 24px); box-sizing: border-box; }
+    #ccm-panel:not(.collapsed) { width: 290px; row-gap: 0; }
+    #ccm-panel:not(.collapsed)::after { content: ''; order: 3; flex-basis: 100%; height: 0; margin-top: 6px; }
+    #ccm-panel:not(.collapsed) > button { order: 4; flex: 1 1 auto; }
+    #ccm-panel:not(.collapsed) > button.swatch { order: 1; flex: 1 1 0; height: 36px; }
+    #ccm-panel:not(.collapsed) > .ccm-go { order: 2; flex: 1.6 1 0; height: 36px; }
+    .ccm-more { display: none; }
     h4 { margin: 0 0 6px; font: 700 13px/1.2 system-ui, sans-serif; }
     label { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; cursor: pointer; }
     input { margin: 2px 0 0; width: 16px; height: 16px; flex: none; accent-color: #6a6958; }
@@ -288,12 +296,18 @@
       #ccm-panel.offboard { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } /* clear NYT's buttons and banners */
       label { padding: 7px 0; }
       #ccm-panel > button { min-width: 30px; height: 42px; padding: 0 4px; }
-      /* open on a phone: one full-width row, buttons share the space instead of wrapping onto the game's buttons */
-      #ccm-panel:not(.collapsed) { left: 6px; right: 6px; max-width: none; flex-wrap: nowrap; gap: 2px; }
-      #ccm-panel:not(.collapsed) > button { flex: 1 1 auto; min-width: 22px; padding: 0 2px; }
-    }
-    @media (max-width: 340px) {
-      #ccm-panel:not(.collapsed) { flex-wrap: wrap; }
+      /* open on a phone: one full-width row (colors, ⌫, ↶, ?, Go, ⋯) so it stays clear of the
+         game's buttons; ⋯ opens a second row with sort, 📜, ⚙ and hide */
+      #ccm-panel:not(.collapsed) { left: 6px; right: 6px; width: auto; max-width: none; column-gap: 3px; }
+      #ccm-panel:not(.collapsed) > button { flex: 1 1 auto; min-width: 26px; padding: 0 2px; height: 42px; }
+      #ccm-panel:not(.collapsed) > button.swatch { order: 1; flex: 1.3 1 0; height: 42px; }
+      #ccm-panel:not(.collapsed) > :is(.ccm-erase, .ccm-undo, .ccm-maybe) { order: 2; }
+      #ccm-panel:not(.collapsed) > .ccm-go { order: 3; flex: 1.6 1 0; height: 42px; }
+      #ccm-panel:not(.collapsed) > .ccm-more { order: 4; display: block; }
+      #ccm-panel:not(.collapsed)::after { order: 5; }
+      #ccm-panel:not(.collapsed) > :is(.ccm-sort, .ccm-hist, .ccm-gear, .ccm-toggle) { order: 6; }
+      #ccm-panel:not(.collapsed):not(.more)::after,
+      #ccm-panel:not(.collapsed):not(.more) > :is(.ccm-sort, .ccm-hist, .ccm-gear, .ccm-toggle) { display: none; }
     }
   `;
 
@@ -324,7 +338,7 @@
   };
   const btns = {};
   for (const c of COLORS) { btns[c.key] = addButton('0', () => assign(c.key), c.hex); btns[c.key].classList.add('swatch'); }
-  addButton('⌫', () => assign('erase'));
+  addButton('⌫', () => assign('erase')).classList.add('ccm-erase');
   const undoBtn = addButton('↶', () => undo());
   undoBtn.classList.add('ccm-undo');
   undoBtn.title = 'Undo your last color change';
@@ -340,12 +354,13 @@
     sortBtn.title = m.title + ' (tap to change)';
     sortBtn.classList.toggle('active', !!m.order);
   }
+  sortBtn.classList.add('ccm-sort');
   showSort();
   const goBtn = addButton('Go ▶', () => onGo());
   goBtn.classList.add('ccm-go');
   const maybeBtn = addButton('?', () => setMaybeMode(!maybeMode));
   maybeBtn.classList.add('ccm-maybe');
-  maybeBtn.title = 'Maybe mode: colors you tap add "maybe" dots instead of the main mark';
+  maybeBtn.title = 'Maybe mode: colors you tap are added to the tiles\' options instead of replacing their color';
   let maybeMode = false;
   function setMaybeMode(on) {
     maybeMode = !!on && opt('maybes');
@@ -426,11 +441,19 @@
     showCollapsed();
   });
   toggleBtn.classList.add('ccm-toggle');
+  // phones only: ⋯ shows a second row with the less-used tools
+  const moreBtn = addButton('⋯', () => showMore(!panel.classList.contains('more')));
+  moreBtn.classList.add('ccm-more');
+  moreBtn.title = 'More: sort, history, settings, hide';
+  function showMore(on) {
+    panel.classList.toggle('more', on);
+    moreBtn.classList.toggle('active', on);
+  }
   function showCollapsed() {
     const on = onBoard ? userCollapsed : !peek;
     panel.classList.toggle('collapsed', on);
     panel.classList.toggle('offboard', !onBoard);
-    if (on) { toggleSettings(false); toggleHistory(false); }
+    if (on) { toggleSettings(false); toggleHistory(false); if (typeof showMore === 'function') showMore(false); }
     toggleBtn.textContent = on ? '🎨' : '▾';
     toggleBtn.title = on ? 'Show the color palette' : 'Hide the palette';
   }
@@ -476,6 +499,17 @@
     for (const [w, cs] of Object.entries(maybes)) maybes[w] = sortColors(cs.map(flip));
   }
   const sortColors = cs => ORDER.filter(c => cs.includes(c));
+  // keeps each tile either decided or undecided. An undecided tile down to one candidate
+  // becomes that color's mark when the color has room (else it stays a dashed one-color maybe).
+  function settle() {
+    for (const w of Object.keys(maybes)) {
+      const cs = sortColors([...(maybes[w] || []), ...(marks[w] ? [marks[w]] : [])]);
+      if (!cs.length) delete maybes[w];
+      else if (cs.length === 1 && (marks[w] === cs[0] || countOf(cs[0]) < MAX_PER_COLOR)) {
+        marks[w] = cs[0]; delete maybes[w];
+      } else { maybes[w] = cs; delete marks[w]; }
+    }
+  }
   const snapshot = () => JSON.stringify({ m: marks, y: maybes });
   function restore(snap) {
     const o = JSON.parse(snap);
@@ -516,22 +550,21 @@
     arm(null);
     const words = sel.map(wordOf);
     const before = snapshot();
-    if (maybeMode) {
-      // toggle the tapped color as a "maybe" on the selection (on for all if any lacks it), or ⌫ to clear
-      if (color === 'erase') for (const w of words) delete maybes[w];
-      else {
-        if (solved.has(color)) { shake(); return; }
-        const add = words.some(w => !(maybes[w] || []).includes(color));
-        for (const w of words) {
-          const cs = new Set(maybes[w] || []);
-          if (add) cs.add(color); else cs.delete(color);
-          if (cs.size) maybes[w] = sortColors([...cs]); else delete maybes[w];
-        }
+    if (color === 'erase') {
+      for (const w of words) { delete marks[w]; delete maybes[w]; }
+    } else if (maybeMode) {
+      // toggle the tapped color among the selection's options (on for all if any lacks it):
+      // one option is a plain mark, two or more split the outline
+      if (solved.has(color)) { shake(); return; }
+      const opts = w => maybes[w] || (marks[w] ? [marks[w]] : []);
+      const add = words.some(w => !opts(w).includes(color));
+      for (const w of words) {
+        const cs = new Set(opts(w));
+        if (add) cs.add(color); else cs.delete(color);
+        delete marks[w];
+        if (cs.size) maybes[w] = sortColors([...cs]); else delete maybes[w];
       }
-    } else if (color === 'erase') {
-      // ⌫ clears the main marks; on tiles that only have maybes, it clears those instead
-      if (words.some(w => marks[w])) for (const w of words) delete marks[w];
-      else for (const w of words) delete maybes[w];
+      settle();
     } else {
       if (solved.has(color)) { shake(); return; } // that group is already solved
       const incoming = words.filter(w => marks[w] !== color);
@@ -543,12 +576,14 @@
         incoming.forEach((w, i) => {
           const old = marks[w];
           if (old) marks[outgoing[i]] = old; else delete marks[outgoing[i]];
+          if (maybes[w]) { maybes[outgoing[i]] = maybes[w]; delete maybes[w]; } // an undecided tile's options move too
           marks[w] = color;
         });
       } else {
-        for (const w of incoming) marks[w] = color;
+        for (const w of incoming) { marks[w] = color; delete maybes[w]; }
         if (opt('autoFill')) autoFill();
       }
+      settle();
     }
     if (snapshot() !== before) { history.push(before); if (history.length > UNDO_LIMIT) history.shift(); showUndo(); }
     save();
@@ -564,7 +599,7 @@
     if (full.length !== 3 || unused.length !== 1) return;
     const rest = tiles().map(wordOf).filter(w => !marks[w]);
     if (rest.length !== 4) return;
-    for (const w of rest) marks[w] = unused[0];
+    for (const w of rest) { marks[w] = unused[0]; delete maybes[w]; }
   }
 
   // ---------- after a group is solved, correct the colors to match the game ----------
@@ -590,13 +625,15 @@
         if (solved.has(c) && solvedAs.get(w) !== c) delete marks[w];
       }
     }
-    // a solved color can't be anyone's maybe any more, and solved tiles need none
+    // a solved color drops out of every undecided tile (yellow-or-green becomes green once
+    // yellow is solved), and solved tiles are decided
     const solvedWords = new Set(groups.flatMap(g => g.words));
     const solvedSet = new Set(groups.map(g => g.color));
     for (const [w, cs] of Object.entries(maybes)) {
       const keep = solvedWords.has(w) ? [] : cs.filter(c => !solvedSet.has(c));
       if (keep.length) maybes[w] = keep; else delete maybes[w];
     }
+    settle();
     if (snapshot() !== before) save();
   }
 
@@ -759,14 +796,19 @@
     }
     m.dataset.k = key;
     const r = markRoots.get(m);
-    const letter = color && opt('letters') ? color[0].toUpperCase() : '';
+    const cs = color ? [color] : maybe;
+    const letters = opt('letters') ? cs.map(c => c[0].toUpperCase()).join('') : '';
+    // decided: a solid outline. Undecided: the outline split like a pie, one slice per
+    // candidate color clockwise from the top; a lone candidate (its color is full) is dashed.
+    const fill = cs.length > 1
+      ? `conic-gradient(${cs.map((c, i) => `${HEX[c]} ${i * 100 / cs.length}% ${(i + 1) * 100 / cs.length}%`).join(', ')})`
+      : !color && cs.length ? `repeating-conic-gradient(${HEX[cs[0]]} 0 6deg, transparent 0 12deg)` : '';
     r.innerHTML = `<style>${MARK_CSS}</style>` +
-      // the colored outline is the mark; the corner dot only appears to carry a letter
-      (color ? `<div class="ring" style="--c:${HEX[color]}"></div>` +
-        (letter ? `<div class="dot letter" style="--c:${HEX[color]}">${letter}</div>` : '') : '') +
-      (away ? `<div class="away">${away}</div>` : '') +
-      (maybe.length ? `<div class="maybes${opt('letters') ? ' letter' : ''}">` +
-        maybe.map(c => `<span style="--c:${HEX[c]}">${opt('letters') ? c[0].toUpperCase() : ''}</span>`).join('') + '</div>' : '');
+      (color ? `<div class="ring" style="--c:${HEX[color]}"></div>` : '') +
+      (fill ? `<div class="pie" style="--g:${fill}"></div>` : '') +
+      // the corner dot only appears to carry letters
+      (letters ? `<div class="dot letter" style="--c:${cs.length > 1 ? '#fff' : HEX[cs[0]]}">${letters}</div>` : '') +
+      (away ? `<div class="away">${away}</div>` : '');
   }
 
   // ---------- draw everything ----------
@@ -783,6 +825,9 @@
     checkGuess();
     const groups = solvedGroups();
     tidyKeys(groups);
+    const unsettled = snapshot();
+    settle(); // also merges 0.6 data, where a tile could have a mark and maybes
+    if (snapshot() !== unsettled) save();
     reconcileSolved(groups);
     const solved = new Set(groups.map(g => g.color));
 
@@ -806,7 +851,10 @@
       else if (el.dataset.ccm) delete el.dataset.ccm;
       if (badge[w]) { if (el.dataset.ccmAway !== badge[w]) el.dataset.ccmAway = badge[w]; }
       else if (el.dataset.ccmAway) delete el.dataset.ccmAway;
-      drawMark(el, c, badge[w] || '', opt('maybes') ? (maybes[w] || []).filter(x => x !== c) : []);
+      const split = !c && maybes[w]?.length ? maybes[w].join(',') : '';
+      if (split) { if (el.dataset.ccmSplit !== split) el.dataset.ccmSplit = split; }
+      else if (el.dataset.ccmSplit) delete el.dataset.ccmSplit;
+      drawMark(el, c, badge[w] || '', c ? [] : (maybes[w] || []));
     }
     for (const k of ORDER) {
       const n = [...present].filter(w => marks[w] === k).length;

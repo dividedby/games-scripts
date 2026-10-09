@@ -9,7 +9,7 @@ import { JSDOM } from 'jsdom';
 
 const SRC = readFileSync(new URL('../connections-color-marker.user.js', import.meta.url), 'utf8');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const BTN = { yellow: 0, green: 1, blue: 2, purple: 3, erase: 4, undo: 5, sort: 6, go: 7, maybe: 8, hist: 9, gear: 10, toggle: 11 };
+const BTN = { yellow: 0, green: 1, blue: 2, purple: 3, erase: 4, undo: 5, sort: 6, go: 7, maybe: 8, hist: 9, gear: 10, toggle: 11, more: 12 };
 const RGB = { yellow: 'rgb(249, 223, 109)', blue: 'rgb(176, 196, 239)', purple: 'rgb(186, 129, 197)' };
 
 // words: tiles on the board; solved: [{ level, words }]; stored: localStorage seed
@@ -387,7 +387,7 @@ test('tiles show just the outline; the corner letter dot appears only with color
 const maybesOf = (b, date = '2023-07-01') => JSON.parse(b.w.localStorage.getItem(`ccm:maybe:${date}`) || '{}');
 const markKey = (b, x) => b.tile(x).querySelector('ccm-mark')?.dataset.k;
 
-test('maybe colors: off by default; ? mode adds/removes maybes on selected tiles without touching marks', async () => {
+test('maybe colors: off by default; ? mode turns tiles into splits of their candidate colors', async () => {
   const off = await board({ words: ['A'] });
   assert.ok(off.panel.classList.contains('nomaybe'));
 
@@ -395,67 +395,95 @@ test('maybe colors: off by default; ? mode adds/removes maybes on selected tiles
   assert.ok(!b.panel.classList.contains('nomaybe'));
   await b.tap('maybe');
   assert.ok(b.panel.classList.contains('maybemode'));
-  b.select(['A', 'B']); await b.tap('purple');
+  // a decided tile gains a second option: it becomes undecided (no longer counts as blue)
+  b.select(['A']); await b.tap('purple');
+  assert.deepEqual(maybesOf(b), { A: ['blue', 'purple'] }, 'kept in rainbow order');
+  assert.equal(b.store().A, undefined, 'a split tile is not decided');
+  assert.equal(markKey(b, 'A'), '||0|blue,purple');
+  assert.equal(b.tile('A').dataset.ccmSplit, 'blue,purple', 'split tiles are positioned so the outline stays on the tile');
+  // one option on an unmarked tile is just a plain mark
   b.select(['B']); await b.tap('green');
-  assert.deepEqual(maybesOf(b), { A: ['purple'], B: ['green', 'purple'] }, 'kept in rainbow order');
-  assert.equal(b.store().A, 'blue', 'main mark untouched');
-  assert.equal(b.store().B, undefined);
-  assert.equal(markKey(b, 'B'), '||0|green,purple');
-  // tapping a color all selected tiles already have removes it
-  b.select(['A', 'B']); await b.tap('purple');
-  assert.deepEqual(maybesOf(b), { B: ['green'] });
-  // ⌫ in maybe mode clears maybes only
-  b.select(['B']); await b.tap('erase');
+  assert.equal(b.store().B, 'green');
+  assert.deepEqual(maybesOf(b), { A: ['blue', 'purple'] });
+  // removing options down to one decides the tile again
+  b.select(['A']); await b.tap('purple');
+  assert.equal(b.store().A, 'blue');
   assert.deepEqual(maybesOf(b), {});
-  // maybes never count toward the 4-per-color limit
-  b.select(['B', 'C', 'D', 'E']); await b.tap('blue');
-  assert.ok(!b.shook());
-  await b.tap('maybe'); // back to normal mode
-  b.select(['B', 'C', 'D', 'E']); await b.tap('blue');
-  assert.ok(b.shook(), 'main marks still capped (A is blue)');
+  // ⌫ clears everything on the tile
+  b.select(['A']); await b.tap('yellow');
+  b.select(['A']); await b.tap('erase');
+  assert.equal(b.store().A, undefined);
+  assert.deepEqual(maybesOf(b), {});
 });
 
-test('maybe colors: undo, swaps and solves carry them along', async () => {
+test('maybe colors: split tiles never count toward the 4-per-color limit, Go or auto-fill', async () => {
   const b = await board({
-    words: ['A', 'B', 'C'],
+    words: ['A', 'B', 'C', 'D', 'E'], marks: { A: 'blue', B: 'blue', C: 'blue', D: 'blue' },
     stored: { 'ccm:settings': { maybes: true } },
   });
   await b.tap('maybe');
+  b.select(['E']); await b.tap('green');
+  b.select(['E']); await b.tap('blue'); // E: green, then green-or-blue
+  assert.ok(!b.shook(), 'blue is full, but a split option is fine');
+  assert.deepEqual(maybesOf(b), { E: ['green', 'blue'] });
+  assert.equal(b.btn('blue').textContent, '4');
+  // dropping green leaves only blue, which is full: E stays a lone (dashed) candidate
+  b.select(['E']); await b.tap('green');
+  assert.deepEqual(maybesOf(b), { E: ['blue'] });
+  assert.equal(b.store().E, undefined);
+});
+
+test('maybe colors: undo, swaps and solves carry them along', async () => {
+  const b = await board({ words: ['A', 'B', 'C'], stored: { 'ccm:settings': { maybes: true } } });
+  await b.tap('maybe');
   b.select(['A']); await b.tap('blue');
+  b.select(['A']); await b.tap('green');
+  assert.deepEqual(maybesOf(b), { A: ['green', 'blue'] });
   await b.tap('undo');
-  assert.deepEqual(maybesOf(b), {}, 'undo removes a maybe');
-  b.select(['A']); await b.tap('blue');
+  assert.deepEqual(maybesOf(b), {}, 'undo takes back the second option');
+  assert.equal(b.store().A, 'blue');
+  b.select(['A']); await b.tap('green');
   await b.tap('maybe');
   b.select([]);
   await b.tap('blue'); await b.tap('yellow'); // swap blue <-> yellow
-  assert.deepEqual(maybesOf(b), { A: ['yellow'] }, 'swaps carry maybes');
+  assert.deepEqual(maybesOf(b), { A: ['yellow', 'green'] }, 'swaps carry options');
 
+  // a solved color drops out; a tile left with one option becomes that color
   const s = await board({
-    words: ['X', 'Y'],
-    solved: [{ level: 2, words: ['P1', 'P2', 'P3', 'P4'] }],
-    stored: { 'ccm:settings': { maybes: true }, 'ccm:maybe:2023-07-01': { X: ['blue', 'purple'], P1: ['green'], Y: ['blue'] } },
+    words: ['X', 'Y', 'Z'],
+    solved: [{ level: 0, words: ['P1', 'P2', 'P3', 'P4'] }],
+    stored: { 'ccm:settings': { maybes: true }, 'ccm:maybe:2023-07-01': { X: ['yellow', 'green'], Y: ['yellow', 'blue', 'purple'], P1: ['green', 'blue'] } },
   });
-  assert.deepEqual(maybesOf(s), { X: ['purple'] }, 'solved color and solved tiles drop out');
+  assert.deepEqual(maybesOf(s), { Y: ['blue', 'purple'] }, 'yellow dropped, solved tiles cleared');
+  assert.equal(s.store().X, 'green', 'yellow-or-green became green once yellow was solved');
 });
 
-test('maybe colors: Shift+number adds a maybe without maybe mode, M toggles the mode', async () => {
-  const b = await board({ words: ['A', 'B'], stored: { 'ccm:settings': { maybes: true } } });
+test('maybe colors: 0.6 data (a mark plus maybe dots) becomes a split', async () => {
+  const b = await board({
+    words: ['A', 'B'], marks: { A: 'blue' },
+    stored: { 'ccm:settings': { maybes: true }, 'ccm:maybe:2023-07-01': { A: ['purple'], B: ['green'] } },
+  });
+  assert.deepEqual(maybesOf(b), { A: ['blue', 'purple'] });
+  assert.equal(b.store().A, undefined);
+  assert.equal(b.store().B, 'green', 'a single maybe on an unmarked tile becomes its mark');
+});
+
+test('maybe colors: Shift+number toggles an option without maybe mode, M toggles the mode', async () => {
+  const b = await board({ words: ['A', 'B'], marks: { A: 'green' }, stored: { 'ccm:settings': { maybes: true } } });
   b.select(['A']);
   b.w.dispatchEvent(new b.w.KeyboardEvent('keydown', { key: '#', code: 'Digit3', shiftKey: true })); await sleep(40);
-  assert.deepEqual(maybesOf(b), { A: ['blue'] });
-  assert.equal(b.store().A, undefined);
+  assert.deepEqual(maybesOf(b), { A: ['green', 'blue'] });
+  assert.ok(!b.panel.classList.contains('maybemode'));
   b.w.dispatchEvent(new b.w.KeyboardEvent('keydown', { key: 'm' })); await sleep(20);
   assert.ok(b.panel.classList.contains('maybemode'));
 });
 
-test('maybe colors: ⌫ outside maybe mode clears maybes on tiles that have no main mark', async () => {
-  const b = await board({
-    words: ['A', 'B', 'C'], marks: { A: 'blue' },
-    stored: { 'ccm:settings': { maybes: true }, 'ccm:maybe:2023-07-01': { A: ['green'], B: ['yellow', 'green'] } },
-  });
-  b.select(['B']); await b.tap('erase');
-  assert.deepEqual(maybesOf(b), { A: ['green'] }, 'B had only maybes: cleared');
-  b.select(['A']); await b.tap('erase');
-  assert.equal(b.store().A, undefined, 'A had a main mark: that goes first');
-  assert.deepEqual(maybesOf(b), { A: ['green'] }, '...and its maybes stay');
+test('palette: ⋯ is phone-only and toggles the second row', async () => {
+  const b = await board({ words: ['A'] });
+  const more = b.btn('more');
+  assert.equal(more.textContent, '⋯');
+  more.click(); await sleep(20);
+  assert.ok(b.panel.classList.contains('more'));
+  more.click(); await sleep(20);
+  assert.ok(!b.panel.classList.contains('more'));
 });

@@ -28,8 +28,9 @@ color, that color and the real color swap everywhere; then any other tile still
 wearing the solved color loses it.
 
 ### Palette
-The floating bar of controls: the four mark colors, erase, Clear, the sort
-button, Go and the hide toggle.
+The floating bar of controls: the four mark colors and Go on top; erase, undo,
+the sort button, the optional ? and 📜, settings and the hide toggle below (on
+phones, one row with the less-used tools behind ⋯).
 
 ### Armed color
 A color tapped on the palette while no tiles are selected. The next tap decides
@@ -58,7 +59,9 @@ The wrong guesses on a puzzle, oldest first, each flagged if the game called it
 One away. A guess counts as wrong when the game's mistake count drops; right
 guesses and repeats ("Already guessed") are not recorded.
 
-### Maybe
-A secondary, candidate color on a tile ("could be purple or blue"), shown as small
-corner dots. A tile can have several maybes and a Mark at the same time. Maybes
-are notes only: Go, auto-fill and the 4-per-color limit use Marks alone.
+### Maybe / split tile
+An undecided tile: two or more candidate colors ("could be yellow or green"), shown
+as an outline split like a pie. A tile is either decided (one Mark) or split, never
+both. Split tiles are notes only: Go, auto-fill and the 4-per-color limit use Marks
+alone. When a color is solved it drops out of every split; a split left with one
+color becomes that color's Mark (if the color has room).
