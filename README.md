@@ -28,6 +28,7 @@ Mark each tile with the color you think it is, then submit the groups in the ord
 - When a group is solved, your colors are corrected to match the game: if your "purple" turns out to be blue, purple and blue swap everywhere.
 - Solved colors show ✓.
 - Optional (off by default): a guess the game calls **One away** puts a red letter (A, B, …) on its tiles. Tiles that share letters are worth a second look.
+- Optional (off by default): **guess history**. 📜 on the palette lists your wrong guesses for the puzzle, with one-aways flagged, so a missed "One away" pop-up isn't lost. Re-entering a wrong guess reminds you whether it was one away (the game only says "Already guessed").
 
 **Layout**
 - The sort button cycles **P→Y** (reverse rainbow), **Y→P** (rainbow) and **Off**. Each color gets its own row; Shuffle still works.
@@ -40,6 +41,7 @@ Mark each tile with the color you think it is, then submit the groups in the ord
 | Setting | Default |
 | --- | --- |
 | Mark "One away" guesses | Off |
+| Guess history (📜 list of wrong guesses) | Off |
 | Auto-fill the last group | On |
 | Fix my colors after a solve (off: only the solved tiles change) | On |
 | Go button (off: marking only) | On |

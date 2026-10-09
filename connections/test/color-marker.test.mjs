@@ -9,7 +9,7 @@ import { JSDOM } from 'jsdom';
 
 const SRC = readFileSync(new URL('../connections-color-marker.user.js', import.meta.url), 'utf8');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const BTN = { yellow: 0, green: 1, blue: 2, purple: 3, erase: 4, undo: 5, sort: 6, go: 7, gear: 8, toggle: 9 };
+const BTN = { yellow: 0, green: 1, blue: 2, purple: 3, erase: 4, undo: 5, sort: 6, go: 7, hist: 8, gear: 9, toggle: 10 };
 const RGB = { yellow: 'rgb(249, 223, 109)', blue: 'rgb(176, 196, 239)', purple: 'rgb(186, 129, 197)' };
 
 // words: tiles on the board; solved: [{ level, words }]; stored: localStorage seed
@@ -17,6 +17,7 @@ async function board({ words = [], solved = [], date = '2023-07-01', marks = {},
   const tiles = words.map(w => `<label class="Card-module_label" data-testid="card-label" data-flip-id="${w}">${w}<span>${w}</span></label>`).join('');
   const secs = solved.map(s => `<section data-testid="solved-category-container" data-level="${s.level}"><ol>${s.words.map(w => `<li>${w}</li>`).join('')}</ol></section>`).join('');
   const dom = new JSDOM(`<!doctype html><body>${secs}<div id="board" style="display:grid">${tiles}</div>` +
+    `<span data-testid="mistake-count">4 mistakes remaining out of 4</span>` +
     `<button data-testid="deselect-btn">Deselect All</button><button data-testid="submit-btn" disabled>Submit</button></body>`,
   { url: `https://www.nytimes.com/games/connections${date ? '/' + date : ''}`, runScripts: 'outside-only', pretendToBeVisual: true });
   const w = dom.window;
@@ -45,6 +46,22 @@ async function board({ words = [], solved = [], date = '2023-07-01', marks = {},
     shook: () => panel.classList.contains('shake'),
     unshake: () => panel.classList.remove('shake'),
     async tap(k) { b.unshake(); b.btn(k).click(); await sleep(40); },
+    // play a guess the way the game would answer it: 'right' | 'wrong' | 'away' | 'repeat'
+    async guess(ws, result) {
+      b.select(ws);
+      const submit = d.querySelector('[data-testid=submit-btn]');
+      submit.disabled = false;
+      submit.click();
+      const mc = d.querySelector('[data-testid=mistake-count]');
+      if (result === 'wrong' || result === 'away') mc.textContent = `${parseInt(mc.textContent, 10) - 1} mistakes remaining out of 4`;
+      if (result === 'away' || result === 'repeat') {
+        const t = d.createElement('div'); t.dataset.testid = 'connection-toast';
+        t.innerHTML = `<h2>${result === 'away' ? 'One away...' : 'Already guessed!'}</h2>`;
+        d.body.appendChild(t); await sleep(200); t.remove();
+      }
+      await sleep(200);
+    },
+    guesses: () => JSON.parse(w.localStorage.getItem(`ccm:${date}`.replace('ccm:', 'ccm:guesses:')) || '[]'),
     close: () => {}, // closing mid-mutation makes jsdom throw from the observer; let it be collected
   };
   return b;
@@ -127,25 +144,50 @@ test('Go: tinted with the next color, dims when not ready, asks "Sure?" out of o
 
 test('"One away" guesses get letter badges; settled guesses drop theirs', async () => {
   const b = await board({ words: ['A', 'B', 'C', 'D', 'E', 'F'], marks: {}, stored: { 'ccm:settings': { oneAway: true } } });
-  const submit = b.d.querySelector('[data-testid=submit-btn]');
-  submit.disabled = false;
-  const toast = async text => { const t = b.d.createElement('div'); t.dataset.testid = 'connection-toast'; t.innerHTML = `<h2>${text}</h2>`; b.d.body.appendChild(t); await sleep(60); t.remove(); };
-  b.select(['A', 'B', 'C', 'D']); submit.click(); await toast('One away...');
-  b.select(['A', 'B', 'E', 'F']); submit.click(); await toast('One away...');
-  b.select(['A', 'C', 'E', 'F']); submit.click(); await toast('Already guessed!');
-  await sleep(60);
+  await b.guess(['A', 'B', 'C', 'D'], 'away');
+  await b.guess(['A', 'B', 'E', 'F'], 'away');
+  await b.guess(['A', 'C', 'E', 'F'], 'repeat'); // game says already guessed: no mistake, nothing new
   assert.equal(b.tile('A').dataset.ccmAway, 'AB');
   assert.equal(b.tile('D').dataset.ccmAway, 'A');
-  assert.equal(JSON.parse(b.w.localStorage.getItem('ccm:1away:2023-07-01')).length, 2);
-  b.close();
+  assert.equal(b.guesses().length, 2);
 
+  // pre-0.5 one-away records are migrated; a settled guess (3 words solved) drops its badge
   const s = await board({
     words: ['EMERALD', 'KELLY', 'LATTE', 'X1'],
     solved: [{ level: 3, words: ['BEAN', 'CLEAN', 'FOX', 'PEANUT'] }],
     stored: { 'ccm:settings': { oneAway: true }, 'ccm:1away:2023-07-01': [['BEAN', 'CLEAN', 'EMERALD', 'FOX'], ['EMERALD', 'KELLY', 'LATTE', 'X1']] },
   });
   assert.equal(s.tile('EMERALD').dataset.ccmAway, 'B', 'guess A is settled, B keeps its letter');
-  s.close();
+});
+
+test('guess history: records wrong guesses (one-aways flagged), ignores right ones, reminds on repeats', async () => {
+  const b = await board({
+    words: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
+    stored: { 'ccm:settings': { history: true } },
+  });
+  assert.ok(!b.panel.classList.contains('nohist'), '📜 shown when the setting is on');
+  await b.guess(['A', 'B', 'C', 'E'], 'wrong');
+  await b.guess(['A', 'B', 'C', 'F'], 'away');
+  assert.deepEqual(b.guesses(), [{ w: ['A', 'B', 'C', 'E'], away: false }, { w: ['A', 'B', 'C', 'F'], away: true }]);
+  assert.equal(b.btn('hist').textContent, '📜2');
+  await b.tap('hist');
+  const list = b.root.getElementById('ccm-history');
+  assert.ok(!list.hidden);
+  assert.equal(list.querySelectorAll('li').length, 2);
+  assert.match(list.querySelectorAll('li')[1].textContent, /A · B · C · F.*one away/);
+  // repeat: the game says "Already guessed"; we add that it was one away
+  await b.guess(['A', 'B', 'C', 'F'], 'repeat');
+  const note = b.root.getElementById('ccm-note');
+  assert.ok(!note.hidden);
+  assert.match(note.textContent, /one away/);
+  assert.equal(b.guesses().length, 2, 'repeats are not recorded twice');
+});
+
+test('guess history: off by default, but still recorded quietly', async () => {
+  const b = await board({ words: ['A', 'B', 'C', 'D', 'E'] });
+  assert.ok(b.panel.classList.contains('nohist'));
+  await b.guess(['A', 'B', 'C', 'E'], 'wrong');
+  assert.equal(b.guesses().length, 1);
 });
 
 test('sort modes cycle reverse rainbow → rainbow → off and remember the choice', async () => {
@@ -261,14 +303,9 @@ test('settings: "Fix my colors" off only corrects the solved tiles', async () =>
   assert.ok(four('X').every(x => s[x] === 'purple'), 'your other marks are left alone');
 });
 
-test('settings: "One away" off by default records nothing', async () => {
-  const b = await board({ words: ['A', 'B', 'C', 'D'] });
-  const submit = b.d.querySelector('[data-testid=submit-btn]');
-  submit.disabled = false;
-  b.select(['A', 'B', 'C', 'D']); submit.click();
-  const t = b.d.createElement('div'); t.dataset.testid = 'connection-toast'; t.innerHTML = '<h2>One away...</h2>'; b.d.body.appendChild(t);
-  await sleep(80);
-  assert.equal(b.w.localStorage.getItem('ccm:1away:2023-07-01'), null);
+test('settings: "One away" marks off by default shows no badges', async () => {
+  const b = await board({ words: ['A', 'B', 'C', 'D', 'E'] });
+  await b.guess(['A', 'B', 'C', 'E'], 'away');
   assert.equal(b.tile('A').dataset.ccmAway, undefined);
 });
 

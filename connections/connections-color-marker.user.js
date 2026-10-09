@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Mark NYT Connections tiles with the color you think they are, then submit them in order (built for reverse-rainbow solves)
-// @version      0.4.0
+// @version      0.5.0
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -51,7 +51,8 @@
   const openedOn = new Date().toLocaleDateString('en-CA');
   const puzzleId = () => location.pathname.match(/\d{4}-\d{2}-\d{2}/)?.[0] || openedOn;
   const marksKey = () => 'ccm:' + puzzleId();
-  const awayKey = () => 'ccm:1away:' + puzzleId();
+  const guessKey = () => 'ccm:guesses:' + puzzleId();
+  const oldAwayKey = () => 'ccm:1away:' + puzzleId(); // before 0.5: one-away guesses only
   const USED_KEY = 'ccm:used';
 
   const up = s => String(s).trim().toUpperCase();
@@ -69,7 +70,7 @@
     ls.set(USED_KEY, used);
   }
   const save = () => { ls.set(marksKey(), marks); touch(); };
-  const saveAways = () => { ls.set(awayKey(), aways); touch(); };
+  const saveGuesses = () => { ls.set(guessKey(), guesses); touch(); };
 
   // drop data for puzzles not touched in KEEP_DAYS (by last use, not puzzle date,
   // so archive puzzles you're playing now are kept)
@@ -77,7 +78,7 @@
     const used = ls.get(USED_KEY, {});
     const cutoff = Date.now() - KEEP_DAYS * 864e5;
     for (const k of Object.keys(localStorage)) {
-      const d = k.match(/^ccm:(?:1away:)?(\d{4}-\d{2}-\d{2})$/)?.[1];
+      const d = k.match(/^ccm:(?:1away:|guesses:)?(\d{4}-\d{2}-\d{2})$/)?.[1];
       if (!d) continue;
       if (!used[d]) used[d] = Date.now(); // first seen: start its clock now
       else if (used[d] < cutoff) ls.del(k);
@@ -87,7 +88,13 @@
   } catch {}
 
   let marks = ls.get(marksKey(), {});
-  let aways = ls.get(awayKey(), []); // "One away" guesses: arrays of 4 words
+  // wrong guesses for this puzzle, oldest first: { w: [4 words, sorted], away: was it "One away" }
+  const loadGuesses = () => {
+    const g = ls.get(guessKey(), null);
+    if (g) return g;
+    return ls.get(oldAwayKey(), []).map(w => ({ w, away: true })); // migrate
+  };
+  let guesses = loadGuesses();
   let lastId = puzzleId();
 
   const SORT_KEY = 'ccm:sort';
@@ -101,6 +108,7 @@
   const SETTINGS_KEY = 'ccm:settings';
   const SETTINGS = [
     { key: 'oneAway',   def: false, label: 'Mark "One away" guesses', help: 'Red letters on the tiles of guesses the game called one away' },
+    { key: 'history',   def: false, label: 'Guess history', help: '📜 on the palette lists your wrong guesses, with one-aways flagged. Repeating one reminds you' },
     { key: 'autoFill',  def: true,  label: 'Auto-fill the last group', help: 'Once three colors have 4 tiles, the last 4 get the remaining color' },
     { key: 'reconcile', def: true,  label: 'Fix my colors after a solve', help: 'If your purple turns out to be blue, swap purple and blue everywhere. Off: only the solved tiles change' },
     { key: 'goButton',  def: true,  label: 'Go button', help: 'Submit a color\'s 4 tiles for you. Off: marking only' },
@@ -228,8 +236,24 @@
       padding: 10px 12px; font: 500 13px/1.3 system-ui, sans-serif; color: var(--fg); cursor: default;
       max-height: calc(100vh - 90px); overflow-y: auto; box-sizing: border-box;
     }
-    #ccm-panel.left #ccm-settings { right: auto; left: 0; }
-    #ccm-settings[hidden] { display: none; }
+    #ccm-history {
+      position: absolute; right: 0; bottom: calc(100% + 8px); width: 290px; max-width: calc(100vw - 24px); box-sizing: border-box;
+      background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.25);
+      padding: 10px 12px; font: 500 13px/1.35 system-ui, sans-serif; color: var(--fg); cursor: default;
+      max-height: calc(100vh - 90px); overflow-y: auto;
+    }
+    #ccm-history ol { margin: 0; padding-left: 20px; }
+    #ccm-history li { padding: 3px 0; }
+    #ccm-history .away { font: 700 10px/1 system-ui, sans-serif; color: #fff; background: #c0392b; border-radius: 4px; padding: 2px 4px; white-space: nowrap; }
+    #ccm-history .empty { margin: 0; color: var(--muted); }
+    #ccm-note {
+      position: absolute; right: 0; bottom: calc(100% + 8px); white-space: nowrap;
+      background: #222; color: #fff; border-radius: 8px; padding: 8px 10px; font: 600 13px/1 system-ui, sans-serif;
+      box-shadow: 0 4px 12px rgba(0,0,0,.25);
+    }
+    #ccm-panel.left #ccm-settings, #ccm-panel.left #ccm-history, #ccm-panel.left #ccm-note { right: auto; left: 0; }
+    #ccm-settings[hidden], #ccm-history[hidden], #ccm-note[hidden] { display: none; }
+    #ccm-panel.nohist .ccm-hist { display: none; }
     h4 { margin: 0 0 6px; font: 700 13px/1.2 system-ui, sans-serif; }
     label { display: flex; gap: 8px; align-items: flex-start; padding: 5px 0; cursor: pointer; }
     input { margin: 2px 0 0; width: 16px; height: 16px; flex: none; accent-color: #6a6958; }
@@ -292,6 +316,9 @@
   showSort();
   const goBtn = addButton('Go ▶', () => onGo());
   goBtn.classList.add('ccm-go');
+  const histBtn = addButton('📜', () => toggleHistory());
+  histBtn.classList.add('ccm-hist');
+  histBtn.title = 'Your wrong guesses on this puzzle';
   const gearBtn = addButton('⚙', () => toggleSettings());
   gearBtn.title = 'Settings';
   gearBtn.classList.add('ccm-gear');
@@ -320,16 +347,32 @@
     applySettings();
   });
   panel.appendChild(sheet);
+  const histSheet = document.createElement('div');
+  histSheet.id = 'ccm-history';
+  histSheet.className = 'pop';
+  histSheet.hidden = true;
+  histSheet.addEventListener('click', e => e.stopPropagation());
+  panel.appendChild(histSheet);
+  const noteEl = document.createElement('div');
+  noteEl.id = 'ccm-note';
+  noteEl.hidden = true;
+  panel.appendChild(noteEl);
   function toggleSettings(open = sheet.hidden) {
     sheet.hidden = !open;
     gearBtn.classList.toggle('active', open);
+    if (open && typeof toggleHistory === 'function') toggleHistory(false);
   }
-  document.addEventListener('click', e => { if (!sheet.hidden && !e.composedPath().includes(host)) toggleSettings(false); });
+  document.addEventListener('click', e => {
+    if (e.composedPath().includes(host)) return;
+    if (!sheet.hidden) toggleSettings(false);
+    if (!histSheet.hidden) toggleHistory(false);
+  });
   function applySettings() {
     for (const box of sheet.querySelectorAll('input[data-k]')) box.checked = !!settings[box.dataset.k];
     panel.classList.toggle('left', opt('left'));
     panel.classList.toggle('nogo', !opt('goButton'));
-    if (!opt('oneAway')) pendingGuess = null;
+    panel.classList.toggle('nohist', !opt('history'));
+    if (!opt('history')) toggleHistory(false);
     if (ready) apply();
   }
   // The palette stays tucked away until a puzzle board is on screen (not on the Play splash
@@ -348,7 +391,7 @@
     const on = onBoard ? userCollapsed : !peek;
     panel.classList.toggle('collapsed', on);
     panel.classList.toggle('offboard', !onBoard);
-    if (on) toggleSettings(false);
+    if (on) { toggleSettings(false); toggleHistory(false); }
     toggleBtn.textContent = on ? '🎨' : '▾';
     toggleBtn.title = on ? 'Show the color palette' : 'Hide the palette';
   }
@@ -491,29 +534,67 @@
     if (JSON.stringify(marks) !== before) save();
   }
 
-  // ---------- "One away" guesses ----------
-  // Remember what was selected when Submit was pressed; if the game's toast then says
-  // "One away", keep that guess and badge its tiles with a letter (A, B, …).
-  let pendingGuess = null;
+  // ---------- guess history ----------
+  // Every Submit (yours or Go's) is watched: a guess that solves a group is forgotten, one the
+  // game counts as a mistake is kept, flagged if the game said "One away". Recorded always
+  // (it's just this browser's storage); the settings only decide what's shown.
+  const mistakesLeft = () => {
+    const n = parseInt(document.querySelector('[data-testid="mistake-count"]')?.textContent, 10);
+    return Number.isNaN(n) ? null : n;
+  };
+  const sameGuess = (a, b) => a.join('|') === b.join('|');
+  let pending = null; // { w, before, away, recorded }
   window.addEventListener('click', e => {
-    if (e.target.closest?.('[data-testid="submit-btn"]')) {
-      const words = selectedTiles().map(wordOf).sort();
-      if (words.length === 4 && opt('oneAway')) {
-        pendingGuess = words;
-        let n = 0;
-        const t = setInterval(() => { if (!pendingGuess || ++n > 40) clearInterval(t); else apply(); }, 150);
-      }
+    if (!e.target.closest?.('[data-testid="submit-btn"]')) return;
+    const w = selectedTiles().map(wordOf).sort();
+    if (w.length !== 4) return;
+    const old = guesses.find(g => sameGuess(g.w, w));
+    if (old) { // the game will just say "Already guessed"
+      if (opt('history')) note(old.away ? 'Already guessed · it was one away' : 'Already guessed');
+      return;
     }
+    pending = { w, before: mistakesLeft(), away: false, recorded: null, at: Date.now() };
+    const t = setInterval(() => { if (!pending || Date.now() - pending.at > 6000) { pending = null; clearInterval(t); } else apply(); }, 150);
   }, true);
-  function checkToast() {
-    if (!pendingGuess) return;
-    // the guess was right: it shows up as a solved group, nothing to remember
-    if (solvedGroups().some(g => pendingGuess.every(w => g.words.includes(w)))) { pendingGuess = null; return; }
-    const toast = document.querySelector('[data-testid="connection-toast"]');
-    if (!toast || !/one away/i.test(toast.textContent)) return;
-    const key = pendingGuess.join('|');
-    if (!aways.some(g => g.join('|') === key)) { aways.push(pendingGuess); saveAways(); }
-    pendingGuess = null;
+  function checkGuess() {
+    if (!pending) return;
+    const p = pending;
+    if (solvedGroups().some(g => p.w.every(w => g.words.includes(w)))) { pending = null; return; } // right
+    const toast = document.querySelector('[data-testid="connection-toast"]')?.textContent || '';
+    if (/one away/i.test(toast)) p.away = true;
+    const left = mistakesLeft();
+    if (!p.recorded && p.before != null && left != null && left < p.before) {
+      p.recorded = { w: p.w, away: p.away };
+      guesses.push(p.recorded);
+      saveGuesses();
+    } else if (p.recorded && p.away && !p.recorded.away) { // toast showed up after the count dropped
+      p.recorded.away = true;
+      saveGuesses();
+    }
+  }
+
+  // a short note above the palette (e.g. a repeated guess)
+  let noteTimer = null;
+  function note(text) {
+    noteEl.textContent = text;
+    noteEl.hidden = false;
+    clearTimeout(noteTimer);
+    noteTimer = setTimeout(() => { noteEl.hidden = true; }, 2600);
+  }
+
+  function renderHistory() {
+    const wrong = guesses.length;
+    const label = '📜' + (wrong ? wrong : '');
+    if (histBtn.textContent !== label) histBtn.textContent = label;
+    if (histSheet.hidden) return;
+    histSheet.innerHTML = '<h4>Wrong guesses</h4>' + (wrong
+      ? '<ol>' + guesses.map(g => `<li>${g.w.map(x => x.replace(/[<&]/g, '')).join(' · ')}${g.away ? ' <span class="away">one away</span>' : ''}</li>`).join('') + '</ol>'
+      : '<p class="empty">No wrong guesses yet.</p>');
+  }
+  function toggleHistory(open = histSheet.hidden) {
+    histSheet.hidden = !open;
+    histBtn.classList.toggle('active', open);
+    if (open) { toggleSettings(false); renderHistory(); }
   }
 
   // ---------- Go: submit the armed color, or the next one in order ----------
@@ -625,12 +706,12 @@
     if (puzzleId() !== lastId) { // moved to another date
       lastId = puzzleId();
       marks = ls.get(marksKey(), {});
-      aways = ls.get(awayKey(), []);
-      pendingGuess = null;
+      guesses = loadGuesses();
+      pending = null;
       history = [];
       showUndo();
     }
-    checkToast();
+    checkGuess();
     const groups = solvedGroups();
     tidyKeys(groups);
     reconcileSolved(groups);
@@ -640,6 +721,7 @@
     const badge = {};
     // a guess is settled once a solved group holds 3 of its words; its badge is dropped
     // (letters stay the same for the others)
+    const aways = guesses.filter(g => g.away).map(g => g.w);
     if (opt('oneAway')) aways.forEach((g, i) => {
       if (groups.some(sg => g.filter(w => sg.words.includes(w)).length >= 3)) return;
       g.forEach(w => { badge[w] = (badge[w] || '') + String.fromCharCode(65 + i); });
@@ -667,6 +749,7 @@
     if (armed && solved.has(armed)) arm(null);
     showGo();
     showTheme();
+    renderHistory();
     if (onBoard !== ts.length > 0) { onBoard = ts.length > 0; peek = false; showCollapsed(); }
     arrange(ts);
   }
@@ -717,7 +800,7 @@
   // ---------- another tab on the same puzzle changed something: pick it up ----------
   window.addEventListener('storage', e => {
     if (e.key === marksKey()) marks = ls.get(marksKey(), {});
-    else if (e.key === awayKey()) aways = ls.get(awayKey(), []);
+    else if (e.key === guessKey()) guesses = loadGuesses();
     else if (e.key === SETTINGS_KEY) { settings = { ...DEFAULTS, ...ls.get(SETTINGS_KEY, {}) }; applySettings(); return; }
     else if (e.key === SORT_KEY) { const v = e.newValue; if (SORT_MODES[v]) { sortMode = v; showSort(); } }
     else return;

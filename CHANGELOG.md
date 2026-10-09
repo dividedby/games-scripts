@@ -11,6 +11,13 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [0.5.0] - 2026-10-08
+#### Added
+- Guess history setting: 📜 on the palette lists your wrong guesses for the puzzle with one-aways flagged, and re-entering one reminds you whether it was one away. Off by default.
+
+#### Changed
+- Wrong guesses are now remembered whether or not the "One away" marks are on, so turning either setting on mid-puzzle shows what you've already tried.
+
 ### [0.4.0] - 2026-10-08
 #### Changed
 - Marked tiles show only the colored outline; the small corner dot now appears only when "Show color letters" is on, carrying the letter.

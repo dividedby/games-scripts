@@ -52,3 +52,8 @@ The game's message for a wrong guess with 3 of 4 tiles from one group. The scrip
 remembers such guesses and badges their tiles with a letter per guess. A guess is
 **settled** once a solved group holds 3 of its words; settled guesses lose their
 badges.
+
+### Guess history
+The wrong guesses on a puzzle, oldest first, each flagged if the game called it
+One away. A guess counts as wrong when the game's mistake count drops; right
+guesses and repeats ("Already guessed") are not recorded.
