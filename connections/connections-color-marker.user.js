@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Mark NYT Connections tiles with the color you think they are, then submit them in order (built for reverse-rainbow solves)
-// @version      0.7.1
+// @version      0.7.2
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -367,6 +367,7 @@
     maybeBtn.classList.toggle('active', maybeMode);
     panel.classList.toggle('maybemode', maybeMode);
     if (maybeMode) arm(null);
+    else apply(); // catch up on the sorting held back during maybe mode
   }
   const histBtn = addButton('📜', () => toggleHistory());
   histBtn.classList.add('ccm-hist');
@@ -897,6 +898,9 @@
       return;
     }
     if (!/grid|flex/.test(getComputedStyle(board).display)) return; // layout we can't reorder
+    // in maybe mode tiles hold still while you add options; they re-sort when ? goes off
+    // (unless the board itself changed, like a newly solved row, which needs placing)
+    if (maybeMode && [...board.children].every(c => c.style.order !== '')) return;
     const cells = ts.map(t => cellOf(t, board));
     const cellSet = new Set(cells);
     // anything else on the board (solved-group rows) stays on top, in its own order
@@ -942,6 +946,7 @@
       const was = maybeMode; maybeMode = true;
       assign(digit === '0' ? 'erase' : COLORS.find(c => c.hotkey === digit).key);
       maybeMode = was;
+      if (!was) apply(); // a one-off option: sort as usual
       return;
     }
     if ((e.key === 'm' || e.key === 'M') && opt('maybes')) { setMaybeMode(!maybeMode); return; }

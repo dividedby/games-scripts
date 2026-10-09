@@ -11,6 +11,10 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [0.7.2] - 2026-10-08
+#### Changed
+- With sorting on, tiles hold still while maybe mode (**?**) is on, so they don't jump rows while you're adding options; they re-sort when you turn it off.
+
 ### [0.7.1] - 2026-10-08
 #### Fixed
 - With sorting on, split tiles stay together in a row after your colors instead of being scattered across the board.

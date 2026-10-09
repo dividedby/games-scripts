@@ -498,3 +498,19 @@ test('sorting keeps split tiles together after the decided rows, padding rows wi
   assert.deepEqual(order, ['Y1', 'Y2', 'Y3', 'N1', 'S2', 'S1', 'N2', 'N3']);
   b.close();
 });
+
+test('maybe mode holds tiles still; they re-sort when it goes off', async () => {
+  const b = await board({
+    words: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'], marks: { H: 'purple' },
+    stored: { 'ccm:sort': '1', 'ccm:settings': { maybes: true } },
+  });
+  const order = () => [...b.d.querySelectorAll('[data-testid=card-label]')].sort((x, y) => x.style.order - y.style.order).map(t => t.dataset.flipId).join('');
+  assert.equal(order(), 'HABCDEFG');
+  await b.tap('maybe');
+  b.select(['G']); await b.tap('blue');
+  b.select(['G']); await b.tap('green');
+  assert.equal(order(), 'HABCDEFG', 'G stays put while maybe mode is on');
+  await b.tap('maybe');
+  assert.equal(order(), 'HABCGDEF', 'G joins the split tiles once maybe mode is off');
+  b.close();
+});
