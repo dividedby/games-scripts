@@ -11,6 +11,10 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [0.7.1] - 2026-10-08
+#### Fixed
+- With sorting on, split tiles stay together in a row after your colors instead of being scattered across the board.
+
 ### [0.7.0] - 2026-10-08
 #### Changed
 - Maybe colors split the tile's outline like a pie instead of adding corner dots: yellow-or-green is half yellow, half green; three options get a third each. A tile is either decided (one color) or split; only decided tiles count toward Go, auto-fill and the 4-per-color limit. With **?** on, tapping a color adds it to or removes it from the selected tiles' options; down to one option, the tile is decided again.

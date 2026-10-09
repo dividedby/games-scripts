@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Mark NYT Connections tiles with the color you think they are, then submit them in order (built for reverse-rainbow solves)
-// @version      0.7.0
+// @version      0.7.1
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -902,15 +902,23 @@
     // anything else on the board (solved-group rows) stays on top, in its own order
     [...board.children].forEach((c, i) => { if (!cellSet.has(c)) setOrder(c, String(i - 1000)); });
     const unmarked = [];
+    const split = []; // undecided tiles stay together, by their first option in sort order
     const byColor = Object.fromEntries(ORDER.map(k => [k, []]));
-    ts.forEach((t, i) => (byColor[marks[wordOf(t)]] || unmarked).push(cells[i]));
+    ts.forEach((t, i) => {
+      const w = wordOf(t);
+      if (byColor[marks[w]]) byColor[marks[w]].push(cells[i]);
+      else if (maybes[w]?.length) split.push([Math.min(...maybes[w].map(c => sortOrder.indexOf(c))), cells[i]]);
+      else unmarked.push(cells[i]);
+    });
+    split.sort((a, b) => a[0] - b[0]);
     const seq = [];
     for (const k of sortOrder) {
       if (!byColor[k].length) continue;
       seq.push(...byColor[k]);
-      while (seq.length % 4 && unmarked.length) seq.push(unmarked.shift()); // pad the row
+      // pad the row with blank tiles, then splits if there aren't enough
+      while (seq.length % 4 && (unmarked.length || split.length)) seq.push(unmarked.length ? unmarked.shift() : split.shift()[1]);
     }
-    seq.push(...unmarked);
+    seq.push(...split.map(s => s[1]), ...unmarked);
     seq.forEach((c, i) => setOrder(c, String(i)));
   }
 

@@ -487,3 +487,14 @@ test('palette: ⋯ is phone-only and toggles the second row', async () => {
   more.click(); await sleep(20);
   assert.ok(!b.panel.classList.contains('more'));
 });
+
+test('sorting keeps split tiles together after the decided rows, padding rows with blank tiles first', async () => {
+  const b = await board({
+    words: ['S1', 'N1', 'Y1', 'S2', 'Y2', 'N2', 'Y3', 'N3'],
+    marks: { Y1: 'yellow', Y2: 'yellow', Y3: 'yellow' },
+    stored: { 'ccm:sort': '1', 'ccm:settings': { maybes: true }, 'ccm:maybe:2023-07-01': { S1: ['green', 'blue'], S2: ['yellow', 'purple'] } },
+  });
+  const order = [...b.d.querySelectorAll('[data-testid=card-label]')].sort((x, y) => x.style.order - y.style.order).map(t => t.dataset.flipId);
+  assert.deepEqual(order, ['Y1', 'Y2', 'Y3', 'N1', 'S2', 'S1', 'N2', 'N3']);
+  b.close();
+});
