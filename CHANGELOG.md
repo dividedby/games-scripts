@@ -11,6 +11,10 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [0.6.1] - 2026-10-08
+#### Fixed
+- The settings panel had grown taller than a laptop screen; descriptions are now one line each, with the full explanation on hover.
+
 ### [0.6.0] - 2026-10-08
 #### Added
 - Maybe colors setting: with **?** on, tapping colors adds small "maybe" dots to the selected tiles, several per tile, on top of the main mark. They don't count toward Go, auto-fill or the 4-per-color limit, follow swaps and undo, and drop out once a color is solved. Keys: M for maybe mode, Shift+1–4 for a single maybe. Off by default.

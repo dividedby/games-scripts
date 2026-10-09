@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Mark NYT Connections tiles with the color you think they are, then submit them in order (built for reverse-rainbow solves)
-// @version      0.6.0
+// @version      0.6.1
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -110,17 +110,23 @@
 
   // ---------- settings (⚙ on the palette), saved per browser ----------
   const SETTINGS_KEY = 'ccm:settings';
+  // help: one line shown in the panel; tip: the longer explanation, shown on hover
   const SETTINGS = [
-    { key: 'oneAway',   def: false, label: 'Mark "One away" guesses', help: 'Red letters on the tiles of guesses the game called one away' },
-    { key: 'history',   def: false, label: 'Guess history', help: '📜 on the palette lists your wrong guesses, with one-aways flagged. Repeating one reminds you' },
-    { key: 'maybes',    def: false, label: 'Maybe colors', help: '? on the palette: while it\'s on, colors you tap are added to the selected tiles as small "maybe" dots, as many as you like per tile' },
-    { key: 'autoFill',  def: true,  label: 'Auto-fill the last group', help: 'Once three colors have 4 tiles, the last 4 get the remaining color' },
-    { key: 'reconcile', def: true,  label: 'Fix my colors after a solve', help: 'If your purple turns out to be blue, swap purple and blue everywhere. Off: only the solved tiles change' },
-    { key: 'goButton',  def: true,  label: 'Go button', help: 'Submit a color\'s 4 tiles for you. Off: marking only' },
-    { key: 'orderWarn', def: true,  label: 'Ask before going out of order', help: 'Go asks "Sure?" when you submit a color ahead of your sort order' },
-    { key: 'letters',   def: false, label: 'Show color letters', help: 'Y, G, B, P on each marked tile, for telling the colors apart without color' },
-    { key: 'keys',      def: true,  label: 'Keyboard shortcuts', help: '1–4 colors, 0 erase, Z undo, G go, Esc cancel; with maybe colors on, M maybe mode and Shift+1–4 add a maybe' },
-    { key: 'left',      def: false, label: 'Palette on the left', help: 'Move the palette to the bottom-left corner' },
+    { key: 'oneAway',   def: false, label: 'Mark "One away" guesses', help: 'Red letters on tiles from one-away guesses' },
+    { key: 'history',   def: false, label: 'Guess history', help: '📜 lists your wrong guesses',
+      tip: '📜 on the palette lists your wrong guesses, with one-aways flagged. Repeating one reminds you whether it was one away' },
+    { key: 'maybes',    def: false, label: 'Maybe colors', help: '? adds extra "maybe" color dots to tiles',
+      tip: 'With ? on, colors you tap are added to the selected tiles as small "maybe" dots, as many per tile as you like. They never count toward Go, auto-fill or the 4-per-color limit' },
+    { key: 'autoFill',  def: true,  label: 'Auto-fill the last group', help: 'The last 4 tiles get the last color',
+      tip: 'Once three colors have 4 tiles, the last 4 get the remaining color' },
+    { key: 'reconcile', def: true,  label: 'Fix my colors after a solve', help: 'Swap colors to match solved groups',
+      tip: 'If your purple turns out to be blue, swap purple and blue everywhere. Off: only the solved tiles change' },
+    { key: 'goButton',  def: true,  label: 'Go button', help: 'Submits a color\'s 4 tiles for you' },
+    { key: 'orderWarn', def: true,  label: 'Ask before going out of order', help: '"Sure?" before submitting out of order' },
+    { key: 'letters',   def: false, label: 'Show color letters', help: 'Y/G/B/P letters, for colorblind players' },
+    { key: 'keys',      def: true,  label: 'Keyboard shortcuts', help: '1–4, 0, Z undo, G go, Esc',
+      tip: '1–4 colors, 0 erase, Z undo, G go, Esc cancel; with maybe colors on, M maybe mode and Shift+1–4 add a maybe' },
+    { key: 'left',      def: false, label: 'Palette on the left', help: 'Move the palette to the bottom-left' },
   ];
   const DEFAULTS = Object.fromEntries(SETTINGS.map(o => [o.key, o.def]));
   let settings = { ...DEFAULTS, ...ls.get(SETTINGS_KEY, {}) };
@@ -269,7 +275,7 @@
     #ccm-panel.maybemode button.swatch { border: 2px dashed var(--fg); }
     #ccm-panel { flex-wrap: wrap; justify-content: flex-end; max-width: calc(100vw - 24px); box-sizing: border-box; }
     h4 { margin: 0 0 6px; font: 700 13px/1.2 system-ui, sans-serif; }
-    label { display: flex; gap: 8px; align-items: flex-start; padding: 5px 0; cursor: pointer; }
+    label { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; cursor: pointer; }
     input { margin: 2px 0 0; width: 16px; height: 16px; flex: none; accent-color: #6a6958; }
     small { display: block; color: var(--muted); font-size: 11px; }
     .row { display: flex; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--sep); }
@@ -352,7 +358,7 @@
   sheet.id = 'ccm-settings';
   sheet.hidden = true;
   sheet.innerHTML = '<h4>Color Marker settings</h4>' +
-    SETTINGS.map(o => `<label title="${o.help}"><input type="checkbox" data-k="${o.key}"><span>${o.label}<small>${o.help}</small></span></label>`).join('') +
+    SETTINGS.map(o => `<label title="${o.tip || o.help}"><input type="checkbox" data-k="${o.key}"><span>${o.label}<small>${o.help}</small></span></label>`).join('') +
     '<div class="row"><button type="button" data-act="clear">Clear this puzzle</button><button type="button" data-act="reset">Reset settings</button></div>';
   sheet.addEventListener('click', e => e.stopPropagation());
   sheet.addEventListener('change', e => {
