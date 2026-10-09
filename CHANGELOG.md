@@ -11,6 +11,10 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [0.7.6] - 2026-10-09
+#### Changed
+- Clearer script description in your userscript manager.
+
 ### [0.7.5] - 2026-10-08
 #### Changed
 - On phones, **⋯** swaps the palette row for sort, 📜, ⚙ and hide (and **‹** swaps back) instead of adding a second row that covered the game's Shuffle and Submit buttons.

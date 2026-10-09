@@ -2,8 +2,8 @@
 // @name         Connections Color Marker
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
-// @description  Mark NYT Connections tiles with the color you think they are, then submit them in order (built for reverse-rainbow solves)
-// @version      0.7.5
+// @description  Color-code NYT Connections tiles as you work out the groups, then submit them in the order you choose, like purple first for a reverse rainbow
+// @version      0.7.6
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues

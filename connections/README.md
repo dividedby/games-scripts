@@ -1,6 +1,6 @@
 # Connections Color Marker
 
-Mark each tile with the color you think it is, then submit the groups in the order you want. Built for going after the reverse rainbow (purple, blue, green, yellow), but works for any order.
+Color-code the tiles in NYT Connections as you work out the groups, then submit them in whatever order you like. It's especially handy if you go for a **reverse rainbow**: solving the hardest group (purple) first and the easiest (yellow) last.
 
 **Install:** [Greasy Fork](https://greasyfork.org/en/scripts/599362-connections-color-marker) · [GitHub](https://raw.githubusercontent.com/dividedby/games-scripts/main/connections/connections-color-marker.user.js) · [Changelog](../CHANGELOG.md#connections-color-marker)
 
@@ -12,26 +12,38 @@ Mark each tile with the color you think it is, then submit the groups in the ord
 
 ## Quick start
 
-1. Install the script from [Greasy Fork](https://greasyfork.org/en/scripts/599362-connections-color-marker) or [GitHub](https://raw.githubusercontent.com/dividedby/games-scripts/main/connections/connections-color-marker.user.js) (see [Installing](../README.md#installing)) and open a Connections puzzle.
-2. Select tiles in the game, then tap a color on the palette. They keep that color and get deselected.
-3. When a color has 4 tiles, tap **Go ▶** to submit it. Go always picks the next color in your order (purple first by default).
+1. Install the script from [Greasy Fork](https://greasyfork.org/en/scripts/599362-connections-color-marker) or [GitHub](https://raw.githubusercontent.com/dividedby/games-scripts/main/connections/connections-color-marker.user.js) (see [Installing](../README.md#installing)) and open a Connections puzzle. A color palette appears in the bottom-right corner once the board is showing.
+2. Select tiles the way you normally would, then tap a color on the palette. The tiles get an outline in that color and are deselected, ready for the next group.
+3. Once a color has 4 tiles, tap **Go ▶** to submit them. Go works through the colors in your sort order: purple, blue, green, then yellow, unless you change it.
 
 ## Marking
 
-- Each color holds at most 4 tiles. ⌫ removes marks from the selected tiles, and ↶ undoes your last change (marking, erasing, swapping or clearing).
-- A color is full? Select one of its tiles plus the one you want in, then tap the color: the two swap colors.
-- With nothing selected, tap two colors to swap them everywhere ("my blue is really green").
-- Once three colors are full, the last 4 tiles get the remaining color automatically.
-- The sort button cycles **P→Y** (reverse rainbow), **Y→P** (rainbow) and **Off**. Each color gets its own row, and the game's Shuffle keeps your rows.
+- Each color holds up to 4 tiles. The number on each color button shows how many it has.
+- ⌫ clears the selected tiles, and ↶ undoes your last change.
+- Color already full? Select one of its tiles plus the tile you want to add, then tap the color. The two tiles swap colors.
+- Changed your mind about two whole groups? With nothing selected, tap both colors and they swap everywhere.
+- Once three colors have 4 tiles each, the remaining 4 tiles get the last color automatically.
+
+## Sorting
+
+As soon as you color a tile, it moves into a row with the other tiles of that color, so each group sits in its own row. The button labeled **P→Y** sets the order of the rows:
+
+| Button | Row order | What Go submits first |
+| --- | --- | --- |
+| **P→Y** (default) | Purple, blue, green, yellow: the reverse rainbow | Purple |
+| **Y→P** | Yellow, green, blue, purple: the rainbow | Yellow |
+| **Off** | Tiles stay wherever the game puts them | Purple |
+
+Tap the button to switch between them. The game's Shuffle button still works, but it won't break up your rows. On a phone, the sort button is behind **⋯**.
 
 ## Maybe colors (optional)
 
-Not sure if a tile is yellow or green? Turn on **?** on the palette, select the tile and tap both colors. Its outline splits like a pie: half yellow, half green (a third each for three). Tap a color again to drop it; once one color is left, the tile is a normal mark again. Tapping a color with **?** off sets a single color as usual.
+For tiles you're unsure about. Turn this on in ⚙, and a **?** button appears on the palette. Tap **?**, select a tile and tap two colors, say yellow and green: the tile's outline splits between them, half and half (or in thirds for three colors). Tap a color again to take it back out. Once only one color is left, the tile is an ordinary colored tile again. Tap **?** again to go back to normal coloring.
 
 - Split tiles don't count toward Go, auto-fill or the 4-per-color limit.
 - When a color is solved it drops out of every split, so a yellow-or-green tile becomes green once yellow is solved.
-- While **?** is on, tiles hold still so they don't jump around as you add options. Turn **?** off and they move into place: after your color rows, with matching splits (every green-or-blue, say) side by side.
-- A **dashed** outline means a tile's only remaining option is a color that's already full. Free up a spot or pick another color.
+- While **?** is on, tiles stay put so they don't jump around as you add colors. When you turn **?** off, they move into place: below your color rows, with the same combinations grouped together (all the green-or-blue tiles side by side, for example).
+- A **dashed** outline means the tile's only remaining color is already full. Free up a spot in that color or pick a different one.
 
 <details>
 <summary>Screenshot: maybe mode</summary>
@@ -41,9 +53,9 @@ Not sure if a tile is yellow or green? Turn on **?** on the palette, select the 
 
 ## Submitting
 
-- **Go ▶** submits the next color in your sort order. It's tinted with that color, and dimmed until that color has exactly 4 tiles.
-- To submit a different color, tap that color (nothing selected), then Go. Going out of order? Go turns red and asks **Sure?**; tap again within 4 seconds to submit anyway.
-- You can still select tiles and press the game's own Submit; the script keeps up either way.
+- **Go ▶** submits the next color in your sort order. It takes on that color, and it's dimmed until that color has exactly 4 tiles.
+- To submit a different color, tap that color first (with no tiles selected), then Go. If that would break your order, Go turns red and asks **Sure?**. Tap it again within 4 seconds to go ahead.
+- You can still select tiles and press the game's own Submit button. The script keeps track either way.
 
 <details>
 <summary>Screenshot: out-of-order warning</summary>
@@ -53,9 +65,9 @@ Not sure if a tile is yellow or green? Turn on **?** on the palette, select the 
 
 ## After guesses
 
-- When a group is solved, your colors are corrected to match the game: if your "purple" turns out to be blue, purple and blue swap everywhere. Solved colors show ✓ on the palette.
-- Optional: **One away** marks put a red letter (A, B, …) on the tiles of each guess the game called one away. Tiles that share a letter are worth a second look.
-- Optional: **guess history**. 📜 lists your wrong guesses for the puzzle, with one-aways flagged, so a missed pop-up isn't lost. Re-entering a wrong guess reminds you whether it was one away (the game only says "Already guessed"). Wrong guesses are always recorded, so you can turn this on mid-puzzle.
+- When you solve a group, your colors are corrected to match the game. If the tiles you'd marked purple turn out to be the blue group, purple and blue swap everywhere, so your other guesses stay consistent. Solved colors show ✓ on the palette.
+- Optional: **One away** letters. Each guess the game calls "One away" puts a red letter (A, B, …) on its tiles. Tiles that share a letter are worth a second look.
+- Optional: **guess history**. The 📜 button lists your wrong guesses on this puzzle and flags the ones that were one away, in case you missed the pop-up. If you repeat a wrong guess, the game only says "Already guessed"; the script also tells you whether it was one away. Wrong guesses are recorded even with this off, so you can turn it on partway through.
 
 <details>
 <summary>Screenshot: one-away letters and guess history</summary>
@@ -65,7 +77,7 @@ Not sure if a tile is yellow or green? Turn on **?** on the palette, select the 
 
 ## On your phone
 
-The open palette is one row across the bottom of the screen: the colors, ⌫, ↶, **?**, Go and **⋯**. Tap **⋯** to swap the row for the rest (sort, 📜, ⚙ and hide), and **‹** to swap back. Before you press Play, and on the results screen, the palette stays tucked away as 🎨.
+On a phone the palette is a single row along the bottom of the screen: the colors, ⌫, ↶, **?**, Go and **⋯**. Tap **⋯** to switch the row to the other buttons (sort, 📜, ⚙ and hide), and **‹** to switch back. Before you press Play, and on the results screen, the palette shrinks to a small 🎨 button. The same happens on desktop.
 
 <details>
 <summary>Screenshots: the ⋯ row and settings on iPhone</summary>
@@ -77,22 +89,22 @@ The open palette is one row across the bottom of the screen: the colors, ⌫, �
 
 ## Settings
 
-Open ⚙ on the palette. Choices are saved in your browser.
+Tap ⚙ on the palette. Your choices are saved in your browser.
 
 | Setting | Default |
 | --- | --- |
 | Mark "One away" guesses | Off |
 | Guess history (📜 list of wrong guesses) | Off |
-| Maybe colors (**?** splits a tile between candidate colors) | Off |
+| Maybe colors (**?** lets one tile have several colors) | Off |
 | Auto-fill the last group | On |
-| Fix my colors after a solve (off: only the solved tiles change) | On |
-| Go button (off: marking only) | On |
+| Fix my colors after a solve (when off, only the solved tiles change) | On |
+| Go button (when off, the palette only colors tiles) | On |
 | Ask before going out of order | On |
 | Show color letters (Y/G/B/P on each mark and on the palette, for colorblind players) | Off |
 | Keyboard shortcuts (desktop only) | On |
 | Palette on the left | Off |
 
-The panel also has **Clear this puzzle** and **Reset settings**.
+The panel also has **Clear this puzzle** (removes all your colors on this puzzle; ↶ brings them back) and **Reset settings**.
 
 <details>
 <summary>Screenshots: settings panel and color letters</summary>
@@ -104,13 +116,21 @@ The panel also has **Clear this puzzle** and **Reset settings**.
 
 ## Keyboard (desktop)
 
-1–4 colors, 0 erase, Z undo, G go, Esc cancel. With maybe colors on: M toggles maybe mode, and Shift+1–4 adds or removes one option without it.
+| Key | Does |
+| --- | --- |
+| 1 2 3 4 | Yellow, green, blue, purple |
+| 0 | Clear the selected tiles |
+| Z | Undo |
+| G | Go |
+| Esc | Let go of a color you tapped (before Go or a swap) |
+| M | Turn **?** on or off (with maybe colors on) |
+| Shift + 1–4 | Add or remove that color as a maybe, without turning on **?** |
 
 ## Good to know
 
-- Works with dark-mode extensions like Dark Reader: the marks keep their true colors and the palette turns dark.
-- Marks are saved per puzzle in your browser, kept in sync across tabs, and cleared after 60 days without use.
-- Archive puzzles work too (`nytimes.com/games/connections/YYYY-MM-DD`).
+- Works with dark-mode extensions like Dark Reader. The outlines keep their real colors and the palette switches to a dark theme.
+- Your colors are saved for each puzzle in your browser, so you can close the tab and come back. Two tabs on the same puzzle stay in sync. Puzzles you haven't opened in 60 days are cleaned up.
+- Works on archive puzzles too (`nytimes.com/games/connections/YYYY-MM-DD`).
 
 ## Development
 
