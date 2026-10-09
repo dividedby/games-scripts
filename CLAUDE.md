@@ -27,8 +27,9 @@ jsdom against a simulated board (`connections/test/`). Use pnpm, never npm or ya
   only when the owner says to release.
 - **Public identity is `dividedby` only.** No real name or personal email in code,
   headers, docs or commits. Commit as `dividedby <64715420+dividedby@users.noreply.github.com>`.
-- **Pushing to `main` releases** (to GitHub installs; Greasy Fork installs get it once
-  Greasy Fork has the new version). Unfinished work goes on a branch.
+- **Pushing to `main` releases**, everywhere: GitHub installs pick it up directly, and
+  Greasy Fork syncs the script and its description from `main` on its own. Unfinished
+  work goes on a branch.
 - Never change `@namespace` (Greasy Fork and the managers key installs on it), and keep
   `@updateURL`/`@downloadURL` on the GitHub raw URL (Greasy Fork strips them itself).
 - The script reads the live game's markup (`data-testid="card-label"`,
@@ -48,7 +49,7 @@ Every **user-facing change** moves these together in the same PR:
 - `<script folder>/README.md` — when behavior a user sees changes (the root
   `README.md` only lists scripts and install steps; add a row when adding a script);
 - `<script folder>/greasyfork-description.md` — when the listing's text or "New in"
-  section goes stale (the owner pastes it into Greasy Fork);
+  section goes stale (Greasy Fork syncs it from `main`);
 - `pnpm test` passes, and new behavior gets a test against the simulated board.
 
 Don't call a change done until it has run in the real game (desktop and phone

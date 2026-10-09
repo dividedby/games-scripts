@@ -15,13 +15,15 @@ update URL.
   raw-URL `@downloadURL` / `@updateURL`, so existing GitHub installs keep updating from
   `main`. Greasy Fork installs update from Greasy Fork.
 - The Greasy Fork listing's description lives in the repo next to the script
-  (`connections/greasyfork-description.md`) and is pasted into Greasy Fork by hand.
+  (`connections/greasyfork-description.md`). Greasy Fork is set to sync both the script
+  and this description from their raw URLs on `main`, so the repo is the only place to
+  edit either.
 - `@namespace` (the Greasy Fork user URL) never changes: Greasy Fork warns if it does,
   and managers use it with `@name` to recognise the installed script.
 
 ## Consequences
-- A release reaches GitHub installs when it's pushed to `main`, and Greasy Fork installs
-  only once Greasy Fork has the new version (uploaded by hand, or synced from the raw
-  URL if sync is set up on Greasy Fork).
+- A push to `main` reaches GitHub installs on their next update check, and Greasy Fork
+  installs once Greasy Fork's sync picks up the new version (usually within a day; the
+  owner can trigger it sooner from the listing's admin page).
 - The README offers both install sources and tells people to pick one; installing from
   both would run the script twice.

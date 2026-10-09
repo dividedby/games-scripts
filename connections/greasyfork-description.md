@@ -1,6 +1,7 @@
 <!--
-GreasyFork listing description for Connections Color Marker. Paste into the script's
-"Description" field. GreasyFork renders Markdown. Keep links and image URLs absolute —
+GreasyFork listing description for Connections Color Marker. Greasy Fork syncs this
+file from main automatically (along with the script), so edit it here, not on the site.
+GreasyFork renders Markdown. Keep links and image URLs absolute —
 relative ones won't resolve there. Images use <img width> to stay small (Markdown
 images render full size); GreasyFork allows img width/height, <center> and <details>.
 The full README (with every setting and the dev/test info) lives on GitHub.
