@@ -112,7 +112,7 @@ test('Go: tinted with the next color, dims when not ready, asks "Sure?" out of o
   assert.equal(b.btn('go').textContent, 'Sure?');
   await sleep(3200);
   assert.equal(b.btn('go').textContent, 'Go ▶', '"Sure?" expires');
-  await b.tap('green'); // unarm
+  assert.ok(!b.btn('green').classList.contains('active'), 'and lets go of the color');
   await b.tap('blue');
   assert.ok(b.btn('go').classList.contains('notready'), 'blue has 1 tile');
   await b.tap('go');

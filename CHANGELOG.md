@@ -11,6 +11,11 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [0.2.1] - 2026-10-08
+#### Fixed
+- When an out-of-order "Sure?" times out, the color you picked is let go too, so tapping it again picks it instead of cancelling it.
+- The ⚙ settings icon was hard to see; it's now larger.
+
 ### [0.2.0] - 2026-10-08
 #### Added
 - Settings panel (⚙ on the palette) to turn features on or off: "One away" marks, auto-fill, fixing colors after a solve, the Go button, the out-of-order check, keyboard shortcuts, and which side the palette sits on. Choices are saved in your browser.

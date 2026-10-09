@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Mark NYT Connections tiles with the color you think they are, then submit them in order (built for reverse-rainbow solves)
-// @version      0.2.0
+// @version      0.2.1
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -197,6 +197,7 @@
     #ccm-panel.collapsed > :not(.ccm-toggle) { display: none; }
     #ccm-panel.collapsed { padding: 4px; }
     #ccm-panel.left { right: auto; left: 12px; }
+    #ccm-panel .ccm-gear { font-size: 17px; line-height: 1; }
     #ccm-settings {
       position: absolute; right: 0; bottom: calc(100% + 8px); width: 270px; max-width: calc(100vw - 24px);
       background: #fff; border: 1px solid #ccc; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.18);
@@ -254,6 +255,7 @@
   goBtn.classList.add('ccm-go');
   const gearBtn = addButton('⚙', () => toggleSettings());
   gearBtn.title = 'Settings';
+  gearBtn.classList.add('ccm-gear');
 
   // settings popover
   const sheet = document.createElement('div');
@@ -465,7 +467,7 @@
       goBtn.textContent = 'Sure?';
       goBtn.title = `${armed} before ${next} breaks the ${SORT_MODES[sortMode].title.split(':')[0].toLowerCase()} order. Tap again to submit anyway.`;
       goBtn.classList.add('warn');
-      confirmTimer = setTimeout(() => { clearConfirm(); showGo(); }, CONFIRM_MS);
+      confirmTimer = setTimeout(() => { arm(null); showGo(); }, CONFIRM_MS); // let go of the color too
       return;
     }
     clearConfirm();
