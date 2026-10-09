@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Mark NYT Connections tiles with the color you think they are, then submit them in order (built for reverse-rainbow solves)
-// @version      0.7.4
+// @version      0.7.5
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -291,6 +291,9 @@
     small { display: block; color: var(--muted); font-size: 11px; }
     .row { display: flex; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--sep); }
     .row button { flex: 1; height: 30px; font: 600 12px system-ui, sans-serif; }
+    .ccm-more { font-size: 18px; }
+    /* keyboard shortcuts mean nothing on a touch-only device */
+    @media (hover: none) and (pointer: coarse) { label.desk { display: none; } }
     @keyframes ccm-shake { 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
     @media (max-width: 480px) {
       #ccm-panel { right: 6px; bottom: calc(6px + env(safe-area-inset-bottom, 0px)); gap: 3px; padding: 4px 5px; max-width: calc(100vw - 12px); }
@@ -299,17 +302,18 @@
       label { padding: 7px 0; }
       #ccm-panel > button { min-width: 30px; height: 42px; padding: 0 4px; }
       /* open on a phone: one full-width row (colors, ⌫, ↶, ?, Go, ⋯) so it stays clear of the
-         game's buttons; ⋯ opens a second row with sort, 📜, ⚙ and hide */
+         game's buttons; ⋯ swaps that row for the other tools (sort, 📜, ⚙, hide) and back,
+         so the palette never grows over Shuffle and Submit */
       #ccm-panel:not(.collapsed) { left: 6px; right: 6px; width: auto; max-width: none; column-gap: 3px; }
       #ccm-panel:not(.collapsed) > button { flex: 1 1 auto; min-width: 26px; padding: 0 2px; height: 42px; }
       #ccm-panel:not(.collapsed) > button.swatch { order: 1; flex: 1.3 1 0; height: 42px; }
       #ccm-panel:not(.collapsed) > :is(.ccm-erase, .ccm-undo, .ccm-maybe) { order: 2; }
       #ccm-panel:not(.collapsed) > .ccm-go { order: 3; flex: 1.6 1 0; height: 42px; }
-      #ccm-panel:not(.collapsed) > .ccm-more { order: 4; display: block; }
-      #ccm-panel:not(.collapsed)::after { order: 5; }
-      #ccm-panel:not(.collapsed) > :is(.ccm-sort, .ccm-hist, .ccm-gear, .ccm-toggle) { order: 6; }
-      #ccm-panel:not(.collapsed):not(.more)::after,
-      #ccm-panel:not(.collapsed):not(.more) > :is(.ccm-sort, .ccm-hist, .ccm-gear, .ccm-toggle) { display: none; }
+      #ccm-panel:not(.collapsed) > .ccm-more { order: 4; display: block; flex: 0 0 44px; }
+      #ccm-panel:not(.collapsed)::after { display: none; }
+      #ccm-panel:not(.collapsed) > :is(.ccm-sort, .ccm-hist, .ccm-gear, .ccm-toggle) { order: 3; }
+      #ccm-panel:not(.collapsed):not(.more) > :is(.ccm-sort, .ccm-hist, .ccm-gear, .ccm-toggle),
+      #ccm-panel.more:not(.collapsed) > :is(.swatch, .ccm-erase, .ccm-undo, .ccm-maybe, .ccm-go) { display: none; }
     }
   `;
 
@@ -383,7 +387,7 @@
   sheet.id = 'ccm-settings';
   sheet.hidden = true;
   sheet.innerHTML = '<h4>Color Marker settings</h4>' +
-    SETTINGS.map(o => `<label title="${o.tip || o.help}"><input type="checkbox" data-k="${o.key}"><span>${o.label}<small>${o.help}</small></span></label>`).join('') +
+    SETTINGS.map(o => `<label${o.key === 'keys' ? ' class="desk"' : ''} title="${o.tip || o.help}"><input type="checkbox" data-k="${o.key}"><span>${o.label}<small>${o.help}</small></span></label>`).join('') +
     '<div class="row"><button type="button" data-act="clear">Clear this puzzle</button><button type="button" data-act="reset">Reset settings</button></div>';
   sheet.addEventListener('click', e => e.stopPropagation());
   sheet.addEventListener('change', e => {
@@ -444,14 +448,15 @@
     showCollapsed();
   });
   toggleBtn.classList.add('ccm-toggle');
-  // phones only: ⋯ shows a second row with the less-used tools
+  // phones only: ⋯ swaps the row to the less-used tools; ‹ swaps back
   const moreBtn = addButton('⋯', () => showMore(!panel.classList.contains('more')));
   moreBtn.classList.add('ccm-more');
-  moreBtn.title = 'More: sort, history, settings, hide';
   function showMore(on) {
     panel.classList.toggle('more', on);
-    moreBtn.classList.toggle('active', on);
+    moreBtn.textContent = on ? '‹' : '⋯';
+    moreBtn.title = on ? 'Back to the colors' : 'More: sort, history, settings, hide';
   }
+  showMore(false);
   function showCollapsed() {
     const on = onBoard ? userCollapsed : !peek;
     panel.classList.toggle('collapsed', on);

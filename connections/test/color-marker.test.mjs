@@ -487,8 +487,11 @@ test('palette: ⋯ is phone-only and toggles the second row', async () => {
   assert.equal(more.textContent, '⋯');
   more.click(); await sleep(20);
   assert.ok(b.panel.classList.contains('more'));
+  assert.equal(more.textContent, '‹', 'the same button swaps back');
   more.click(); await sleep(20);
   assert.ok(!b.panel.classList.contains('more'));
+  assert.equal(more.textContent, '⋯');
+  assert.ok(b.box('keys').closest('label').classList.contains('desk'), 'keyboard setting is marked desktop-only');
 });
 
 test('sorting keeps split tiles together after the decided rows, padding rows with blank tiles first', async () => {

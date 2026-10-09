@@ -11,6 +11,11 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [0.7.5] - 2026-10-08
+#### Changed
+- On phones, **⋯** swaps the palette row for sort, 📜, ⚙ and hide (and **‹** swaps back) instead of adding a second row that covered the game's Shuffle and Submit buttons.
+- The "Keyboard shortcuts" setting is hidden on touch-only devices, where it does nothing.
+
 ### [0.7.4] - 2026-10-08
 #### Fixed
 - A tap on Go just after an out-of-order **Sure?** ran out could submit the next color instead; Go now ignores taps for a moment after **Sure?** expires, and **Sure?** waits 4 seconds instead of 3.

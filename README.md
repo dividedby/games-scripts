@@ -73,12 +73,12 @@ Not sure if a tile is yellow or green? Turn on **?** on the palette, select the 
 
 ### On your phone
 
-The open palette is one row across the bottom of the screen: the colors, ⌫, ↶, **?**, Go and **⋯**. Tap **⋯** for the rest: sort, 📜, ⚙ and hide (▾). Before you press Play, and on the results screen, the palette stays tucked away as 🎨.
+The open palette is one row across the bottom of the screen: the colors, ⌫, ↶, **?**, Go and **⋯**. Tap **⋯** to swap the row for the rest (sort, 📜, ⚙ and hide), and **‹** to swap back. Before you press Play, and on the results screen, the palette stays tucked away as 🎨.
 
 <details>
 <summary>Screenshots: the ⋯ row and settings on iPhone</summary>
 <br>
-<img src="docs/images/connections/iphone-more.jpg" alt="iPhone: the palette with its second row open, showing sort, history, settings and hide" width="250">
+<img src="docs/images/connections/iphone-more.jpg" alt="iPhone: the palette swapped to its other tools: sort, history, settings, hide and back" width="250">
 &nbsp;
 <img src="docs/images/connections/iphone-settings.jpg" alt="iPhone: the settings panel open above the palette" width="250">
 </details>
@@ -97,7 +97,7 @@ Open ⚙ on the palette. Choices are saved in your browser.
 | Go button (off: marking only) | On |
 | Ask before going out of order | On |
 | Show color letters (Y/G/B/P on each mark and on the palette, for colorblind players) | Off |
-| Keyboard shortcuts | On |
+| Keyboard shortcuts (desktop only) | On |
 | Palette on the left | Off |
 
 The panel also has **Clear this puzzle** and **Reset settings**.
