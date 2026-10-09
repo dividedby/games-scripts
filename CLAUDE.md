@@ -45,7 +45,8 @@ Every **user-facing change** moves these together in the same PR:
 - the script's `@version` header (see above);
 - `CHANGELOG.md` — entry under the script's `### [Unreleased]`, rolled into a dated
   version section at release;
-- `README.md` — the script's section, when behavior a user sees changes;
+- `<script folder>/README.md` — when behavior a user sees changes (the root
+  `README.md` only lists scripts and install steps; add a row when adding a script);
 - `<script folder>/greasyfork-description.md` — when the listing's text or "New in"
   section goes stale (the owner pastes it into Greasy Fork);
 - `pnpm test` passes, and new behavior gets a test against the simulated board.

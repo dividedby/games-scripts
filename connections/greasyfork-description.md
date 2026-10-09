@@ -72,5 +72,5 @@ userscript manager) on desktop, or the
 on iPhone and iPad, then click **Install** above.
 
 More screenshots, every setting and the full changelog are on
-[GitHub](https://github.com/dividedby/games-scripts#connections-color-marker),
+[GitHub](https://github.com/dividedby/games-scripts/tree/main/connections#readme),
 where you can also report issues. Licensed GPL v3 or later.
