@@ -1,8 +1,8 @@
 <!--
 GreasyFork listing description for Connections Color Marker. Paste into the script's
 "Description" field. GreasyFork renders Markdown. Keep links and image URLs absolute —
-relative ones won't resolve there. If GreasyFork won't show the GitHub-hosted images,
-upload the same files from docs/images/connections/ as the listing's screenshots instead.
+relative ones won't resolve there. Images use <img width> to stay small (Markdown
+images render full size); GreasyFork allows img width/height, <center> and <details>.
 The full README (with every setting and the dev/test info) lives on GitHub.
 -->
 
@@ -10,7 +10,10 @@ Mark every tile in **NYT Connections** with the color you think it is, then subm
 the groups in the order you want. Built for going after the reverse rainbow
 (purple, blue, green, yellow), but works for any order. Desktop and iPhone.
 
-![Tiles outlined in purple, blue, green and yellow, sorted into rows, with the palette below](https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/connections/desktop-board.png)
+<center>
+<img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/connections/desktop-board.png" alt="Desktop: tiles outlined in purple, blue, green and yellow, sorted into rows, with the palette below" width="460">
+<img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/connections/iphone-board.jpg" alt="iPhone: the same kind of board in Safari, with the one-row phone palette" width="160">
+</center>
 
 **New in 0.7**
 
@@ -44,7 +47,20 @@ the groups in the order you want. Built for going after the reverse rainbow
 - **One away** letters on the tiles of each one-away guess.
 - **Color letters** (Y/G/B/P) for colorblind players.
 
-![iPhone: the board in Safari with the one-row phone palette](https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/connections/iphone-board.jpg)
+<details>
+<summary>More screenshots</summary>
+
+<center>
+<img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/connections/desktop-maybe.png" alt="Maybe mode: dashed color buttons, a tile split three ways and a selected tile split two ways" width="460">
+<br><br>
+<img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/connections/desktop-guesses.png" alt="One-away letters on tiles and the list of wrong guesses" width="460">
+<br><br>
+<img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/connections/desktop-settings.png" alt="The settings panel open above the palette" width="460">
+<br><br>
+<img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/connections/iphone-more.jpg" alt="iPhone: the palette swapped to sort, history, settings and hide" width="200">
+<img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/connections/iphone-settings.jpg" alt="iPhone: the settings panel" width="200">
+</center>
+</details>
 
 Keyboard shortcuts on desktop (1–4, 0, Z, G, Esc). Works with dark-mode
 extensions like Dark Reader. Marks are saved per puzzle in your browser and kept
