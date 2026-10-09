@@ -15,8 +15,8 @@ Current scripts:
 - `connections/connections-color-marker.user.js` — NYT Connections: mark tiles with
   colors (or split them between candidate colors), submit groups in order, reconcile
   marks with solved groups.
-- `wordle/wordle-guess-picks.user.js` — NYT Wordle: a random starting word, then 5
-  picks from the best guesses each turn; tap one to play it.
+- `wordle/wordle-shortlist.user.js` — NYT Wordle: a random starting word, then a
+  shortlist of 5 possible answers each turn; tap one to play it.
 
 Each script folder holds the script, its `README.md` (the user guide),
 `greasyfork-description.md` (the Greasy Fork listing, synced from `main`) and
@@ -72,8 +72,8 @@ width), not only in jsdom.
 
 - Use 2023 archive puzzles (`/games/connections/2023-MM-DD`,
   `/games/wordle/2023-MM-DD`): the owner won't replay them. Never play today's
-  Wordle. Wordle Guess Picks has the same debug hook: `wgp:debug` exposes
-  `window.__wgpRoot` and `window.__wgp`. Answers: `/svc/connections/v2/YYYY-MM-DD.json` on nytimes.com. Leave puzzles
+  Wordle. Wordle Shortlist has the same debug hook: `wsl:debug` exposes
+  `window.__wslRoot` and `window.__wsl`. Answers: `/svc/connections/v2/YYYY-MM-DD.json` on nytimes.com. Leave puzzles
   the owner opened for you unsolved and cleared afterwards unless asked.
 - Desktop: the owner's Chrome tab group "Claude" (desktop and phone-width tabs). Set
   localStorage `ccm:debug` to `true` and reload to expose the palette's shadow root as

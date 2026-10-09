@@ -1,4 +1,4 @@
-// Behavior tests for wordle-guess-picks.user.js, run against a simulated Wordle board in
+// Behavior tests for wordle-shortlist.user.js, run against a simulated Wordle board in
 // jsdom:  pnpm test
 // The markup mirrors what the live game renders (data-testid="tile" with data-state,
 // keyboard buttons with data-key, ↵ and ←); keep it in step if NYT changes the page.
@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 
-const SRC = readFileSync(new URL('../wordle-guess-picks.user.js', import.meta.url), 'utf8');
+const SRC = readFileSync(new URL('../wordle-shortlist.user.js', import.meta.url), 'utf8');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const STATES = ['absent', 'present', 'correct'];
 
@@ -51,15 +51,15 @@ async function game({ answer = 'pouch', played = [], date = '2023-07-11', stored
   played.forEach(x => g.enter(x));
   g.submitted = [];
   for (const [k, v] of Object.entries(stored)) w.localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
-  w.__WGP_TEST__ = true;
+  w.__WSL_TEST__ = true;
   w.eval(SRC);
   await sleep(20);
-  g.root = w.__wgpRoot;
-  g.E = w.__wgp;
-  g.panel = () => g.root.getElementById('wgp');
+  g.root = w.__wslRoot;
+  g.E = w.__wsl;
+  g.panel = () => g.root.getElementById('wsl');
   g.picks = () => [...g.panel().querySelectorAll('.pick')].map(b => b.dataset.w);
   g.pick = word => g.panel().querySelector(`.pick[data-w="${word}"]`);
-  g.saved = () => JSON.parse(w.localStorage.getItem('wgp:' + date));
+  g.saved = () => JSON.parse(w.localStorage.getItem('wsl:' + date));
   g.type = async word => { for (const c of word) d.querySelector(`[data-key="${c}"]`).click(); await sleep(200); };
   g.guess = async word => { await g.type(word); d.querySelector('[data-key="↵"]').click(); await sleep(250); };
   return g;
@@ -81,7 +81,7 @@ test('before the first guess: one random starting word from the likely answers, 
   assert.equal(picks.length, 1);
   assert.match(g.panel().textContent, /Start with/);
   assert.ok(g.E.ANSWERS.some(i => g.E.ALL[i] === picks[0]), 'the starting word is a likely answer');
-  const again = await game({ stored: { ['wgp:2023-07-11']: g.saved() } });
+  const again = await game({ stored: { ['wsl:2023-07-11']: g.saved() } });
   assert.deepEqual(again.picks(), picks, 'reloading the page shows the same word');
 });
 
@@ -161,7 +161,7 @@ test('🎲 deals new picks and ▾ tucks them away until 🎲 Picks is tapped', 
   assert.ok(g.panel().hidden);
   const show = g.root.getElementById('show');
   assert.ok(!show.hidden);
-  const g2 = await game({ played: ['crane'], stored: { 'wgp:collapsed': true } });
+  const g2 = await game({ played: ['crane'], stored: { 'wsl:collapsed': true } });
   assert.ok(g2.panel().hidden, 'stays tucked away on reload');
   g2.root.getElementById('show').click(); await sleep(20);
   assert.ok(!g2.panel().hidden);
@@ -178,10 +178,10 @@ test('an answer missing from the list still gets picks from the wider guess list
 
 test('the picks sit just above the game keyboard, and saved picks expire after 60 days', async () => {
   const old = Date.now() - 61 * 864e5;
-  const g = await game({ stored: { 'wgp:2023-01-01': { sig: '', picks: [], at: old }, 'wgp:2023-07-10': { sig: '', picks: [], at: Date.now() } } });
-  assert.equal(g.d.getElementById('wgp-root').nextElementSibling.className, 'Keyboard-module_keyboard');
-  assert.equal(g.w.localStorage.getItem('wgp:2023-01-01'), null);
-  assert.notEqual(g.w.localStorage.getItem('wgp:2023-07-10'), null);
+  const g = await game({ stored: { 'wsl:2023-01-01': { sig: '', picks: [], at: old }, 'wsl:2023-07-10': { sig: '', picks: [], at: Date.now() } } });
+  assert.equal(g.d.getElementById('wsl-root').nextElementSibling.className, 'Keyboard-module_keyboard');
+  assert.equal(g.w.localStorage.getItem('wsl:2023-01-01'), null);
+  assert.notEqual(g.w.localStorage.getItem('wsl:2023-07-10'), null);
 });
 
 test('when only one answer fits, it is the single pick, labeled as the only fit', async () => {

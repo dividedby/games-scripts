@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Wordle Guess Picks
+// @name         Wordle Shortlist
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
-// @description  NYT Wordle with a nudge: a random starting word, then five good guesses to choose from each turn, so you still make the call
+// @description  NYT Wordle with a nudge: a random starting word, then a shortlist of possible answers to choose from each turn, so you still make the call
 // @version      0.1.0
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
@@ -10,8 +10,8 @@
 // @match        https://www.nytimes.com/games/wordle*
 // @grant        none
 // @run-at       document-idle
-// @downloadURL  https://raw.githubusercontent.com/dividedby/games-scripts/main/wordle/wordle-guess-picks.user.js
-// @updateURL    https://raw.githubusercontent.com/dividedby/games-scripts/main/wordle/wordle-guess-picks.user.js
+// @downloadURL  https://raw.githubusercontent.com/dividedby/games-scripts/main/wordle/wordle-shortlist.user.js
+// @updateURL    https://raw.githubusercontent.com/dividedby/games-scripts/main/wordle/wordle-shortlist.user.js
 // ==/UserScript==
 
 (() => {
@@ -335,14 +335,14 @@ zonedzoneszooms
   // Today's puzzle has no date in its URL, so it's filed under the day the page was opened
   const openedOn = new Date().toLocaleDateString('en-CA');
   const puzzleId = () => location.pathname.match(/\d{4}-\d{2}-\d{2}/)?.[0] || openedOn;
-  const picksKey = () => 'wgp:' + puzzleId();
-  const COLLAPSED_KEY = 'wgp:collapsed';
+  const picksKey = () => 'wsl:' + puzzleId();
+  const COLLAPSED_KEY = 'wsl:collapsed';
 
   function tidy() {
     const cutoff = Date.now() - KEEP_DAYS * 864e5;
     try {
       for (const k of Object.keys(localStorage)) {
-        const d = k.match(/^wgp:(\d{4}-\d{2}-\d{2})$/)?.[1];
+        const d = k.match(/^wsl:(\d{4}-\d{2}-\d{2})$/)?.[1];
         if (d && ls.get(k, {}).at < cutoff) ls.del(k);
       }
     } catch {}
@@ -368,12 +368,12 @@ zonedzoneszooms
 
   // ---------- panel ----------
   const host = document.createElement('div');
-  host.id = 'wgp-root';
+  host.id = 'wsl-root';
   const root = host.attachShadow({ mode: 'closed' });
   root.innerHTML = `<style>
     :host { display: block; width: 100%; max-width: 500px; margin: 0 auto; box-sizing: border-box; padding: 0 8px; }
-    #wgp { display: flex; align-items: stretch; justify-content: center; gap: 6px; margin: 6px 0 8px; font-family: inherit; }
-    #wgp[hidden] { display: none; }
+    #wsl { display: flex; align-items: stretch; justify-content: center; gap: 6px; margin: 6px 0 8px; font-family: inherit; }
+    #wsl[hidden] { display: none; }
     .lead { align-self: center; font-size: 13px; opacity: .7; white-space: nowrap; }
     button { font: inherit; color: inherit; background: transparent; cursor: pointer; border-radius: 6px;
       border: 1px solid color-mix(in srgb, currentColor 30%, transparent); padding: 4px 2px; touch-action: manipulation; }
@@ -387,9 +387,9 @@ zonedzoneszooms
     #show[hidden] { display: none; }
     .note { align-self: center; font-size: 13px; opacity: .75; }
   </style>
-  <div id="wgp" hidden></div>
+  <div id="wsl" hidden></div>
   <button id="show" hidden title="Show guess picks">🎲 Picks</button>`;
-  const panel = root.getElementById('wgp');
+  const panel = root.getElementById('wsl');
   const show = root.getElementById('show');
 
   let state = null;   // { sig, left, picks }
@@ -490,8 +490,8 @@ zonedzoneszooms
 
   tidy();
   refresh();
-  if (window.__WGP_TEST__ || ls.get('wgp:debug', false)) {
-    window.__wgpRoot = root;
-    window.__wgp = { pattern, choose, candidates, expectedLeft, ALL, ANSWERS, codes };
+  if (window.__WSL_TEST__ || ls.get('wsl:debug', false)) {
+    window.__wslRoot = root;
+    window.__wsl = { pattern, choose, candidates, expectedLeft, ALL, ANSWERS, codes };
   }
 })();

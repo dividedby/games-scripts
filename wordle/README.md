@@ -1,8 +1,8 @@
-# Wordle Guess Picks
+# Wordle Shortlist
 
 NYT Wordle with a nudge. You get a random starting word, then each turn a handful of words that could be the answer to choose from. It makes Wordle easy, but you still pick the word: the choices aren't all equally good, so it's on you to spot the better ones.
 
-**Install:** [GitHub](https://raw.githubusercontent.com/dividedby/games-scripts/main/wordle/wordle-guess-picks.user.js) · [Changelog](../CHANGELOG.md#wordle-guess-picks)
+**Install:** [GitHub](https://raw.githubusercontent.com/dividedby/games-scripts/main/wordle/wordle-shortlist.user.js) · [Changelog](../CHANGELOG.md#wordle-shortlist)
 
 ## How it works
 
@@ -35,7 +35,7 @@ The likely answers (about 3,000 words) are NYT WordleBot's list, as curated by [
 
 ## Development
 
-The script is a single file, [`wordle-guess-picks.user.js`](wordle-guess-picks.user.js), with no build step. Behavior tests load it into jsdom against a simulated Wordle board ([`test/`](test/)):
+The script is a single file, [`wordle-shortlist.user.js`](wordle-shortlist.user.js), with no build step. Behavior tests load it into jsdom against a simulated Wordle board ([`test/`](test/)):
 
 ```sh
 pnpm install

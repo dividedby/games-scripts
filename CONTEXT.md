@@ -87,7 +87,7 @@ The palette state while **?** is on: tapping a color adds it to (or removes it
 from) the selected tiles' candidates instead of setting their Mark. Tiles hold
 still in maybe mode and re-sort when it's turned off.
 
-## Wordle Guess Picks
+## Wordle Shortlist
 
 ### Likely answers
 The words the script treats as possible answers: NYT WordleBot's answer list. If none
