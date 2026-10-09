@@ -131,9 +131,12 @@ test('Go: tinted with the next color, dims when not ready, asks "Sure?" out of o
   await b.tap('green');
   await b.tap('go');
   assert.equal(b.btn('go').textContent, 'Sure?');
-  await sleep(3200);
+  await sleep(4200);
   assert.equal(b.btn('go').textContent, 'Go ▶', '"Sure?" expires');
   assert.ok(!b.btn('green').classList.contains('active'), 'and lets go of the color');
+  await b.tap('go');
+  assert.ok(b.shook(), 'a late tap right after "Sure?" expires does not submit the next color');
+  await sleep(1600);
   await b.tap('blue');
   assert.ok(b.btn('go').classList.contains('notready'), 'blue has 1 tile');
   await b.tap('go');
@@ -524,5 +527,17 @@ test('split tiles with the same combination sit side by side', async () => {
   const order = [...b.d.querySelectorAll('[data-testid=card-label]')].sort((x, y) => x.style.order - y.style.order).map(t => t.dataset.flipId);
   // P→Y: purple-or-blue, purple-or-green, then the three blue-or-greens together, then green-or-yellow
   assert.deepEqual(order, ['PB', 'PG', 'GB1', 'GB2', 'GB3', 'YG']);
+  b.close();
+});
+
+test('auto-fill also completes a last color that already has some tiles or splits', async () => {
+  const b = await board({
+    words: [...four('P'), ...four('G'), ...four('Y'), 'B1', 'B2', 'B3', 'B4'],
+    marks: { ...Object.fromEntries(four('P').map(x => [x, 'purple'])), ...Object.fromEntries(four('G').map(x => [x, 'green'])), B1: 'blue' },
+    stored: { 'ccm:settings': { maybes: true }, 'ccm:maybe:2023-07-01': { B2: ['yellow', 'blue'] } },
+  });
+  b.select(four('Y')); await b.tap('yellow');
+  for (const w of ['B1', 'B2', 'B3', 'B4']) assert.equal(b.store()[w], 'blue', w);
+  assert.deepEqual(maybesOf(b), {}, 'the split was decided');
   b.close();
 });

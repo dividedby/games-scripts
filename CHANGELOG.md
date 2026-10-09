@@ -11,6 +11,12 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [0.7.4] - 2026-10-08
+#### Fixed
+- A tap on Go just after an out-of-order **Sure?** ran out could submit the next color instead; Go now ignores taps for a moment after **Sure?** expires, and **Sure?** waits 4 seconds instead of 3.
+- Auto-fill also finishes the last color when some of its tiles are already marked or split (it used to need all 4 blank).
+- The ⌫ and ▾ icons are larger.
+
 ### [0.7.3] - 2026-10-08
 #### Changed
 - Split tiles with the same colors (say, every green-or-blue) now sit side by side when sorting, ordered by your sort order.

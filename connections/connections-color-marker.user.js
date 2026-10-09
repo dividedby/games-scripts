@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Mark NYT Connections tiles with the color you think they are, then submit them in order (built for reverse-rainbow solves)
-// @version      0.7.3
+// @version      0.7.4
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -36,7 +36,8 @@
   const SORT_CYCLE = ['reverse', 'rainbow', 'off'];
   const MAX_PER_COLOR = 4;
   const KEEP_DAYS = 60;
-  const CONFIRM_MS = 3000;
+  const CONFIRM_MS = 4000;
+  const GRACE_MS = 1500; // after "Sure?" expires, Go ignores taps this long so a late tap can't submit a different color
 
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const ls = {
@@ -245,7 +246,8 @@
     #ccm-panel.collapsed { padding: 4px; }
     #ccm-panel.left { right: auto; left: 12px; }
     .ccm-gear { font-size: 17px; line-height: 1; }
-    .ccm-undo { font-size: 15px; }
+    .ccm-undo, .ccm-erase { font-size: 15px; }
+    .ccm-toggle { font-size: 14px; }
     #ccm-panel.nogo .ccm-go { display: none; }
     #ccm-settings {
       position: absolute; right: 0; bottom: calc(100% + 8px); width: 270px; max-width: calc(100vw - 24px);
@@ -592,15 +594,16 @@
     deselectAll();
   }
 
-  // three colors have 4 each and the last 4 tiles are unmarked → give them the unused color.
-  // Counts include words from groups you've already solved, so it works mid-game too.
+  // three colors have 4 each and exactly 4 tiles are left (blank, split, or already the last
+  // color) → they all get the last color. Counts include words from groups you've already
+  // solved, so it works mid-game too.
   function autoFill() {
     const full = ORDER.filter(k => countOf(k) === MAX_PER_COLOR);
-    const unused = ORDER.filter(k => countOf(k) === 0);
-    if (full.length !== 3 || unused.length !== 1) return;
-    const rest = tiles().map(wordOf).filter(w => !marks[w]);
+    if (full.length !== 3) return;
+    const last = ORDER.find(k => !full.includes(k));
+    const rest = tiles().map(wordOf).filter(w => !marks[w] || marks[w] === last);
     if (rest.length !== 4) return;
-    for (const w of rest) { marks[w] = unused[0]; delete maybes[w]; }
+    for (const w of rest) { marks[w] = last; delete maybes[w]; }
   }
 
   // ---------- after a group is solved, correct the colors to match the game ----------
@@ -703,6 +706,7 @@
 
   // ---------- Go: submit the armed color, or the next one in order ----------
   let confirmFor = null, confirmTimer = null;
+  let goQuietUntil = 0;
   function clearConfirm() {
     clearTimeout(confirmTimer);
     confirmFor = null;
@@ -710,18 +714,19 @@
   }
   function onGo() {
     if (submitting || !opt('goButton')) return;
+    if (Date.now() < goQuietUntil) { shake(); return; } // a tap meant for an expired "Sure?"
     const next = nextColor();
     const color = armed || next;
     if (!color) { shake(); return; }
     if (tiles().filter(t => marks[wordOf(t)] === color).length !== 4) { arm(null); shake(); return; }
-    // out of order? ask once: Go turns red "Sure?", a second tap within 3s submits
+    // out of order? ask once: Go turns red "Sure?", a second tap within 4s submits
     if (opt('orderWarn') && SORT_MODES[sortMode].order && armed && next && armed !== next && confirmFor !== armed) {
       clearConfirm();
       confirmFor = armed;
       goBtn.textContent = 'Sure?';
       goBtn.title = `${armed} before ${next} breaks the ${SORT_MODES[sortMode].title.split(':')[0].toLowerCase()} order. Tap again to submit anyway.`;
       goBtn.classList.add('warn');
-      confirmTimer = setTimeout(() => { arm(null); showGo(); }, CONFIRM_MS); // let go of the color too
+      confirmTimer = setTimeout(() => { arm(null); showGo(); goQuietUntil = Date.now() + GRACE_MS; }, CONFIRM_MS); // let go of the color too
       return;
     }
     clearConfirm();
