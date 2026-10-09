@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Mark NYT Connections tiles with the color you think they are, then submit them in order (built for reverse-rainbow solves)
-// @version      0.6.1
+// @version      0.6.2
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -206,10 +206,10 @@
     .dot.letter { min-width: 16px; height: 16px; border-radius: 8px; line-height: 14px; top: 5px; right: 5px; }
     .maybes { position: absolute; top: 6px; left: 6px; display: flex; gap: 3px; }
     .maybes span {
-      width: 10px; height: 10px; border-radius: 50%; background: var(--c); border: 1px solid rgba(0,0,0,.35);
+      width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; background: var(--c); border: 1.5px solid rgba(0,0,0,.55);
       font: 800 8px/8px system-ui, sans-serif; color: #111; text-align: center;
     }
-    .maybes.letter span { width: 14px; height: 14px; line-height: 12px; }
+    .maybes.letter span { width: 14px; height: 14px; line-height: 11px; }
     .away {
       position: absolute; left: 6px; bottom: 6px; font: 700 10px/1 system-ui, sans-serif; letter-spacing: 1px;
       color: #fff; background: #c0392b; border-radius: 4px; padding: 2px 3px;
@@ -272,6 +272,7 @@
     #ccm-settings[hidden], #ccm-history[hidden], #ccm-note[hidden] { display: none; }
     #ccm-panel.nohist .ccm-hist, #ccm-panel.nomaybe .ccm-maybe { display: none; }
     .ccm-maybe { font-weight: 800; }
+    #ccm-panel.maybemode .ccm-maybe { background: var(--fg); color: var(--bg); border-color: var(--fg); }
     #ccm-panel.maybemode button.swatch { border: 2px dashed var(--fg); }
     #ccm-panel { flex-wrap: wrap; justify-content: flex-end; max-width: calc(100vw - 24px); box-sizing: border-box; }
     h4 { margin: 0 0 6px; font: 700 13px/1.2 system-ui, sans-serif; }
@@ -287,6 +288,12 @@
       #ccm-panel.offboard { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } /* clear NYT's buttons and banners */
       label { padding: 7px 0; }
       #ccm-panel > button { min-width: 30px; height: 42px; padding: 0 4px; }
+      /* open on a phone: one full-width row, buttons share the space instead of wrapping onto the game's buttons */
+      #ccm-panel:not(.collapsed) { left: 6px; right: 6px; max-width: none; flex-wrap: nowrap; gap: 2px; }
+      #ccm-panel:not(.collapsed) > button { flex: 1 1 auto; min-width: 22px; padding: 0 2px; }
+    }
+    @media (max-width: 340px) {
+      #ccm-panel:not(.collapsed) { flex-wrap: wrap; }
     }
   `;
 
@@ -522,7 +529,9 @@
         }
       }
     } else if (color === 'erase') {
-      for (const w of words) delete marks[w];
+      // ⌫ clears the main marks; on tiles that only have maybes, it clears those instead
+      if (words.some(w => marks[w])) for (const w of words) delete marks[w];
+      else for (const w of words) delete maybes[w];
     } else {
       if (solved.has(color)) { shake(); return; } // that group is already solved
       const incoming = words.filter(w => marks[w] !== color);

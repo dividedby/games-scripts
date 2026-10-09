@@ -19,7 +19,7 @@ Mark each tile with the color you think it is, then submit the groups in the ord
 - A color is full? Select one of its tiles plus the one you want in, then tap the color: the two swap colors.
 - With nothing selected, tap two colors to swap them everywhere.
 - Once three colors have 4 tiles, the last 4 get the remaining color automatically.
-- Optional (off by default): **maybe colors**. Turn on **?** on the palette, then tap colors to add small "maybe" dots to the selected tiles, as many per tile as you like (tap a color again to remove it, ⌫ clears them). The outline stays the main mark; maybes never count toward Go, auto-fill or the 4-per-color limit. Solved colors drop out of the maybes, and swaps carry them along.
+- Optional (off by default): **maybe colors**. Turn on **?** on the palette, then tap colors to add small "maybe" dots to the selected tiles, as many per tile as you like (tap a color again to remove it; ⌫ clears them, in maybe mode or on tiles with no main mark). The outline stays the main mark; maybes never count toward Go, auto-fill or the 4-per-color limit. Solved colors drop out of the maybes, and swaps carry them along.
 
 **Submitting**
 - **Go ▶** submits the next color in your sort order. It's tinted with that color, and dimmed if that color doesn't have exactly 4 tiles.
@@ -33,6 +33,7 @@ Mark each tile with the color you think it is, then submit the groups in the ord
 
 **Layout**
 - The sort button cycles **P→Y** (reverse rainbow), **Y→P** (rainbow) and **Off**. Each color gets its own row; Shuffle still works.
+- On phones the open palette spans the bottom of the screen in one row.
 - The palette stays tucked away (🎨) until the board is on screen. ▾ hides it, 🎨 brings it back.
 - Keys on desktop: 1–4 colors, 0 erase, Z undo, G go, Esc cancel. With maybe colors on: M toggles maybe mode, Shift+1–4 adds a maybe.
 - Works with dark-mode extensions like Dark Reader: the marks keep their true colors and the palette turns dark.

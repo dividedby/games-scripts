@@ -447,3 +447,15 @@ test('maybe colors: Shift+number adds a maybe without maybe mode, M toggles the 
   b.w.dispatchEvent(new b.w.KeyboardEvent('keydown', { key: 'm' })); await sleep(20);
   assert.ok(b.panel.classList.contains('maybemode'));
 });
+
+test('maybe colors: ⌫ outside maybe mode clears maybes on tiles that have no main mark', async () => {
+  const b = await board({
+    words: ['A', 'B', 'C'], marks: { A: 'blue' },
+    stored: { 'ccm:settings': { maybes: true }, 'ccm:maybe:2023-07-01': { A: ['green'], B: ['yellow', 'green'] } },
+  });
+  b.select(['B']); await b.tap('erase');
+  assert.deepEqual(maybesOf(b), { A: ['green'] }, 'B had only maybes: cleared');
+  b.select(['A']); await b.tap('erase');
+  assert.equal(b.store().A, undefined, 'A had a main mark: that goes first');
+  assert.deepEqual(maybesOf(b), { A: ['green'] }, '...and its maybes stay');
+});

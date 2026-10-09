@@ -11,6 +11,13 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [0.6.2] - 2026-10-08
+#### Fixed
+- ⌫ on tiles that only have maybe dots now clears them, instead of appearing to do nothing.
+- The **?** button is filled in while maybe mode is on, so it's harder to forget it's active.
+- On phones, the open palette is one full-width row instead of wrapping a lone ▾ onto a second row over the game's Shuffle/Submit buttons.
+- Maybe dots are a little larger with a darker outline, so light blue and yellow show on the cream tiles.
+
 ### [0.6.1] - 2026-10-08
 #### Fixed
 - The settings panel had grown taller than a laptop screen; descriptions are now one line each, with the full explanation on hover.
