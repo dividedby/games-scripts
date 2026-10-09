@@ -10,7 +10,7 @@ The full README (with every setting and the dev/test info) lives on GitHub.
 Color-code the tiles in **NYT Connections** as you work out the groups, then submit
 them in whatever order you like. It's especially handy if you go for a **reverse
 rainbow**: solving the hardest group (purple) first and the easiest (yellow) last.
-Works on desktop and iPhone.
+Works on desktop, iPhone and Android.
 
 <center>
 <img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/connections/desktop-board.png" alt="Desktop: tiles outlined in purple, blue, green and yellow, sorted into rows, with the palette below" width="460">
@@ -75,10 +75,15 @@ Keyboard shortcuts on desktop (1–4, 0, Z, G, Esc). Works with dark-mode
 extensions like Dark Reader. Your colors are saved for each puzzle in your
 browser, so you can close the tab and come back. Archive puzzles work too.
 
-**Install:** use [Tampermonkey](https://www.tampermonkey.net/) (or another
-userscript manager) on desktop, or the
-[Userscripts](https://apps.apple.com/app/userscripts/id1463298887) app for Safari
-on iPhone and iPad, then click **Install** above.
+**Install:** get a userscript manager, then click **Install** above.
+
+- **Chrome, Edge, Brave:** [Tampermonkey](https://www.tampermonkey.net/). In Chrome,
+  also turn on **Allow user scripts** on Tampermonkey's details page.
+- **Firefox, on desktop or Android:**
+  [Tampermonkey](https://addons.mozilla.org/firefox/addon/tampermonkey/) or
+  [Violentmonkey](https://addons.mozilla.org/firefox/addon/violentmonkey/).
+- **Safari on iPhone, iPad or Mac:** the
+  [Userscripts](https://apps.apple.com/app/userscripts/id1463298887) app.
 
 A full guide with every setting, more screenshots and the changelog is on
 [GitHub](https://github.com/dividedby/games-scripts/tree/main/connections#readme),
