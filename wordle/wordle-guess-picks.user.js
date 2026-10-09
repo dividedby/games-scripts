@@ -513,7 +513,9 @@ zonedzoneszooms
     const kb = keyboard();
     if (!b || !kb) return;
     b.style.transform = b.style.transformOrigin = b.style.marginBottom = '';
-    const over = kb.getBoundingClientRect().bottom - Math.min(innerHeight, window.visualViewport?.height || innerHeight);
+    // only the part the picks caused: if the game already runs past the screen, that's its own
+    const over = Math.min(host.offsetHeight,
+      kb.getBoundingClientRect().bottom - Math.min(innerHeight, window.visualViewport?.height || innerHeight));
     if (over <= 0) return;
     const h = b.offsetHeight;
     const scale = Math.max(0.6, (h - over - 4) / h);
