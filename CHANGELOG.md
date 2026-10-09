@@ -11,6 +11,13 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [0.6.0] - 2026-10-08
+#### Added
+- Maybe colors setting: with **?** on, tapping colors adds small "maybe" dots to the selected tiles, several per tile, on top of the main mark. They don't count toward Go, auto-fill or the 4-per-color limit, follow swaps and undo, and drop out once a color is solved. Keys: M for maybe mode, Shift+1–4 for a single maybe. Off by default.
+
+#### Changed
+- The palette wraps onto a second row when it would be wider than the screen.
+
 ### [0.5.0] - 2026-10-08
 #### Added
 - Guess history setting: 📜 on the palette lists your wrong guesses for the puzzle with one-aways flagged, and re-entering one reminds you whether it was one away. Off by default.

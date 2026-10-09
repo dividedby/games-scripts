@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Mark NYT Connections tiles with the color you think they are, then submit them in order (built for reverse-rainbow solves)
-// @version      0.5.0
+// @version      0.6.0
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -51,6 +51,7 @@
   const openedOn = new Date().toLocaleDateString('en-CA');
   const puzzleId = () => location.pathname.match(/\d{4}-\d{2}-\d{2}/)?.[0] || openedOn;
   const marksKey = () => 'ccm:' + puzzleId();
+  const maybeKey = () => 'ccm:maybe:' + puzzleId();
   const guessKey = () => 'ccm:guesses:' + puzzleId();
   const oldAwayKey = () => 'ccm:1away:' + puzzleId(); // before 0.5: one-away guesses only
   const USED_KEY = 'ccm:used';
@@ -69,7 +70,7 @@
     used[puzzleId()] = Date.now();
     ls.set(USED_KEY, used);
   }
-  const save = () => { ls.set(marksKey(), marks); touch(); };
+  const save = () => { ls.set(marksKey(), marks); ls.set(maybeKey(), maybes); touch(); };
   const saveGuesses = () => { ls.set(guessKey(), guesses); touch(); };
 
   // drop data for puzzles not touched in KEEP_DAYS (by last use, not puzzle date,
@@ -78,7 +79,7 @@
     const used = ls.get(USED_KEY, {});
     const cutoff = Date.now() - KEEP_DAYS * 864e5;
     for (const k of Object.keys(localStorage)) {
-      const d = k.match(/^ccm:(?:1away:|guesses:)?(\d{4}-\d{2}-\d{2})$/)?.[1];
+      const d = k.match(/^ccm:(?:1away:|guesses:|maybe:)?(\d{4}-\d{2}-\d{2})$/)?.[1];
       if (!d) continue;
       if (!used[d]) used[d] = Date.now(); // first seen: start its clock now
       else if (used[d] < cutoff) ls.del(k);
@@ -88,6 +89,9 @@
   } catch {}
 
   let marks = ls.get(marksKey(), {});
+  // "maybe" colors: { word: [colors] } — candidates on top of the main mark; they never count
+  // toward Go, auto-fill or the 4-per-color limit
+  let maybes = ls.get(maybeKey(), {});
   // wrong guesses for this puzzle, oldest first: { w: [4 words, sorted], away: was it "One away" }
   const loadGuesses = () => {
     const g = ls.get(guessKey(), null);
@@ -109,12 +113,13 @@
   const SETTINGS = [
     { key: 'oneAway',   def: false, label: 'Mark "One away" guesses', help: 'Red letters on the tiles of guesses the game called one away' },
     { key: 'history',   def: false, label: 'Guess history', help: '📜 on the palette lists your wrong guesses, with one-aways flagged. Repeating one reminds you' },
+    { key: 'maybes',    def: false, label: 'Maybe colors', help: '? on the palette: while it\'s on, colors you tap are added to the selected tiles as small "maybe" dots, as many as you like per tile' },
     { key: 'autoFill',  def: true,  label: 'Auto-fill the last group', help: 'Once three colors have 4 tiles, the last 4 get the remaining color' },
     { key: 'reconcile', def: true,  label: 'Fix my colors after a solve', help: 'If your purple turns out to be blue, swap purple and blue everywhere. Off: only the solved tiles change' },
     { key: 'goButton',  def: true,  label: 'Go button', help: 'Submit a color\'s 4 tiles for you. Off: marking only' },
     { key: 'orderWarn', def: true,  label: 'Ask before going out of order', help: 'Go asks "Sure?" when you submit a color ahead of your sort order' },
     { key: 'letters',   def: false, label: 'Show color letters', help: 'Y, G, B, P on each marked tile, for telling the colors apart without color' },
-    { key: 'keys',      def: true,  label: 'Keyboard shortcuts', help: '1–4 colors, 0 erase, Z undo, G go, Esc cancel' },
+    { key: 'keys',      def: true,  label: 'Keyboard shortcuts', help: '1–4 colors, 0 erase, Z undo, G go, Esc cancel; with maybe colors on, M maybe mode and Shift+1–4 add a maybe' },
     { key: 'left',      def: false, label: 'Palette on the left', help: 'Move the palette to the bottom-left corner' },
   ];
   const DEFAULTS = Object.fromEntries(SETTINGS.map(o => [o.key, o.def]));
@@ -193,6 +198,12 @@
       font: 800 10px/10px system-ui, sans-serif; color: #111; text-align: center;
     }
     .dot.letter { min-width: 16px; height: 16px; border-radius: 8px; line-height: 14px; top: 5px; right: 5px; }
+    .maybes { position: absolute; top: 6px; left: 6px; display: flex; gap: 3px; }
+    .maybes span {
+      width: 10px; height: 10px; border-radius: 50%; background: var(--c); border: 1px solid rgba(0,0,0,.35);
+      font: 800 8px/8px system-ui, sans-serif; color: #111; text-align: center;
+    }
+    .maybes.letter span { width: 14px; height: 14px; line-height: 12px; }
     .away {
       position: absolute; left: 6px; bottom: 6px; font: 700 10px/1 system-ui, sans-serif; letter-spacing: 1px;
       color: #fff; background: #c0392b; border-radius: 4px; padding: 2px 3px;
@@ -253,7 +264,10 @@
     }
     #ccm-panel.left #ccm-settings, #ccm-panel.left #ccm-history, #ccm-panel.left #ccm-note { right: auto; left: 0; }
     #ccm-settings[hidden], #ccm-history[hidden], #ccm-note[hidden] { display: none; }
-    #ccm-panel.nohist .ccm-hist { display: none; }
+    #ccm-panel.nohist .ccm-hist, #ccm-panel.nomaybe .ccm-maybe { display: none; }
+    .ccm-maybe { font-weight: 800; }
+    #ccm-panel.maybemode button.swatch { border: 2px dashed var(--fg); }
+    #ccm-panel { flex-wrap: wrap; justify-content: flex-end; max-width: calc(100vw - 24px); box-sizing: border-box; }
     h4 { margin: 0 0 6px; font: 700 13px/1.2 system-ui, sans-serif; }
     label { display: flex; gap: 8px; align-items: flex-start; padding: 5px 0; cursor: pointer; }
     input { margin: 2px 0 0; width: 16px; height: 16px; flex: none; accent-color: #6a6958; }
@@ -262,7 +276,7 @@
     .row button { flex: 1; height: 30px; font: 600 12px system-ui, sans-serif; }
     @keyframes ccm-shake { 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
     @media (max-width: 480px) {
-      #ccm-panel { right: 6px; bottom: calc(6px + env(safe-area-inset-bottom, 0px)); gap: 3px; padding: 4px 5px; }
+      #ccm-panel { right: 6px; bottom: calc(6px + env(safe-area-inset-bottom, 0px)); gap: 3px; padding: 4px 5px; max-width: calc(100vw - 12px); }
       #ccm-panel.left { right: auto; left: 6px; }
       #ccm-panel.offboard { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } /* clear NYT's buttons and banners */
       label { padding: 7px 0; }
@@ -316,6 +330,16 @@
   showSort();
   const goBtn = addButton('Go ▶', () => onGo());
   goBtn.classList.add('ccm-go');
+  const maybeBtn = addButton('?', () => setMaybeMode(!maybeMode));
+  maybeBtn.classList.add('ccm-maybe');
+  maybeBtn.title = 'Maybe mode: colors you tap add "maybe" dots instead of the main mark';
+  let maybeMode = false;
+  function setMaybeMode(on) {
+    maybeMode = !!on && opt('maybes');
+    maybeBtn.classList.toggle('active', maybeMode);
+    panel.classList.toggle('maybemode', maybeMode);
+    if (maybeMode) arm(null);
+  }
   const histBtn = addButton('📜', () => toggleHistory());
   histBtn.classList.add('ccm-hist');
   histBtn.title = 'Your wrong guesses on this puzzle';
@@ -339,7 +363,7 @@
     applySettings();
   });
   sheet.querySelector('[data-act=clear]').addEventListener('click', () => {
-    if (confirm('Clear all color marks for this puzzle?')) { remember(); marks = {}; save(); apply(); }
+    if (confirm('Clear all color marks for this puzzle?')) { remember(); marks = {}; maybes = {}; save(); apply(); }
   });
   sheet.querySelector('[data-act=reset]').addEventListener('click', () => {
     settings = { ...DEFAULTS };
@@ -372,6 +396,8 @@
     panel.classList.toggle('left', opt('left'));
     panel.classList.toggle('nogo', !opt('goButton'));
     panel.classList.toggle('nohist', !opt('history'));
+    panel.classList.toggle('nomaybe', !opt('maybes'));
+    if (!opt('maybes')) setMaybeMode(false);
     if (!opt('history')) toggleHistory(false);
     if (ready) apply();
   }
@@ -432,24 +458,29 @@
   }
 
   function swapColors(a, b) {
-    for (const [w, c] of Object.entries(marks)) {
-      if (c === a) marks[w] = b;
-      else if (c === b) marks[w] = a;
-    }
+    const flip = c => c === a ? b : c === b ? a : c;
+    for (const [w, c] of Object.entries(marks)) marks[w] = flip(c);
+    for (const [w, cs] of Object.entries(maybes)) maybes[w] = sortColors(cs.map(flip));
+  }
+  const sortColors = cs => ORDER.filter(c => cs.includes(c));
+  const snapshot = () => JSON.stringify({ m: marks, y: maybes });
+  function restore(snap) {
+    const o = JSON.parse(snap);
+    if (o && o.m) { marks = o.m; maybes = o.y || {}; } else marks = o; // pre-0.6 snapshots held marks only
   }
 
   // ---------- undo: snapshots of your marks before each change you make ----------
   let history = [];
   const UNDO_LIMIT = 50;
   function remember() {
-    history.push(JSON.stringify(marks));
+    history.push(snapshot());
     if (history.length > UNDO_LIMIT) history.shift();
     showUndo();
   }
   function showUndo() { undoBtn.classList.toggle('off', !history.length); }
   function undo() {
     if (submitting || !history.length) { shake(); return; }
-    marks = JSON.parse(history.pop());
+    restore(history.pop());
     arm(null);
     save();
     apply();
@@ -462,6 +493,7 @@
     const sel = selectedTiles();
     const solved = solvedColors();
     if (!sel.length) {
+      if (maybeMode) { shake(); return; } // maybes go on selected tiles
       if (!HEX[color] || solved.has(color)) { arm(null); shake(); return; } // nothing to arm
       if (!armed) { arm(color); return; }
       if (armed !== color) { remember(); swapColors(armed, color); save(); apply(); }
@@ -470,8 +502,20 @@
     }
     arm(null);
     const words = sel.map(wordOf);
-    const before = JSON.stringify(marks);
-    if (color === 'erase') {
+    const before = snapshot();
+    if (maybeMode) {
+      // toggle the tapped color as a "maybe" on the selection (on for all if any lacks it), or ⌫ to clear
+      if (color === 'erase') for (const w of words) delete maybes[w];
+      else {
+        if (solved.has(color)) { shake(); return; }
+        const add = words.some(w => !(maybes[w] || []).includes(color));
+        for (const w of words) {
+          const cs = new Set(maybes[w] || []);
+          if (add) cs.add(color); else cs.delete(color);
+          if (cs.size) maybes[w] = sortColors([...cs]); else delete maybes[w];
+        }
+      }
+    } else if (color === 'erase') {
       for (const w of words) delete marks[w];
     } else {
       if (solved.has(color)) { shake(); return; } // that group is already solved
@@ -491,7 +535,7 @@
         if (opt('autoFill')) autoFill();
       }
     }
-    if (JSON.stringify(marks) !== before) { history.push(before); if (history.length > UNDO_LIMIT) history.shift(); showUndo(); }
+    if (snapshot() !== before) { history.push(before); if (history.length > UNDO_LIMIT) history.shift(); showUndo(); }
     save();
     apply();
     deselectAll();
@@ -515,7 +559,7 @@
   // other tile still wearing it gets unmarked. Safe to run repeatedly.
   function reconcileSolved(groups) {
     if (!groups.length) return;
-    const before = JSON.stringify(marks);
+    const before = snapshot();
     for (const { color: real, words } of groups) {
       if (!opt('reconcile')) { for (const w of words) marks[w] = real; continue; } // only the solved tiles
       const tally = {};
@@ -531,7 +575,14 @@
         if (solved.has(c) && solvedAs.get(w) !== c) delete marks[w];
       }
     }
-    if (JSON.stringify(marks) !== before) save();
+    // a solved color can't be anyone's maybe any more, and solved tiles need none
+    const solvedWords = new Set(groups.flatMap(g => g.words));
+    const solvedSet = new Set(groups.map(g => g.color));
+    for (const [w, cs] of Object.entries(maybes)) {
+      const keep = solvedWords.has(w) ? [] : cs.filter(c => !solvedSet.has(c));
+      if (keep.length) maybes[w] = keep; else delete maybes[w];
+    }
+    if (snapshot() !== before) save();
   }
 
   // ---------- guess history ----------
@@ -680,10 +731,10 @@
 
   // ---------- the colored overlay inside each marked tile ----------
   const markRoots = new WeakMap(); // <ccm-mark> → its closed shadow root
-  function drawMark(tile, color, away) {
+  function drawMark(tile, color, away, maybe = []) {
     let m = [...tile.children].find(n => n.localName === 'ccm-mark');
-    if (!color && !away) { if (m) m.remove(); return; }
-    const key = `${color || ''}|${away}|${opt('letters') ? 1 : 0}`;
+    if (!color && !away && !maybe.length) { if (m) m.remove(); return; }
+    const key = `${color || ''}|${away}|${opt('letters') ? 1 : 0}|${maybe.join(',')}`;
     if (m && m.dataset.k === key) return; // already drawn
     if (!m) {
       m = document.createElement('ccm-mark');
@@ -698,7 +749,9 @@
       // the colored outline is the mark; the corner dot only appears to carry a letter
       (color ? `<div class="ring" style="--c:${HEX[color]}"></div>` +
         (letter ? `<div class="dot letter" style="--c:${HEX[color]}">${letter}</div>` : '') : '') +
-      (away ? `<div class="away">${away}</div>` : '');
+      (away ? `<div class="away">${away}</div>` : '') +
+      (maybe.length ? `<div class="maybes${opt('letters') ? ' letter' : ''}">` +
+        maybe.map(c => `<span style="--c:${HEX[c]}">${opt('letters') ? c[0].toUpperCase() : ''}</span>`).join('') + '</div>' : '');
   }
 
   // ---------- draw everything ----------
@@ -706,6 +759,7 @@
     if (puzzleId() !== lastId) { // moved to another date
       lastId = puzzleId();
       marks = ls.get(marksKey(), {});
+      maybes = ls.get(maybeKey(), {});
       guesses = loadGuesses();
       pending = null;
       history = [];
@@ -737,7 +791,7 @@
       else if (el.dataset.ccm) delete el.dataset.ccm;
       if (badge[w]) { if (el.dataset.ccmAway !== badge[w]) el.dataset.ccmAway = badge[w]; }
       else if (el.dataset.ccmAway) delete el.dataset.ccmAway;
-      drawMark(el, c, badge[w] || '');
+      drawMark(el, c, badge[w] || '', opt('maybes') ? (maybes[w] || []).filter(x => x !== c) : []);
     }
     for (const k of ORDER) {
       const n = [...present].filter(w => marks[w] === k).length;
@@ -800,6 +854,7 @@
   // ---------- another tab on the same puzzle changed something: pick it up ----------
   window.addEventListener('storage', e => {
     if (e.key === marksKey()) marks = ls.get(marksKey(), {});
+    else if (e.key === maybeKey()) maybes = ls.get(maybeKey(), {});
     else if (e.key === guessKey()) guesses = loadGuesses();
     else if (e.key === SETTINGS_KEY) { settings = { ...DEFAULTS, ...ls.get(SETTINGS_KEY, {}) }; applySettings(); return; }
     else if (e.key === SORT_KEY) { const v = e.newValue; if (SORT_MODES[v]) { sortMode = v; showSort(); } }
@@ -811,6 +866,14 @@
   window.addEventListener('keydown', e => {
     if (e.target.closest?.('input[type="text"], textarea, [contenteditable]')) return;
     if (e.metaKey || e.ctrlKey || e.altKey || !opt('keys')) return;
+    const digit = e.code?.match(/^(?:Digit|Numpad)([0-4])$/)?.[1];
+    if (e.shiftKey && digit && opt('maybes')) { // Shift+1–4: a maybe without entering maybe mode
+      const was = maybeMode; maybeMode = true;
+      assign(digit === '0' ? 'erase' : COLORS.find(c => c.hotkey === digit).key);
+      maybeMode = was;
+      return;
+    }
+    if ((e.key === 'm' || e.key === 'M') && opt('maybes')) { setMaybeMode(!maybeMode); return; }
     const c = COLORS.find(c => c.hotkey === e.key);
     if (c) assign(c.key);
     else if (e.key === '0') assign('erase');

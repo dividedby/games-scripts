@@ -57,3 +57,8 @@ badges.
 The wrong guesses on a puzzle, oldest first, each flagged if the game called it
 One away. A guess counts as wrong when the game's mistake count drops; right
 guesses and repeats ("Already guessed") are not recorded.
+
+### Maybe
+A secondary, candidate color on a tile ("could be purple or blue"), shown as small
+corner dots. A tile can have several maybes and a Mark at the same time. Maybes
+are notes only: Go, auto-fill and the 4-per-color limit use Marks alone.

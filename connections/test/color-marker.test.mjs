@@ -9,7 +9,7 @@ import { JSDOM } from 'jsdom';
 
 const SRC = readFileSync(new URL('../connections-color-marker.user.js', import.meta.url), 'utf8');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const BTN = { yellow: 0, green: 1, blue: 2, purple: 3, erase: 4, undo: 5, sort: 6, go: 7, hist: 8, gear: 9, toggle: 10 };
+const BTN = { yellow: 0, green: 1, blue: 2, purple: 3, erase: 4, undo: 5, sort: 6, go: 7, maybe: 8, hist: 9, gear: 10, toggle: 11 };
 const RGB = { yellow: 'rgb(249, 223, 109)', blue: 'rgb(176, 196, 239)', purple: 'rgb(186, 129, 197)' };
 
 // words: tiles on the board; solved: [{ level, words }]; stored: localStorage seed
@@ -379,7 +379,71 @@ test('today\'s puzzle (no date in the URL) is filed under the day the page opene
 test('tiles show just the outline; the corner letter dot appears only with color letters on', async () => {
   // the overlay's shadow root is closed, so check what it renders through its cache key
   const b = await board({ words: ['A'], marks: { A: 'blue' } });
-  assert.equal(b.tile('A').querySelector('ccm-mark').dataset.k, 'blue||0');
+  assert.equal(b.tile('A').querySelector('ccm-mark').dataset.k, 'blue||0|');
   await b.setOpt('letters', true);
-  assert.equal(b.tile('A').querySelector('ccm-mark').dataset.k, 'blue||1');
+  assert.equal(b.tile('A').querySelector('ccm-mark').dataset.k, 'blue||1|');
+});
+
+const maybesOf = (b, date = '2023-07-01') => JSON.parse(b.w.localStorage.getItem(`ccm:maybe:${date}`) || '{}');
+const markKey = (b, x) => b.tile(x).querySelector('ccm-mark')?.dataset.k;
+
+test('maybe colors: off by default; ? mode adds/removes maybes on selected tiles without touching marks', async () => {
+  const off = await board({ words: ['A'] });
+  assert.ok(off.panel.classList.contains('nomaybe'));
+
+  const b = await board({ words: ['A', 'B', 'C', 'D', 'E'], marks: { A: 'blue' }, stored: { 'ccm:settings': { maybes: true } } });
+  assert.ok(!b.panel.classList.contains('nomaybe'));
+  await b.tap('maybe');
+  assert.ok(b.panel.classList.contains('maybemode'));
+  b.select(['A', 'B']); await b.tap('purple');
+  b.select(['B']); await b.tap('green');
+  assert.deepEqual(maybesOf(b), { A: ['purple'], B: ['green', 'purple'] }, 'kept in rainbow order');
+  assert.equal(b.store().A, 'blue', 'main mark untouched');
+  assert.equal(b.store().B, undefined);
+  assert.equal(markKey(b, 'B'), '||0|green,purple');
+  // tapping a color all selected tiles already have removes it
+  b.select(['A', 'B']); await b.tap('purple');
+  assert.deepEqual(maybesOf(b), { B: ['green'] });
+  // ⌫ in maybe mode clears maybes only
+  b.select(['B']); await b.tap('erase');
+  assert.deepEqual(maybesOf(b), {});
+  // maybes never count toward the 4-per-color limit
+  b.select(['B', 'C', 'D', 'E']); await b.tap('blue');
+  assert.ok(!b.shook());
+  await b.tap('maybe'); // back to normal mode
+  b.select(['B', 'C', 'D', 'E']); await b.tap('blue');
+  assert.ok(b.shook(), 'main marks still capped (A is blue)');
+});
+
+test('maybe colors: undo, swaps and solves carry them along', async () => {
+  const b = await board({
+    words: ['A', 'B', 'C'],
+    stored: { 'ccm:settings': { maybes: true } },
+  });
+  await b.tap('maybe');
+  b.select(['A']); await b.tap('blue');
+  await b.tap('undo');
+  assert.deepEqual(maybesOf(b), {}, 'undo removes a maybe');
+  b.select(['A']); await b.tap('blue');
+  await b.tap('maybe');
+  b.select([]);
+  await b.tap('blue'); await b.tap('yellow'); // swap blue <-> yellow
+  assert.deepEqual(maybesOf(b), { A: ['yellow'] }, 'swaps carry maybes');
+
+  const s = await board({
+    words: ['X', 'Y'],
+    solved: [{ level: 2, words: ['P1', 'P2', 'P3', 'P4'] }],
+    stored: { 'ccm:settings': { maybes: true }, 'ccm:maybe:2023-07-01': { X: ['blue', 'purple'], P1: ['green'], Y: ['blue'] } },
+  });
+  assert.deepEqual(maybesOf(s), { X: ['purple'] }, 'solved color and solved tiles drop out');
+});
+
+test('maybe colors: Shift+number adds a maybe without maybe mode, M toggles the mode', async () => {
+  const b = await board({ words: ['A', 'B'], stored: { 'ccm:settings': { maybes: true } } });
+  b.select(['A']);
+  b.w.dispatchEvent(new b.w.KeyboardEvent('keydown', { key: '#', code: 'Digit3', shiftKey: true })); await sleep(40);
+  assert.deepEqual(maybesOf(b), { A: ['blue'] });
+  assert.equal(b.store().A, undefined);
+  b.w.dispatchEvent(new b.w.KeyboardEvent('keydown', { key: 'm' })); await sleep(20);
+  assert.ok(b.panel.classList.contains('maybemode'));
 });
