@@ -15,6 +15,8 @@ Current scripts:
 - `connections/connections-color-marker.user.js` — NYT Connections: mark tiles with
   colors (or split them between candidate colors), submit groups in order, reconcile
   marks with solved groups.
+- `wordle/wordle-guess-picks.user.js` — NYT Wordle: a random starting word, then 5
+  picks from the best guesses each turn; tap one to play it.
 
 Each script folder holds the script, its `README.md` (the user guide),
 `greasyfork-description.md` (the Greasy Fork listing, synced from `main`) and
@@ -22,8 +24,8 @@ Each script folder holds the script, its `README.md` (the user guide),
 listing link to them by path, so keep the file names. The root `README.md` only lists
 scripts and install steps. Domain terms are in `CONTEXT.md`.
 
-No bundler and no build step. `pnpm test` runs behavior tests that load a script into
-jsdom against a simulated board (`connections/test/`). Use pnpm, never npm or yarn.
+No bundler and no build step. `pnpm test` runs behavior tests that load each script
+into jsdom against a simulated board (`<script folder>/test/`). Use pnpm, never npm or yarn.
 
 ## Rules that bite
 
@@ -39,12 +41,17 @@ jsdom against a simulated board (`connections/test/`). Use pnpm, never npm or ya
   work goes on a branch.
 - Never change `@namespace` (Greasy Fork and the managers key installs on it), and keep
   `@updateURL`/`@downloadURL` on the GitHub raw URL (Greasy Fork strips them itself).
-- The script reads the live game's markup (`data-testid="card-label"`,
+- The scripts read the live games' markup. Connections: `data-testid="card-label"`,
   `data-flip-id`, `Card-module_selected`, `solved-category-container` +
-  `data-level`, `connection-toast`). When the game changes, update the simulated
-  board in the tests to match what it really renders.
-- The game reacts to `pointerdown`, not `click`: selecting a tile programmatically
-  needs the full pointer/mouse sequence (`press()` in the script).
+  `data-level`, `connection-toast`. Wordle: `data-testid="tile"` with `data-state`
+  (`empty`/`tbd`/`correct`/`present`/`absent`), keyboard buttons `data-key` (`↵`, `←`),
+  hard mode in localStorage `games-state-wordleV2*`/`games-settings-wordleV2*`. When a
+  game changes, update the simulated board in the tests to match what it really renders.
+- Connections reacts to `pointerdown`, not `click`: selecting a tile programmatically
+  needs the full pointer/mouse sequence (`press()` in the script). Wordle's keyboard
+  takes plain `.click()`.
+- Wordle only colors a row once its flip animation ends, and Chrome doesn't run
+  animations in a hidden tab: test with the window in front.
 
 ## Definition of done
 
@@ -64,8 +71,10 @@ width), not only in jsdom.
 
 ## Testing in the real game
 
-- Use 2023 archive puzzles (`/games/connections/2023-MM-DD`): the owner won't replay
-  them. Answers: `/svc/connections/v2/YYYY-MM-DD.json` on nytimes.com. Leave puzzles
+- Use 2023 archive puzzles (`/games/connections/2023-MM-DD`,
+  `/games/wordle/2023-MM-DD`): the owner won't replay them. Never play today's
+  Wordle. Wordle Guess Picks has the same debug hook: `wgp:debug` exposes
+  `window.__wgpRoot` and `window.__wgp`. Answers: `/svc/connections/v2/YYYY-MM-DD.json` on nytimes.com. Leave puzzles
   the owner opened for you unsolved and cleared afterwards unless asked.
 - Desktop: the owner's Chrome tab group "Claude" (desktop and phone-width tabs). Set
   localStorage `ccm:debug` to `true` and reload to expose the palette's shadow root as

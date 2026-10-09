@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/),
 and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Versions below 1.0.0 are pre-release.
 
+## Wordle Guess Picks
+
+### [Unreleased]
+#### Added
+- First version: a random starting word from the likely answers, then 5 picks each turn drawn from the best 30 guesses, each with roughly how many answers it would leave and a dot when it could be the answer. Tap a pick to play it; 🎲 deals new picks; ▾ tucks them away. Follows hard mode, never looks up the answer, and shrinks the board on short screens so the keyboard stays in view.
+
 ## Connections Color Marker
 
 ### [Unreleased]

@@ -86,3 +86,21 @@ can't become a Mark yet, so its outline is dashed.
 The palette state while **?** is on: tapping a color adds it to (or removes it
 from) the selected tiles' candidates instead of setting their Mark. Tiles hold
 still in maybe mode and re-sort when it's turned off.
+
+## Wordle Guess Picks
+
+### Likely answers
+The words the script treats as possible answers: NYT WordleBot's answer list. If none
+of them fits the board, every word on the guess list counts instead.
+
+### Picks
+The words offered for the next guess. Before the first guess, one random likely
+answer (the **starting word**). After that, 5 drawn at random from the best 30
+guesses, so they are good but not equally good; with two or fewer answers left, the
+picks are exactly those answers. Picks are kept per puzzle and turn until 🎲 deals
+new ones.
+
+### Answers left
+A pick's hint: the number of likely answers you'd expect to still fit after playing
+it (averaged over the answers that fit now). Fewer is better. A dot marks a pick
+that is itself a likely answer.
