@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Color-code NYT Connections tiles as you work out the groups, then submit them in the order you choose, like purple first for a reverse rainbow
-// @version      0.7.6
+// @version      0.7.7
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -31,7 +31,7 @@
   const SORT_MODES = {
     reverse: { label: 'P→Y', title: 'Reverse rainbow: purple, blue, green, yellow', order: [...ORDER].reverse() },
     rainbow: { label: 'Y→P', title: 'Rainbow: yellow, green, blue, purple', order: ORDER },
-    off:     { label: 'Off', title: 'Unsorted: the game\'s own order', order: null },
+    off:     { label: 'Off', title: 'Off: tiles stay in the game\'s order (Go still goes purple first)', order: null },
   };
   const SORT_CYCLE = ['reverse', 'rainbow', 'off'];
   const MAX_PER_COLOR = 4;
@@ -39,6 +39,7 @@
   const CONFIRM_MS = 4000;
   const GRACE_MS = 1500; // after "Sure?" expires, Go ignores taps this long so a late tap can't submit a different color
 
+  let ready = false; // true once the first setup has run
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const ls = {
     get(k, fallback) { try { const v = localStorage.getItem(k); return v === null ? fallback : JSON.parse(v); } catch { return fallback; } },
@@ -118,7 +119,7 @@
     { key: 'history',   def: false, label: 'Guess history', help: '📜 lists your wrong guesses',
       tip: '📜 on the palette lists your wrong guesses, with one-aways flagged. Repeating one reminds you whether it was one away' },
     { key: 'maybes',    def: false, label: 'Maybe colors', help: '? lets a tile be several colors at once',
-      tip: 'With ? on, colors you tap are added to the selected tiles\' options, splitting the outline between them (yellow or green: half each). Split tiles don\'t count toward Go, auto-fill or the 4-per-color limit until one color is left' },
+      tip: 'With ? on, colors you tap are added to the selected tiles\' options, splitting the outline between them (yellow or green: half each). Tap a color again to remove it. Split tiles don\'t count toward Go, auto-fill or the 4-per-color limit until one color is left' },
     { key: 'autoFill',  def: true,  label: 'Auto-fill the last group', help: 'The last 4 tiles get the last color',
       tip: 'Once three colors have 4 tiles, the last 4 get the remaining color' },
     { key: 'reconcile', def: true,  label: 'Fix my colors after a solve', help: 'Swap colors to match solved groups',
@@ -126,8 +127,8 @@
     { key: 'goButton',  def: true,  label: 'Go button', help: 'Submits a color\'s 4 tiles for you' },
     { key: 'orderWarn', def: true,  label: 'Ask before going out of order', help: '"Sure?" before submitting out of order' },
     { key: 'letters',   def: false, label: 'Show color letters', help: 'Y/G/B/P letters, for colorblind players' },
-    { key: 'keys',      def: true,  label: 'Keyboard shortcuts', help: '1–4, 0, Z undo, G go, Esc',
-      tip: '1–4 colors, 0 erase, Z undo, G go, Esc cancel; with maybe colors on, M maybe mode and Shift+1–4 add or remove an option' },
+    { key: 'keys',      def: true,  label: 'Keyboard shortcuts', help: '1–4 colors, 0 clear, Z undo, G go',
+      tip: '1–4 colors, 0 clear, Z undo, G go, Esc lets go of a tapped color; with maybe colors on, M maybe mode and Shift+1–4 add or remove an option' },
     { key: 'left',      def: false, label: 'Palette on the left', help: 'Move the palette to the bottom-left' },
   ];
   const DEFAULTS = Object.fromEntries(SETTINGS.map(o => [o.key, o.def]));
@@ -148,6 +149,8 @@
   const countOf = color => Object.entries(marks)
     .filter(([w, c]) => c === color && (!puzzleWords || puzzleWords.has(w))).length;
 
+  const submitButton = () => document.querySelector('[data-testid="submit-btn"]') || gameButton(/^submit$/i);
+  const attr = t => t.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
   const gameButton = re => [...document.querySelectorAll('button')]
     .find(b => re.test(b.textContent.trim()) && !panel.contains(b));
 
@@ -284,14 +287,13 @@
     #ccm-panel:not(.collapsed) > button { order: 4; flex: 1 1 auto; }
     #ccm-panel:not(.collapsed) > button.swatch { order: 1; flex: 1 1 0; height: 36px; }
     #ccm-panel:not(.collapsed) > .ccm-go { order: 2; flex: 1.6 1 0; height: 36px; }
-    .ccm-more { display: none; }
+    .ccm-more { display: none; font-size: 18px; }
     h4 { margin: 0 0 6px; font: 700 13px/1.2 system-ui, sans-serif; }
     label { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; cursor: pointer; }
     input { margin: 2px 0 0; width: 16px; height: 16px; flex: none; accent-color: #6a6958; }
     small { display: block; color: var(--muted); font-size: 11px; }
     .row { display: flex; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--sep); }
     .row button { flex: 1; height: 30px; font: 600 12px system-ui, sans-serif; }
-    .ccm-more { font-size: 18px; }
     /* keyboard shortcuts mean nothing on a touch-only device */
     @media (hover: none) and (pointer: coarse) { label.desk { display: none; } }
     @keyframes ccm-shake { 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
@@ -369,11 +371,12 @@
   maybeBtn.title = 'Maybe mode: colors you tap are added to the tiles\' options instead of replacing their color';
   let maybeMode = false;
   function setMaybeMode(on) {
+    const was = maybeMode;
     maybeMode = !!on && opt('maybes');
     maybeBtn.classList.toggle('active', maybeMode);
     panel.classList.toggle('maybemode', maybeMode);
     if (maybeMode) arm(null);
-    else apply(); // catch up on the sorting held back during maybe mode
+    else if (was && ready) apply(); // catch up on the sorting held back during maybe mode
   }
   const histBtn = addButton('📜', () => toggleHistory());
   histBtn.classList.add('ccm-hist');
@@ -387,7 +390,7 @@
   sheet.id = 'ccm-settings';
   sheet.hidden = true;
   sheet.innerHTML = '<h4>Color Marker settings</h4>' +
-    SETTINGS.map(o => `<label${o.key === 'keys' ? ' class="desk"' : ''} title="${o.tip || o.help}"><input type="checkbox" data-k="${o.key}"><span>${o.label}<small>${o.help}</small></span></label>`).join('') +
+    SETTINGS.map(o => `<label${o.key === 'keys' ? ' class="desk"' : ''} title="${attr(o.tip || o.help)}"><input type="checkbox" data-k="${o.key}"><span>${o.label}<small>${o.help}</small></span></label>`).join('') +
     '<div class="row"><button type="button" data-act="clear">Clear this puzzle</button><button type="button" data-act="reset">Reset settings</button></div>';
   sheet.addEventListener('click', e => e.stopPropagation());
   sheet.addEventListener('change', e => {
@@ -408,7 +411,6 @@
   panel.appendChild(sheet);
   const histSheet = document.createElement('div');
   histSheet.id = 'ccm-history';
-  histSheet.className = 'pop';
   histSheet.hidden = true;
   histSheet.addEventListener('click', e => e.stopPropagation());
   panel.appendChild(histSheet);
@@ -419,7 +421,7 @@
   function toggleSettings(open = sheet.hidden) {
     sheet.hidden = !open;
     gearBtn.classList.toggle('active', open);
-    if (open && typeof toggleHistory === 'function') toggleHistory(false);
+    if (open) toggleHistory(false);
   }
   document.addEventListener('click', e => {
     if (e.composedPath().includes(host)) return;
@@ -461,7 +463,7 @@
     const on = onBoard ? userCollapsed : !peek;
     panel.classList.toggle('collapsed', on);
     panel.classList.toggle('offboard', !onBoard);
-    if (on) { toggleSettings(false); toggleHistory(false); if (typeof showMore === 'function') showMore(false); }
+    if (on) { toggleSettings(false); toggleHistory(false); showMore(false); }
     toggleBtn.textContent = on ? '🎨' : '▾';
     toggleBtn.title = on ? 'Show the color palette' : 'Hide the palette';
   }
@@ -493,10 +495,10 @@
     goBtn.textContent = 'Go ▶';
     goBtn.style.background = c ? HEX[c] : '';
     const n = c ? tiles().filter(t => marks[wordOf(t)] === c).length : 0;
-    const ready = n === 4;
-    goBtn.classList.toggle('notready', !ready); // dimmed: Go would just shake
+    const full = n === 4;
+    goBtn.classList.toggle('notready', !full); // dimmed: Go would just shake
     goBtn.title = !c ? 'Nothing left to submit'
-      : !ready ? `${c} needs 4 tiles to submit (has ${n})`
+      : !full ? `${c} needs 4 tiles to submit (has ${n})`
       : armed ? `Select the 4 ${armed} tiles and submit`
       : `Submit the next color in order (${c})`;
   }
@@ -521,21 +523,21 @@
   const snapshot = () => JSON.stringify({ m: marks, y: maybes });
   function restore(snap) {
     const o = JSON.parse(snap);
-    if (o && o.m) { marks = o.m; maybes = o.y || {}; } else marks = o; // pre-0.6 snapshots held marks only
+    marks = o.m; maybes = o.y;
   }
 
   // ---------- undo: snapshots of your marks before each change you make ----------
-  let history = [];
+  let undoStack = [];
   const UNDO_LIMIT = 50;
   function remember() {
-    history.push(snapshot());
-    if (history.length > UNDO_LIMIT) history.shift();
+    undoStack.push(snapshot());
+    if (undoStack.length > UNDO_LIMIT) undoStack.shift();
     showUndo();
   }
-  function showUndo() { undoBtn.classList.toggle('off', !history.length); }
+  function showUndo() { undoBtn.classList.toggle('off', !undoStack.length); }
   function undo() {
-    if (submitting || !history.length) { shake(); return; }
-    restore(history.pop());
+    if (submitting || !undoStack.length) { shake(); return; }
+    restore(undoStack.pop());
     arm(null);
     save();
     apply();
@@ -573,6 +575,7 @@
         if (cs.size) maybes[w] = sortColors([...cs]); else delete maybes[w];
       }
       settle();
+      if (opt('autoFill')) autoFill(); // a split down to one color may have filled a third color
     } else {
       if (solved.has(color)) { shake(); return; } // that group is already solved
       const incoming = words.filter(w => marks[w] !== color);
@@ -593,7 +596,7 @@
       }
       settle();
     }
-    if (snapshot() !== before) { history.push(before); if (history.length > UNDO_LIMIT) history.shift(); showUndo(); }
+    if (snapshot() !== before) { undoStack.push(before); if (undoStack.length > UNDO_LIMIT) undoStack.shift(); showUndo(); }
     save();
     apply();
     deselectAll();
@@ -656,8 +659,10 @@
   };
   const sameGuess = (a, b) => a.join('|') === b.join('|');
   let pending = null; // { w, before, away, recorded }
+  let pollTimer = null;
   window.addEventListener('click', e => {
-    if (!e.target.closest?.('[data-testid="submit-btn"]')) return;
+    const b = e.target.closest?.('button');
+    if (!b || b !== submitButton()) return;
     const w = selectedTiles().map(wordOf).sort();
     if (w.length !== 4) return;
     const old = guesses.find(g => sameGuess(g.w, w));
@@ -666,7 +671,8 @@
       return;
     }
     pending = { w, before: mistakesLeft(), away: false, recorded: null, at: Date.now() };
-    const t = setInterval(() => { if (!pending || Date.now() - pending.at > 6000) { pending = null; clearInterval(t); } else apply(); }, 150);
+    clearInterval(pollTimer);
+    pollTimer = setInterval(() => { if (!pending || Date.now() - pending.at > 6000) { pending = null; clearInterval(pollTimer); } else apply(); }, 150);
   }, true);
   function checkGuess() {
     if (!pending) return;
@@ -753,7 +759,7 @@
       }
       // wait for the game to register all 4 and enable Submit
       for (let i = 0; i < 30; i++) {
-        const btn = gameButton(/^submit$/i);
+        const btn = submitButton();
         const sel = selectedTiles().map(wordOf);
         if (btn && !btn.disabled && sel.length === 4 && targets.every(w => sel.includes(w))) {
           btn.click();
@@ -780,19 +786,29 @@
   function tidyKeys(groups) {
     const words = new Set([...tiles().map(wordOf), ...groups.flatMap(g => g.words)]);
     if (words.size !== 16) { puzzleWords = null; return; }
+    // just moved to another date in the same page: wait until its board has rendered,
+    // or the old board's words would make every new mark look like a leftover
+    const sig = [...words].sort().join('|');
+    if (staleBoard && sig === staleBoard) { puzzleWords = null; return; }
+    staleBoard = null;
     puzzleWords = words;
     let changed = false;
-    for (const k of Object.keys(marks)) {
-      if (words.has(k)) continue;
-      const u = undouble(k);
-      if (u !== k && words.has(u) && !marks[u]) marks[u] = marks[k];
-      delete marks[k];
-      changed = true;
+    for (const store of [marks, maybes]) {
+      const keys = Object.keys(store);
+      if (keys.length && !keys.some(k => words.has(k) || words.has(undouble(k)))) continue; // none fit: wrong board, keep them
+      for (const k of keys) {
+        if (words.has(k)) continue;
+        const u = undouble(k);
+        if (u !== k && words.has(u) && !store[u]) store[u] = store[k];
+        delete store[k];
+        changed = true;
+      }
     }
     if (changed) save();
   }
 
   // ---------- the colored overlay inside each marked tile ----------
+  let staleBoard = null; // the previous puzzle's words, right after a date change
   const markRoots = new WeakMap(); // <ccm-mark> → its closed shadow root
   function drawMark(tile, color, away, maybe = []) {
     let m = [...tile.children].find(n => n.localName === 'ccm-mark');
@@ -825,12 +841,14 @@
   // ---------- draw everything ----------
   function apply() {
     if (puzzleId() !== lastId) { // moved to another date
+      const old = new Set([...tiles().map(wordOf), ...solvedGroups().flatMap(g => g.words)]);
+      staleBoard = old.size === 16 ? [...old].sort().join('|') : null;
       lastId = puzzleId();
       marks = ls.get(marksKey(), {});
       maybes = ls.get(maybeKey(), {});
       guesses = loadGuesses();
       pending = null;
-      history = [];
+      undoStack = [];
       showUndo();
     }
     checkGuess();
@@ -940,8 +958,9 @@
 
   // ---------- another tab on the same puzzle changed something: pick it up ----------
   window.addEventListener('storage', e => {
-    if (e.key === marksKey()) marks = ls.get(marksKey(), {});
-    else if (e.key === maybeKey()) maybes = ls.get(maybeKey(), {});
+    // marks and maybes are written together; read both so a half-arrived update
+    // can't be "settled" and saved back over the other tab's change
+    if (e.key === marksKey() || e.key === maybeKey()) { marks = ls.get(marksKey(), {}); maybes = ls.get(maybeKey(), {}); }
     else if (e.key === guessKey()) guesses = loadGuesses();
     else if (e.key === SETTINGS_KEY) { settings = { ...DEFAULTS, ...ls.get(SETTINGS_KEY, {}) }; applySettings(); return; }
     else if (e.key === SORT_KEY) { const v = e.newValue; if (SORT_MODES[v]) { sortMode = v; showSort(); } }
@@ -979,8 +998,7 @@
   const mo = new MutationObserver(muts => {
     if (watched === document.body || !watched?.isConnected) watch();
     if (queued) return;
-    if (muts.every(m => m.type === 'childList' && [...m.addedNodes, ...m.removedNodes].every(ours) ||
-      m.type === 'attributes' && m.target.localName === 'ccm-mark')) return;
+    if (muts.every(m => m.type === 'childList' && [...m.addedNodes, ...m.removedNodes].every(ours))) return;
     queued = true;
     const run = () => { queued = false; apply(); };
     if (document.hidden) setTimeout(run, 50); else requestAnimationFrame(run);
@@ -1001,7 +1019,6 @@
   }
   watch();
 
-  let ready = false;
   applySettings();
   ready = true;
   showUndo();

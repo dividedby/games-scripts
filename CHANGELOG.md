@@ -11,6 +11,17 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [0.7.7] - 2026-10-09
+#### Fixed
+- With the same puzzle open in two tabs, turning a split tile into a single color in one tab could leave it with no color at all in both.
+- Moving to another puzzle date without reloading the page could erase that puzzle's saved colors.
+- The hover tip for "Ask before going out of order" was blank.
+- Auto-fill now also runs when a split tile settles into a color and that fills a third color.
+- Several quick guesses in a row no longer pile up background checks.
+
+#### Changed
+- Clearer hover tips for maybe colors, keyboard shortcuts and the Off sort mode.
+
 ### [0.7.6] - 2026-10-09
 #### Changed
 - Clearer script description in your userscript manager.

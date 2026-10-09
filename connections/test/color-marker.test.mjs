@@ -544,3 +544,52 @@ test('auto-fill also completes a last color that already has some tiles or split
   assert.deepEqual(maybesOf(b), {}, 'the split was decided');
   b.close();
 });
+
+test('another tab turning a split into a mark comes through intact (both keys arrive as separate events)', async () => {
+  const b = await board({
+    words: ['A', 'B'],
+    stored: { 'ccm:settings': { maybes: true }, 'ccm:maybe:2023-07-01': { A: ['yellow', 'green'] } },
+  });
+  // the other tab writes both keys, then this tab hears about them one at a time
+  b.w.localStorage.setItem('ccm:2023-07-01', JSON.stringify({ A: 'yellow' }));
+  b.w.localStorage.setItem('ccm:maybe:2023-07-01', JSON.stringify({}));
+  b.w.dispatchEvent(new b.w.StorageEvent('storage', { key: 'ccm:2023-07-01' })); await sleep(40);
+  b.w.dispatchEvent(new b.w.StorageEvent('storage', { key: 'ccm:maybe:2023-07-01' })); await sleep(40);
+  assert.equal(b.store().A, 'yellow');
+  assert.deepEqual(maybesOf(b), {});
+  b.close();
+});
+
+test('moving to another date in the same page keeps that puzzle\'s marks while the old board is still showing', async () => {
+  const words = 'ABCDEFGHIJKLMNOP'.split('');
+  const b = await board({ words, marks: { A: 'blue' } });
+  const next = 'QRSTUVWXYZabcdef'.split('');
+  b.w.localStorage.setItem('ccm:2023-07-02', JSON.stringify({ Q: 'purple' }));
+  b.w.history.pushState({}, '', '/games/connections/2023-07-02');
+  b.d.body.appendChild(b.d.createElement('i')); await sleep(80); // a re-render before the new board arrives
+  assert.deepEqual(JSON.parse(b.w.localStorage.getItem('ccm:2023-07-02')), { Q: 'purple' }, 'not wiped as leftovers');
+  // now the new board renders
+  for (const [i, t] of [...b.d.querySelectorAll('[data-testid=card-label]')].entries()) { t.dataset.flipId = next[i]; t.textContent = next[i]; }
+  await sleep(80);
+  assert.equal(b.tile('Q').querySelector('ccm-mark')?.dataset.k?.split('|')[0], 'purple');
+  b.close();
+});
+
+test('setting tooltips with quotes in them survive', async () => {
+  const b = await board({ words: ['A'] });
+  assert.match(b.box('orderWarn').closest('label').title, /"Sure\?" before submitting/);
+  b.close();
+});
+
+test('auto-fill also runs when a split settles into the third full color', async () => {
+  const b = await board({
+    words: [...four('P'), ...four('G'), 'Y1', 'Y2', 'Y3', 'Y4', ...four('B')],
+    marks: { ...Object.fromEntries(four('P').map(x => [x, 'purple'])), ...Object.fromEntries(four('G').map(x => [x, 'green'])), Y1: 'yellow', Y2: 'yellow', Y3: 'yellow' },
+    stored: { 'ccm:settings': { maybes: true }, 'ccm:maybe:2023-07-01': { Y4: ['yellow', 'blue'] } },
+  });
+  await b.tap('maybe');
+  b.select(['Y4']); await b.tap('blue'); // Y4 is down to yellow: yellow is full, so blue goes to the last 4
+  assert.equal(b.store().Y4, 'yellow');
+  for (const w of four('B')) assert.equal(b.store()[w], 'blue', w);
+  b.close();
+});

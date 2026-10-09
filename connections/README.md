@@ -66,7 +66,7 @@ For tiles you're unsure about. Turn this on in ⚙, and a **?** button appears o
 ## After guesses
 
 - When you solve a group, your colors are corrected to match the game. If the tiles you'd marked purple turn out to be the blue group, purple and blue swap everywhere, so your other guesses stay consistent. Solved colors show ✓ on the palette.
-- Optional: **One away** letters. Each guess the game calls "One away" puts a red letter (A, B, …) on its tiles. Tiles that share a letter are worth a second look.
+- Optional: **One away** letters. Each guess the game calls "One away" puts a red letter (A, B, …) on its tiles. Tiles that share a letter are worth a second look. A guess's letter goes away once you've solved the group it was one away from.
 - Optional: **guess history**. The 📜 button lists your wrong guesses on this puzzle and flags the ones that were one away, in case you missed the pop-up. If you repeat a wrong guess, the game only says "Already guessed"; the script also tells you whether it was one away. Wrong guesses are recorded even with this off, so you can turn it on partway through.
 
 <details>
@@ -128,6 +128,7 @@ The panel also has **Clear this puzzle** (removes all your colors on this puzzle
 
 ## Good to know
 
+- ▾ tucks the palette away into a small 🎨 button; tap 🎨 to bring it back. Hover over any palette button for a short description.
 - Works with dark-mode extensions like Dark Reader. The outlines keep their real colors and the palette switches to a dark theme.
 - Your colors are saved for each puzzle in your browser, so you can close the tab and come back. Two tabs on the same puzzle stay in sync. Puzzles you haven't opened in 60 days are cleaned up.
 - Works on archive puzzles too (`nytimes.com/games/connections/YYYY-MM-DD`).
