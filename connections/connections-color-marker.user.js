@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Mark NYT Connections tiles with the color you think they are, then submit them in order (built for reverse-rainbow solves)
-// @version      0.1.0
+// @version      0.2.0
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -96,10 +96,26 @@
   })();
   const COLLAPSE_KEY = 'ccm:collapsed';
 
+  // ---------- settings (⚙ on the palette), saved per browser ----------
+  const SETTINGS_KEY = 'ccm:settings';
+  const SETTINGS = [
+    { key: 'oneAway',   def: false, label: 'Mark "One away" guesses', help: 'Red letters on the tiles of guesses the game called one away' },
+    { key: 'autoFill',  def: true,  label: 'Auto-fill the last group', help: 'Once three colors have 4 tiles, the last 4 get the remaining color' },
+    { key: 'reconcile', def: true,  label: 'Fix my colors after a solve', help: 'If your purple turns out to be blue, swap purple and blue everywhere. Off: only the solved tiles change' },
+    { key: 'goButton',  def: true,  label: 'Go button', help: 'Submit a color\'s 4 tiles for you. Off: marking only' },
+    { key: 'orderWarn', def: true,  label: 'Ask before going out of order', help: 'Go asks "Sure?" when you submit a color ahead of your sort order' },
+    { key: 'keys',      def: true,  label: 'Keyboard shortcuts', help: '1–4 colors, 0 erase, G go, Esc cancel' },
+    { key: 'left',      def: false, label: 'Palette on the left', help: 'Move the palette to the bottom-left corner' },
+  ];
+  const DEFAULTS = Object.fromEntries(SETTINGS.map(o => [o.key, o.def]));
+  let settings = { ...DEFAULTS, ...ls.get(SETTINGS_KEY, {}) };
+  const opt = k => settings[k];
+
   // ---------- reading the board ----------
   function tiles() {
     const t = [...document.querySelectorAll('[data-testid="card-label"]')];
-    return t.length ? t : [...document.querySelectorAll('label')].filter(l => l.querySelector('input[type="checkbox"]'));
+    return t.length ? t : [...document.querySelectorAll('label')]
+      .filter(l => l.querySelector('input[type="checkbox"]') && !l.closest('#ccm-panel')); // not our settings
   }
   const wordOf = el => el.dataset.flipId ? up(el.dataset.flipId) : undouble(el.textContent);
   const isSelected = el => /selected/i.test(el.className); // the game's Card-module_selected class
@@ -180,9 +196,26 @@
     #ccm-panel.shake { animation: ccm-shake .3s; }
     #ccm-panel.collapsed > :not(.ccm-toggle) { display: none; }
     #ccm-panel.collapsed { padding: 4px; }
+    #ccm-panel.left { right: auto; left: 12px; }
+    #ccm-settings {
+      position: absolute; right: 0; bottom: calc(100% + 8px); width: 270px; max-width: calc(100vw - 24px);
+      background: #fff; border: 1px solid #ccc; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.18);
+      padding: 10px 12px; font: 500 13px/1.3 system-ui, sans-serif; color: #222; cursor: default;
+    }
+    #ccm-panel.left #ccm-settings { right: auto; left: 0; }
+    #ccm-settings[hidden] { display: none; }
+    #ccm-settings h4 { margin: 0 0 6px; font: 700 13px/1.2 system-ui, sans-serif; }
+    #ccm-settings label { display: flex; gap: 8px; align-items: flex-start; padding: 5px 0; cursor: pointer; }
+    #ccm-settings input { margin: 2px 0 0; width: 16px; height: 16px; flex: none; accent-color: #5a594e; }
+    #ccm-settings small { display: block; color: #666; font-size: 11px; }
+    #ccm-settings .row { display: flex; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; }
+    #ccm-settings .row button { flex: 1; height: 30px; font: 600 12px system-ui, sans-serif; }
+    #ccm-panel.nogo .ccm-go { display: none; }
     @keyframes ccm-shake { 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
     @media (max-width: 480px) {
       #ccm-panel { right: 6px; bottom: calc(6px + env(safe-area-inset-bottom, 0px)); gap: 3px; padding: 4px 5px; font-size: 12px; }
+      #ccm-panel.left { right: auto; left: 6px; }
+      #ccm-settings label { padding: 7px 0; }
       #ccm-panel button { min-width: 32px; height: 42px; padding: 0 5px; }
     }
   `;
@@ -191,7 +224,7 @@
   // ---------- panel ----------
   const panel = document.createElement('div');
   panel.id = 'ccm-panel';
-  panel.title = 'Select tiles, then tap a color to mark them (⌫ removes marks). With nothing selected: tap two colors to swap them, or a color then Go to submit it; Go alone submits the next color. Red letters mark "One away" guesses. Keys: 1–4 colors, 0 erase, G go, Esc cancel.';
+  panel.title = 'Select tiles, then tap a color to mark them (⌫ removes marks). With nothing selected: tap two colors to swap them, or a color then Go to submit it; Go alone submits the next color. ⚙ for settings.';
   const addButton = (label, onClick, bg) => {
     const b = document.createElement('button');
     b.textContent = label;
@@ -204,9 +237,6 @@
   const btns = {};
   for (const c of COLORS) btns[c.key] = addButton('0', () => assign(c.key), c.hex);
   addButton('⌫', () => assign('erase'));
-  addButton('Clear', () => {
-    if (confirm('Clear all color marks for this puzzle?')) { marks = {}; save(); apply(); }
-  });
   const sortBtn = addButton('', () => {
     sortMode = SORT_CYCLE[(SORT_CYCLE.indexOf(sortMode) + 1) % SORT_CYCLE.length];
     try { localStorage.setItem(SORT_KEY, sortMode); } catch {}
@@ -221,6 +251,46 @@
   }
   showSort();
   const goBtn = addButton('Go ▶', () => onGo());
+  goBtn.classList.add('ccm-go');
+  const gearBtn = addButton('⚙', () => toggleSettings());
+  gearBtn.title = 'Settings';
+
+  // settings popover
+  const sheet = document.createElement('div');
+  sheet.id = 'ccm-settings';
+  sheet.hidden = true;
+  sheet.innerHTML = '<h4>Color Marker settings</h4>' +
+    SETTINGS.map(o => `<label title="${o.help}"><input type="checkbox" data-k="${o.key}"><span>${o.label}<small>${o.help}</small></span></label>`).join('') +
+    '<div class="row"><button type="button" data-act="clear">Clear this puzzle</button><button type="button" data-act="reset">Reset settings</button></div>';
+  sheet.addEventListener('click', e => e.stopPropagation());
+  sheet.addEventListener('change', e => {
+    const k = e.target.dataset?.k;
+    if (!k) return;
+    settings[k] = e.target.checked;
+    ls.set(SETTINGS_KEY, settings);
+    applySettings();
+  });
+  sheet.querySelector('[data-act=clear]').addEventListener('click', () => {
+    if (confirm('Clear all color marks for this puzzle?')) { marks = {}; save(); apply(); }
+  });
+  sheet.querySelector('[data-act=reset]').addEventListener('click', () => {
+    settings = { ...DEFAULTS };
+    ls.set(SETTINGS_KEY, settings);
+    applySettings();
+  });
+  panel.appendChild(sheet);
+  function toggleSettings(open = sheet.hidden) {
+    sheet.hidden = !open;
+    gearBtn.classList.toggle('active', open);
+  }
+  document.addEventListener('click', e => { if (!sheet.hidden && !panel.contains(e.target)) toggleSettings(false); });
+  function applySettings() {
+    for (const box of sheet.querySelectorAll('input[data-k]')) box.checked = !!settings[box.dataset.k];
+    panel.classList.toggle('left', opt('left'));
+    panel.classList.toggle('nogo', !opt('goButton'));
+    if (!opt('oneAway')) pendingGuess = null;
+    if (ready) apply();
+  }
   // The palette stays tucked away until a puzzle board is on screen (not on the Play splash
   // or the results page). On the board it follows your own ▾/🎨 choice.
   let userCollapsed = ls.get(COLLAPSE_KEY, false);
@@ -236,6 +306,7 @@
   function showCollapsed() {
     const on = onBoard ? userCollapsed : !peek;
     panel.classList.toggle('collapsed', on);
+    if (on) toggleSettings(false);
     toggleBtn.textContent = on ? '🎨' : '▾';
     toggleBtn.title = on ? 'Show the color palette' : 'Hide the palette';
   }
@@ -308,7 +379,7 @@
         });
       } else {
         for (const w of incoming) marks[w] = color;
-        autoFill();
+        if (opt('autoFill')) autoFill();
       }
     }
     save();
@@ -336,16 +407,19 @@
     if (!groups.length) return;
     const before = JSON.stringify(marks);
     for (const { color: real, words } of groups) {
+      if (!opt('reconcile')) { for (const w of words) marks[w] = real; continue; } // only the solved tiles
       const tally = {};
       for (const w of words) if (marks[w]) tally[marks[w]] = (tally[marks[w]] || 0) + 1;
       const guessed = Object.keys(tally).find(c => tally[c] >= 3);
       if (guessed && guessed !== real) swapColors(guessed, real);
       for (const w of words) marks[w] = real;
     }
-    const solvedAs = new Map(groups.flatMap(g => g.words.map(w => [w, g.color])));
-    const solved = new Set(groups.map(g => g.color));
-    for (const [w, c] of Object.entries(marks)) {
-      if (solved.has(c) && solvedAs.get(w) !== c) delete marks[w];
+    if (opt('reconcile')) {
+      const solvedAs = new Map(groups.flatMap(g => g.words.map(w => [w, g.color])));
+      const solved = new Set(groups.map(g => g.color));
+      for (const [w, c] of Object.entries(marks)) {
+        if (solved.has(c) && solvedAs.get(w) !== c) delete marks[w];
+      }
     }
     if (JSON.stringify(marks) !== before) save();
   }
@@ -357,7 +431,7 @@
   window.addEventListener('click', e => {
     if (e.target.closest?.('[data-testid="submit-btn"]')) {
       const words = selectedTiles().map(wordOf).sort();
-      if (words.length === 4) pendingGuess = words;
+      if (words.length === 4 && opt('oneAway')) pendingGuess = words;
     }
   }, true);
   function checkToast() {
@@ -379,13 +453,13 @@
     goBtn.classList.remove('warn');
   }
   function onGo() {
-    if (submitting) return;
+    if (submitting || !opt('goButton')) return;
     const next = nextColor();
     const color = armed || next;
     if (!color) { shake(); return; }
     if (tiles().filter(t => marks[wordOf(t)] === color).length !== 4) { arm(null); shake(); return; }
     // out of order? ask once: Go turns red "Sure?", a second tap within 3s submits
-    if (SORT_MODES[sortMode].order && armed && next && armed !== next && confirmFor !== armed) {
+    if (opt('orderWarn') && SORT_MODES[sortMode].order && armed && next && armed !== next && confirmFor !== armed) {
       clearConfirm();
       confirmFor = armed;
       goBtn.textContent = 'Sure?';
@@ -470,7 +544,7 @@
     const badge = {};
     // a guess is settled once a solved group holds 3 of its words; its badge is dropped
     // (letters stay the same for the others)
-    aways.forEach((g, i) => {
+    if (opt('oneAway')) aways.forEach((g, i) => {
       if (groups.some(sg => g.filter(w => sg.words.includes(w)).length >= 3)) return;
       g.forEach(w => { badge[w] = (badge[w] || '') + String.fromCharCode(65 + i); });
     });
@@ -547,7 +621,7 @@
   // ---------- keyboard ----------
   window.addEventListener('keydown', e => {
     if (e.target.closest?.('input[type="text"], textarea, [contenteditable]')) return;
-    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.metaKey || e.ctrlKey || e.altKey || !opt('keys')) return;
     const c = COLORS.find(c => c.hotkey === e.key);
     if (c) assign(c.key);
     else if (e.key === '0') assign('erase');
@@ -564,5 +638,8 @@
     if (document.hidden) setTimeout(run, 50); else requestAnimationFrame(run);
   }).observe(document.body, { childList: true, subtree: true, characterData: true });
 
+  let ready = false;
+  applySettings();
+  ready = true;
   apply();
 })();

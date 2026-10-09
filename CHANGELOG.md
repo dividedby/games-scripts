@@ -11,6 +11,14 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [0.2.0] - 2026-10-08
+#### Added
+- Settings panel (⚙ on the palette) to turn features on or off: "One away" marks, auto-fill, fixing colors after a solve, the Go button, the out-of-order check, keyboard shortcuts, and which side the palette sits on. Choices are saved in your browser.
+
+#### Changed
+- "One away" marks are now off by default; turn them on in settings.
+- Clear moved from the palette into the settings panel, next to a new Reset settings.
+
 ### [0.1.0] - 2026-10-08
 #### Added
 - Mark tiles with yellow, green, blue or purple from a floating palette; at most 4 tiles per color.

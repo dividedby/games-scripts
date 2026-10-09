@@ -9,7 +9,7 @@ import { JSDOM } from 'jsdom';
 
 const SRC = readFileSync(new URL('../connections-color-marker.user.js', import.meta.url), 'utf8');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const BTN = { yellow: 0, green: 1, blue: 2, purple: 3, erase: 4, clear: 5, sort: 6, go: 7, toggle: 8 };
+const BTN = { yellow: 0, green: 1, blue: 2, purple: 3, erase: 4, sort: 5, go: 6, gear: 7, toggle: 8 };
 const RGB = { yellow: 'rgb(249, 223, 109)', blue: 'rgb(176, 196, 239)', purple: 'rgb(186, 129, 197)' };
 
 // words: tiles on the board; solved: [{ level, words }]; stored: localStorage seed
@@ -29,7 +29,9 @@ async function board({ words = [], solved = [], date = '2023-07-01', marks = {},
   const panel = d.getElementById('ccm-panel');
   const b = {
     w, d, panel,
-    btn: k => panel.querySelectorAll('button')[BTN[k]],
+    btn: k => panel.querySelectorAll(':scope > button')[BTN[k]],
+    box: k => d.querySelector(`#ccm-settings input[data-k="${k}"]`),
+    async setOpt(k, on) { const x = b.box(k); x.checked = on; x.dispatchEvent(new w.Event('change', { bubbles: true })); await sleep(40); },
     tile: x => d.querySelector(`[data-flip-id="${x}"]`),
     select(ws) {
       for (const t of d.querySelectorAll('[data-testid=card-label]')) t.classList.remove('Card-module_selected');
@@ -120,7 +122,7 @@ test('Go: tinted with the next color, dims when not ready, asks "Sure?" out of o
 });
 
 test('"One away" guesses get letter badges; settled guesses drop theirs', async () => {
-  const b = await board({ words: ['A', 'B', 'C', 'D', 'E', 'F'], marks: {} });
+  const b = await board({ words: ['A', 'B', 'C', 'D', 'E', 'F'], marks: {}, stored: { 'ccm:settings': { oneAway: true } } });
   const submit = b.d.querySelector('[data-testid=submit-btn]');
   submit.disabled = false;
   const toast = async text => { const t = b.d.createElement('div'); t.dataset.testid = 'connection-toast'; t.innerHTML = `<h2>${text}</h2>`; b.d.body.appendChild(t); await sleep(60); t.remove(); };
@@ -136,7 +138,7 @@ test('"One away" guesses get letter badges; settled guesses drop theirs', async 
   const s = await board({
     words: ['EMERALD', 'KELLY', 'LATTE', 'X1'],
     solved: [{ level: 3, words: ['BEAN', 'CLEAN', 'FOX', 'PEANUT'] }],
-    stored: { 'ccm:1away:2023-07-01': [['BEAN', 'CLEAN', 'EMERALD', 'FOX'], ['EMERALD', 'KELLY', 'LATTE', 'X1']] },
+    stored: { 'ccm:settings': { oneAway: true }, 'ccm:1away:2023-07-01': [['BEAN', 'CLEAN', 'EMERALD', 'FOX'], ['EMERALD', 'KELLY', 'LATTE', 'X1']] },
   });
   assert.equal(s.tile('EMERALD').dataset.ccmAway, 'B', 'guess A is settled, B keeps its letter');
   s.close();
@@ -205,4 +207,63 @@ test('idle page: no redraw loop', async () => {
   await sleep(400);
   assert.equal(frames, 0);
   b.close();
+});
+
+test('settings: defaults, saved choices, and each toggle takes effect', async () => {
+  const b = await board({ words: [...four('P'), ...four('B'), ...four('G'), ...four('Y')] });
+  // defaults: one-away off, everything else on, palette on the right
+  assert.equal(b.box('oneAway').checked, false);
+  for (const k of ['autoFill', 'reconcile', 'goButton', 'orderWarn', 'keys']) assert.equal(b.box(k).checked, true, k);
+  assert.ok(b.d.getElementById('ccm-settings').hidden);
+  await b.tap('gear');
+  assert.ok(!b.d.getElementById('ccm-settings').hidden, '⚙ opens the panel');
+  b.d.body.click(); await sleep(20);
+  assert.ok(b.d.getElementById('ccm-settings').hidden, 'clicking outside closes it');
+
+  // auto-fill off: three full colors leave the last 4 unmarked
+  await b.setOpt('autoFill', false);
+  for (const [c, p] of [['purple', 'P'], ['blue', 'B'], ['green', 'G']]) { b.select(four(p)); await b.tap(c); }
+  assert.equal(b.store().Y1, undefined);
+  assert.deepEqual(JSON.parse(b.w.localStorage.getItem('ccm:settings')).autoFill, false);
+
+  // Go off: hidden and inert; order warning off: no "Sure?"
+  await b.setOpt('goButton', false);
+  assert.ok(b.panel.classList.contains('nogo'));
+  await b.setOpt('goButton', true);
+  await b.setOpt('orderWarn', false);
+  await b.tap('green'); await b.tap('go');
+  assert.notEqual(b.btn('go').textContent, 'Sure?');
+
+  // keys off: number keys do nothing
+  await b.setOpt('keys', false);
+  b.w.dispatchEvent(new b.w.KeyboardEvent('keydown', { key: '1' }));
+  await sleep(20);
+  assert.ok(!b.btn('yellow').classList.contains('active'));
+
+  // palette side
+  await b.setOpt('left', true);
+  assert.ok(b.panel.classList.contains('left'));
+});
+
+test('settings: "Fix my colors" off only corrects the solved tiles', async () => {
+  const b = await board({
+    words: four('X'),
+    solved: [{ level: 3, words: four('A') }],
+    marks: { ...Object.fromEntries(four('A').map(x => [x, 'blue'])), ...Object.fromEntries(four('X').map(x => [x, 'purple'])) },
+    stored: { 'ccm:settings': { reconcile: false } },
+  });
+  const s = b.store();
+  assert.ok(four('A').every(x => s[x] === 'purple'), 'solved tiles take the real color');
+  assert.ok(four('X').every(x => s[x] === 'purple'), 'your other marks are left alone');
+});
+
+test('settings: "One away" off by default records nothing', async () => {
+  const b = await board({ words: ['A', 'B', 'C', 'D'] });
+  const submit = b.d.querySelector('[data-testid=submit-btn]');
+  submit.disabled = false;
+  b.select(['A', 'B', 'C', 'D']); submit.click();
+  const t = b.d.createElement('div'); t.dataset.testid = 'connection-toast'; t.innerHTML = '<h2>One away...</h2>'; b.d.body.appendChild(t);
+  await sleep(80);
+  assert.equal(b.w.localStorage.getItem('ccm:1away:2023-07-01'), null);
+  assert.equal(b.tile('A').dataset.ccmAway, undefined);
 });

@@ -26,12 +26,26 @@ Mark each tile with the color you think it is, then submit the groups in the ord
 **After guesses**
 - When a group is solved, your colors are corrected to match the game: if your "purple" turns out to be blue, purple and blue swap everywhere.
 - Solved colors show ✓.
-- A guess the game calls **One away** puts a red letter (A, B, …) on its tiles. Tiles that share letters are worth a second look.
+- Optional (off by default): a guess the game calls **One away** puts a red letter (A, B, …) on its tiles. Tiles that share letters are worth a second look.
 
 **Layout**
 - The sort button cycles **P→Y** (reverse rainbow), **Y→P** (rainbow) and **Off**. Each color gets its own row; Shuffle still works.
 - The palette stays tucked away (🎨) until the board is on screen. ▾ hides it, 🎨 brings it back.
 - Keys on desktop: 1–4 colors, 0 erase, G go, Esc cancel.
+
+**Settings (⚙ on the palette)**
+
+| Setting | Default |
+| --- | --- |
+| Mark "One away" guesses | Off |
+| Auto-fill the last group | On |
+| Fix my colors after a solve (off: only the solved tiles change) | On |
+| Go button (off: marking only) | On |
+| Ask before going out of order | On |
+| Keyboard shortcuts | On |
+| Palette on the left | Off |
+
+The settings panel also has **Clear this puzzle** and **Reset settings**.
 
 Marks are saved per puzzle in your browser and cleared after 60 days without use.
 
