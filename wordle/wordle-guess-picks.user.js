@@ -443,7 +443,7 @@ zonedzoneszooms
     const showPanel = state && !board.over;
     show.hidden = !showPanel || !collapsed;
     panel.hidden = !showPanel || collapsed;
-    if (!showPanel || collapsed) return;
+    if (!showPanel || collapsed) { fit(); return; }
     const first = !board.rows.length;
     let html = first ? '<span class="lead">Start with</span>' : '';
     if (!state.picks.length) html += '<span class="note">No word on my list fits these colors</span>';
@@ -457,6 +457,7 @@ zonedzoneszooms
     html += `<button class="tool" id="roll" title="Different picks"${busy ? ' disabled' : ''}>🎲</button>`;
     html += `<button class="tool" id="hide" title="Hide picks">▾</button>`;
     panel.innerHTML = html;
+    fit();
   }
 
   function refresh(force = false) {
@@ -505,6 +506,22 @@ zonedzoneszooms
     const kb = keyboard();
     if (kb && host.nextElementSibling !== kb) kb.parentElement.insertBefore(host, kb);
   }
+  // The game sizes its board to the screen, not to the space left, so on a short screen the
+  // picks would push the keyboard off the bottom. Then shrink the board by that much instead.
+  function fit() {
+    const b = document.querySelector('[class*="Board-module_board__"]');
+    const kb = keyboard();
+    if (!b || !kb) return;
+    b.style.transform = b.style.transformOrigin = b.style.marginBottom = '';
+    const over = kb.getBoundingClientRect().bottom - Math.min(innerHeight, window.visualViewport?.height || innerHeight);
+    if (over <= 0) return;
+    const h = b.offsetHeight;
+    const scale = Math.max(0.6, (h - over - 4) / h);
+    b.style.transform = `scale(${scale})`;
+    b.style.transformOrigin = 'top center';
+    b.style.marginBottom = `${-Math.round(h * (1 - scale))}px`;
+  }
+  addEventListener('resize', () => setTimeout(fit, 200));
 
   let timer = 0;
   const later = () => { clearTimeout(timer); timer = setTimeout(() => refresh(), 120); };
