@@ -382,7 +382,17 @@ zonedzoneszooms
     .pick { flex: 1 1 0; min-width: 0; max-width: 92px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
     .pick b { font-size: 15px; letter-spacing: .04em; text-transform: uppercase; }
     .pick small { font-size: 11px; opacity: .75; white-space: nowrap; }
-    .tool { flex: 0 0 auto; width: 34px; font-size: 16px; }
+    .tools { flex: 0 0 auto; display: flex; gap: 6px; }
+    .tool { width: 34px; font-size: 16px; }
+    /* phones: a little room at the screen edges, like the keyboard has, and the two tools
+       stacked so the five words keep their width */
+    @media (max-width: 480px) {
+      :host { padding: 0 12px; }
+      #wsl { gap: 4px; }
+      .pick b { font-size: 14px; letter-spacing: 0; }
+      .tools { flex-direction: column; gap: 3px; }
+      .tool { width: 30px; flex: 1 1 0; padding: 0; font-size: 13px; line-height: 1; }
+    }
     #show { margin: 6px auto 8px; display: block; padding: 4px 10px; font-size: 13px; }
     #show[hidden] { display: none; }
     .note { align-self: center; font-size: 13px; opacity: .75; }
@@ -413,8 +423,8 @@ zonedzoneszooms
         : `${p.word.toUpperCase()}: if it isn't the answer, about ${Math.max(1, Math.round(p.left))} answer${Math.round(p.left) > 1 ? 's' : ''} left on average. Tap to play it`;
       html += `<button class="pick" data-w="${p.word}" title="${tip}"${busy ? ' disabled' : ''}><b>${p.word}</b><small>${last ? 'only fit' : leftText(p.left)}</small></button>`;
     }
-    html += `<button class="tool" id="roll" title="Deal a different shortlist"${busy ? ' disabled' : ''}>🎲</button>`;
-    html += `<button class="tool" id="hide" title="Hide the shortlist">▾</button>`;
+    html += `<span class="tools"><button class="tool" id="roll" title="Deal a different shortlist"${busy ? ' disabled' : ''}>🎲</button>`;
+    html += `<button class="tool" id="hide" title="Hide the shortlist">▾</button></span>`;
     panel.innerHTML = html;
     fit();
   }
