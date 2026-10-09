@@ -7,7 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Userscripts for browser word and puzzle games, one folder per game. Each
 `*.user.js` file is the deliverable: it installs directly into Tampermonkey
 (desktop) or the Userscripts app (Safari on iPhone) and updates itself from its
-raw URL on `main` (see `docs/adr/0001`).
+raw URL on `main` (see `docs/adr/0001`). Scripts are also listed on Greasy Fork, whose
+installs update from Greasy Fork instead (`docs/adr/0002`).
 
 Current scripts:
 
@@ -26,7 +27,10 @@ jsdom against a simulated board (`connections/test/`). Use pnpm, never npm or ya
   only when the owner says to release.
 - **Public identity is `dividedby` only.** No real name or personal email in code,
   headers, docs or commits. Commit as `dividedby <64715420+dividedby@users.noreply.github.com>`.
-- **Pushing to `main` releases.** Unfinished work goes on a branch.
+- **Pushing to `main` releases** (to GitHub installs; Greasy Fork installs get it once
+  Greasy Fork has the new version). Unfinished work goes on a branch.
+- Never change `@namespace` (Greasy Fork and the managers key installs on it), and keep
+  `@updateURL`/`@downloadURL` on the GitHub raw URL (Greasy Fork strips them itself).
 - The script reads the live game's markup (`data-testid="card-label"`,
   `data-flip-id`, `Card-module_selected`, `solved-category-container` +
   `data-level`, `connection-toast`). When the game changes, update the simulated
@@ -42,6 +46,8 @@ Every **user-facing change** moves these together in the same PR:
 - `CHANGELOG.md` — entry under the script's `### [Unreleased]`, rolled into a dated
   version section at release;
 - `README.md` — the script's section, when behavior a user sees changes;
+- `<script folder>/greasyfork-description.md` — when the listing's text or "New in"
+  section goes stale (the owner pastes it into Greasy Fork);
 - `pnpm test` passes, and new behavior gets a test against the simulated board.
 
 Don't call a change done until it has run in the real game (desktop and phone

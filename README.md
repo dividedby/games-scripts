@@ -4,9 +4,15 @@ Userscripts for browser word and puzzle games.
 
 | Script | Game | Install |
 | --- | --- | --- |
-| [Connections Color Marker](#connections-color-marker) | NYT Connections | [Install](https://raw.githubusercontent.com/dividedby/games-scripts/main/connections/connections-color-marker.user.js) |
+| [Connections Color Marker](#connections-color-marker) | NYT Connections | [Greasy Fork](https://greasyfork.org/en/scripts/599362-connections-color-marker) · [GitHub](https://raw.githubusercontent.com/dividedby/games-scripts/main/connections/connections-color-marker.user.js) |
 
-Install with [Tampermonkey](https://www.tampermonkey.net/) (desktop) or the [Userscripts](https://apps.apple.com/app/userscripts/id1463298887) app (Safari on iPhone/iPad). Installed scripts pick up new versions from this repo (Tampermonkey checks on its own; in Userscripts, use its update check).
+### Installing
+
+1. Get a userscript manager: [Tampermonkey](https://www.tampermonkey.net/) on desktop, or the [Userscripts](https://apps.apple.com/app/userscripts/id1463298887) app for Safari on iPhone and iPad.
+2. Install the script from either place. Both carry the same version:
+   - **[Greasy Fork](https://greasyfork.org/en/scripts/599362-connections-color-marker)**: click **Install this script**. The easiest option, and where reviews and questions go.
+   - **[GitHub](https://raw.githubusercontent.com/dividedby/games-scripts/main/connections/connections-color-marker.user.js)**: open the raw file and your manager offers to install it. New versions land here first.
+3. Updates come from wherever you installed it: Greasy Fork installs update from Greasy Fork, GitHub installs from GitHub. Tampermonkey checks on its own; in the Userscripts app, use its update check. Install from only one place, or you'll have the script running twice.
 
 ## Connections Color Marker
 
@@ -20,7 +26,7 @@ Mark each tile with the color you think it is, then submit the groups in the ord
 
 ### Quick start
 
-1. Install the script (see [above](#games-scripts)) and open a Connections puzzle.
+1. Install the script (see [Installing](#installing)) and open a Connections puzzle.
 2. Select tiles in the game, then tap a color on the palette. They keep that color and get deselected.
 3. When a color has 4 tiles, tap **Go ▶** to submit it. Go always picks the next color in your order (purple first by default).
 

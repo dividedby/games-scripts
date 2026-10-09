@@ -1,7 +1,7 @@
 # 0001 — Scripts update from this repo; versions start at 0.1.0
 
 ## Status
-Accepted (2026-10-08)
+Accepted (2026-10-08). Amended by [0002](0002-also-published-on-greasy-fork.md).
 
 ## Context
 The scripts run in Tampermonkey (desktop Chrome) and the Userscripts app (Safari on
@@ -27,5 +27,5 @@ download location and the version number goes up.
 ## Consequences
 - Pushing to `main` is releasing: installed copies pick the change up on their next
   update check. Anything not ready goes on a branch.
-- Moving to GreasyFork later would mean switching the update URLs, as the other
-  dividedby userscripts do.
+- ~~Moving to GreasyFork later would mean switching the update URLs.~~ Not needed:
+  Greasy Fork strips them from its own copy, so both sources coexist (see 0002).
