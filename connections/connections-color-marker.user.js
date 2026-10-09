@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Mark NYT Connections tiles with the color you think they are, then submit them in order (built for reverse-rainbow solves)
-// @version      0.3.0
+// @version      0.3.1
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -210,8 +210,8 @@
     }
     button.swatch { color: #222; }
     button.active { border-color: var(--on); }
-    .full { text-decoration: line-through; opacity: .7; }
-    .solved { opacity: .45; }
+    .full { text-decoration: line-through; text-decoration-thickness: 2px; }
+    .solved { opacity: .6; }
     .warn { background: #c0392b !important; color: #fff !important; opacity: 1; }
     .notready, .off { opacity: .45; }
     #ccm-panel.shake { animation: ccm-shake .3s; }
@@ -252,7 +252,8 @@
   const host = document.createElement('div');
   host.id = 'ccm-root';
   const shadow = host.attachShadow({ mode: 'closed' });
-  if (window.__CCM_TEST__) window.__ccmRoot = shadow; // tests only
+  // tests, or localStorage 'ccm:debug' = 'true' for live testing: lets page scripts reach the palette
+  if (window.__CCM_TEST__ || ls.get('ccm:debug', false) === true) window.__ccmRoot = shadow;
   const shadowCss = document.createElement('style');
   shadowCss.textContent = PANEL_CSS;
   shadow.appendChild(shadowCss);

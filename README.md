@@ -33,7 +33,7 @@ Mark each tile with the color you think it is, then submit the groups in the ord
 - The sort button cycles **P→Y** (reverse rainbow), **Y→P** (rainbow) and **Off**. Each color gets its own row; Shuffle still works.
 - The palette stays tucked away (🎨) until the board is on screen. ▾ hides it, 🎨 brings it back.
 - Keys on desktop: 1–4 colors, 0 erase, Z undo, G go, Esc cancel.
-- Follows NYT's dark mode, and the marks keep their true colors under dark-mode extensions like Dark Reader.
+- Works with dark-mode extensions like Dark Reader: the marks keep their true colors and the palette turns dark.
 
 **Settings (⚙ on the palette)**
 

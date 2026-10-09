@@ -11,11 +11,15 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [0.3.1] - 2026-10-08
+#### Fixed
+- Full colors on the palette are no longer dimmed, and solved ones are easier to read, especially in dark mode.
+
 ### [0.3.0] - 2026-10-08
 #### Added
 - Undo (↶ or Z) reverses your last color change.
 - "Show color letters" setting puts Y/G/B/P on each mark and on the palette, so the colors can be told apart without color.
-- Dark theme for the palette and settings, following NYT's dark mode or Dark Reader.
+- Dark theme for the palette and settings when a dark-mode extension like Dark Reader is on.
 
 #### Fixed
 - Dark-mode extensions like Dark Reader no longer darken the marks and palette colors (blue was nearly invisible).
