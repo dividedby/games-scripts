@@ -23,7 +23,6 @@ update URL.
 
 ## Consequences
 - A push to `main` reaches GitHub installs on their next update check, and Greasy Fork
-  installs once Greasy Fork's sync picks up the new version (usually within a day; the
-  owner can trigger it sooner from the listing's admin page).
+  installs once Greasy Fork's sync picks up the new version.
 - The README offers both install sources and tells people to pick one; installing from
   both would run the script twice.
