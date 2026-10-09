@@ -44,8 +44,7 @@ into jsdom against a simulated board (`<script folder>/test/`). Use pnpm, never 
 - The scripts read the live games' markup. Connections: `data-testid="card-label"`,
   `data-flip-id`, `Card-module_selected`, `solved-category-container` +
   `data-level`, `connection-toast`. Wordle: `data-testid="tile"` with `data-state`
-  (`empty`/`tbd`/`correct`/`present`/`absent`), keyboard buttons `data-key` (`↵`, `←`),
-  hard mode in localStorage `games-state-wordleV2*`/`games-settings-wordleV2*`. When a
+  (`empty`/`tbd`/`correct`/`present`/`absent`), keyboard buttons `data-key` (`↵`, `←`). When a
   game changes, update the simulated board in the tests to match what it really renders.
 - Connections reacts to `pointerdown`, not `click`: selecting a tile programmatically
   needs the full pointer/mouse sequence (`press()` in the script). Wordle's keyboard

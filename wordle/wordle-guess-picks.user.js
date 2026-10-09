@@ -295,21 +295,6 @@ zonedzoneszooms
     return pool.filter(i => done.every(r => pattern(r.g, CODES[i]) === r.p));
   }
 
-  // Hard mode: greens stay in place and every revealed letter is used again
-  function allowedInHard(i, rows) {
-    const w = ALL[i];
-    for (const r of rows) {
-      const need = {};
-      for (let k = 0; k < 5; k++) {
-        const c = r.word[k];
-        if (r.states[k] === 'correct' && w[k] !== c) return false;
-        if (r.states[k] !== 'absent') need[c] = (need[c] || 0) + 1;
-      }
-      for (const c in need) if (w.split(c).length - 1 < need[c]) return false;
-    }
-    return true;
-  }
-
   // Expected number of answers still possible after guessing g (0 when g is the only one left)
   const buckets = new Int32Array(243);
   function expectedLeft(g, cands) {
@@ -325,29 +310,19 @@ zonedzoneszooms
 
   const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
-  // Returns { left: number of answers still possible, picks: [{ word, left, answer }] }
-  function choose(rows, hard) {
-    if (!rows.length) {
+  // Returns { left: number of answers still possible, picks: [{ word, left }] }.
+  // Every pick could be the answer (no "filler" words that only narrow things down),
+  // so they follow hard mode's rules on their own.
+  function choose(rows) {
+    if (!rows.length) { // truly random, not a good starter: any likely answer
       const i = ANSWERS[Math.floor(Math.random() * ANSWERS.length)];
-      return { left: ANSWERS.length, picks: [{ word: ALL[i], left: expectedLeft(CODES[i], ANSWERS), answer: true }] };
+      return { left: ANSWERS.length, picks: [{ word: ALL[i], left: expectedLeft(CODES[i], ANSWERS) }] };
     }
     let cands = candidates(rows, ANSWERS);
     if (!cands.length) cands = candidates(rows, ALL.map((_, i) => i)); // the answer isn't on our list
-    if (!cands.length) return { left: 0, picks: [] };
-    const asked = new Set(rows.map(r => r.word));
-    const isCand = new Set(cands);
-    const pick = i => ({ word: ALL[i], left: expectedLeft(CODES[i], cands), answer: isCand.has(i) });
-    if (cands.length <= 2) return { left: cands.length, picks: cands.map(pick) };
-    const scored = [];
-    for (let i = 0; i < ALL.length; i++) {
-      if (asked.has(ALL[i]) || (hard && !allowedInHard(i, rows))) continue;
-      scored.push({ i, e: expectedLeft(CODES[i], cands), answer: isCand.has(i) });
-    }
-    // fewer answers left first; on a tie, a word that could be the answer
-    scored.sort((x, y) => x.e - y.e || (y.answer - x.answer));
-    const picks = shuffle(scored.slice(0, POOL)).slice(0, PICKS)
-      .sort((x, y) => x.e - y.e || (y.answer - x.answer))
-      .map(s => ({ word: ALL[s.i], left: s.e, answer: s.answer }));
+    const scored = cands.map(i => ({ word: ALL[i], left: expectedLeft(CODES[i], cands) }))
+      .sort((x, y) => x.left - y.left); // fewer answers left after it first
+    const picks = scored.length <= PICKS ? scored : shuffle(scored.slice(0, POOL)).slice(0, PICKS).sort((x, y) => x.left - y.left);
     return { left: cands.length, picks };
   }
 
@@ -371,19 +346,6 @@ zonedzoneszooms
         if (d && ls.get(k, {}).at < cutoff) ls.del(k);
       }
     } catch {}
-  }
-
-  // the game's own hard mode setting for this puzzle (or in general)
-  function hardMode() {
-    try {
-      for (const k of Object.keys(localStorage)) {
-        if (!/^games-(state|settings)-wordleV2/.test(k)) continue;
-        const states = JSON.parse(localStorage.getItem(k))?.states || [];
-        const s = states.find(x => x.printDate === puzzleId()) || (k.includes('settings') && states[0]);
-        if (s && typeof s.data?.hardMode === 'boolean') return s.data.hardMode;
-      }
-    } catch {}
-    return false;
   }
 
   // ---------- the board ----------
@@ -420,8 +382,6 @@ zonedzoneszooms
     .pick { flex: 1 1 0; min-width: 0; max-width: 92px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
     .pick b { font-size: 15px; letter-spacing: .04em; text-transform: uppercase; }
     .pick small { font-size: 11px; opacity: .75; white-space: nowrap; }
-    .pick.ans small::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%;
-      background: #6aaa64; margin-right: 3px; vertical-align: 0; }
     .tool { flex: 0 0 auto; width: 34px; font-size: 16px; }
     #show { margin: 6px auto 8px; display: block; padding: 4px 10px; font-size: 13px; }
     #show[hidden] { display: none; }
@@ -450,9 +410,8 @@ zonedzoneszooms
     const last = state.left === 1;
     for (const p of state.picks) {
       const tip = last ? `${p.word.toUpperCase()}: the only likely answer that fits. Tap to play it`
-        : `${p.word.toUpperCase()}: about ${Math.max(1, Math.round(p.left))} answer${Math.round(p.left) > 1 ? 's' : ''} left on average after this guess` +
-          (p.answer ? ', and it could be the answer' : '') + '. Tap to play it';
-      html += `<button class="pick${p.answer ? ' ans' : ''}" data-w="${p.word}" title="${tip}"${busy ? ' disabled' : ''}><b>${p.word}</b><small>${last ? 'only fit' : leftText(p.left)}</small></button>`;
+        : `${p.word.toUpperCase()}: if it isn't the answer, about ${Math.max(1, Math.round(p.left))} answer${Math.round(p.left) > 1 ? 's' : ''} left on average. Tap to play it`;
+      html += `<button class="pick" data-w="${p.word}" title="${tip}"${busy ? ' disabled' : ''}><b>${p.word}</b><small>${last ? 'only fit' : leftText(p.left)}</small></button>`;
     }
     html += `<button class="tool" id="roll" title="Different picks"${busy ? ' disabled' : ''}>🎲</button>`;
     html += `<button class="tool" id="hide" title="Hide picks">▾</button>`;
@@ -471,7 +430,7 @@ zonedzoneszooms
       const saved = ls.get(picksKey(), null);
       if (!force && saved?.sig === sig && saved.picks) state = { sig, left: saved.left, picks: saved.picks };
       else {
-        const c = choose(board.rows, hardMode());
+        const c = choose(board.rows);
         state = { sig, left: c.left, picks: c.picks.map(p => ({ ...p, left: Math.round(p.left * 10) / 10 })) };
         ls.set(picksKey(), { ...state, at: Date.now() });
       }

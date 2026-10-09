@@ -94,13 +94,12 @@ The words the script treats as possible answers: NYT WordleBot's answer list. If
 of them fits the board, every word on the guess list counts instead.
 
 ### Picks
-The words offered for the next guess. Before the first guess, one random likely
-answer (the **starting word**). After that, 5 drawn at random from the best 30
-guesses, so they are good but not equally good; with two or fewer answers left, the
-picks are exactly those answers. Picks are kept per puzzle and turn until 🎲 deals
-new ones.
+The words offered for the next guess. Before the first guess, one likely answer at
+random, good opener or not (the **starting word**). After that, only words that could
+still be the answer (never "filler" words played just to narrow things down): 5 drawn
+at random from the best 30 of them, so they are good but not equally good; with 5 or
+fewer left, all of them. Picks are kept per puzzle and turn until 🎲 deals new ones.
 
 ### Answers left
 A pick's hint: the number of likely answers you'd expect to still fit after playing
-it (averaged over the answers that fit now). Fewer is better. A dot marks a pick
-that is itself a likely answer.
+it, if it isn't the answer (averaged over the answers that fit now). Fewer is better.

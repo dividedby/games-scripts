@@ -11,7 +11,7 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 #### Added
-- First version: a random starting word from the likely answers, then 5 picks each turn drawn from the best 30 guesses, each with roughly how many answers it would leave and a dot when it could be the answer. Tap a pick to play it; 🎲 deals new picks; ▾ tucks them away. Follows hard mode, never looks up the answer, and shrinks the board on short screens so the keyboard stays in view.
+- First version: a starting word picked at random from the likely answers, then 5 picks each turn, all possible answers, drawn from the best 30 of them, each with roughly how many answers it would leave. Tap a pick to play it; 🎲 deals new picks; ▾ tucks them away. The picks always fit hard mode, the script never looks up the answer, and the board shrinks on short screens so the keyboard stays in view.
 
 ## Connections Color Marker
 
