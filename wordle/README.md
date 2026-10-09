@@ -19,7 +19,7 @@ The picks are drawn at random from the 30 best possible answers, so some are bet
 | Button | Does |
 | --- | --- |
 | 🎲 | Deal a different set of picks for this turn |
-| ▾ | Tuck the picks away; tap **🎲 Picks** to bring them back |
+| ▾ | Tuck the picks away; tap **🎲 Shortlist** to bring them back |
 
 ## Good to know
 

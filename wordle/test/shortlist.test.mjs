@@ -150,7 +150,7 @@ test('a solved or lost puzzle hides the picks', async () => {
   assert.ok(lost.panel().hidden);
 });
 
-test('🎲 deals new picks and ▾ tucks them away until 🎲 Picks is tapped', async () => {
+test('🎲 deals new picks and ▾ tucks them away until 🎲 Shortlist is tapped', async () => {
   const g = await game({ played: ['crane'] });
   const first = g.picks().join();
   let changed = false;

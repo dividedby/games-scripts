@@ -388,7 +388,7 @@ zonedzoneszooms
     .note { align-self: center; font-size: 13px; opacity: .75; }
   </style>
   <div id="wsl" hidden></div>
-  <button id="show" hidden title="Show guess picks">🎲 Picks</button>`;
+  <button id="show" hidden title="Show the shortlist">🎲 Shortlist</button>`;
   const panel = root.getElementById('wsl');
   const show = root.getElementById('show');
 
@@ -413,8 +413,8 @@ zonedzoneszooms
         : `${p.word.toUpperCase()}: if it isn't the answer, about ${Math.max(1, Math.round(p.left))} answer${Math.round(p.left) > 1 ? 's' : ''} left on average. Tap to play it`;
       html += `<button class="pick" data-w="${p.word}" title="${tip}"${busy ? ' disabled' : ''}><b>${p.word}</b><small>${last ? 'only fit' : leftText(p.left)}</small></button>`;
     }
-    html += `<button class="tool" id="roll" title="Different picks"${busy ? ' disabled' : ''}>🎲</button>`;
-    html += `<button class="tool" id="hide" title="Hide picks">▾</button>`;
+    html += `<button class="tool" id="roll" title="Deal a different shortlist"${busy ? ' disabled' : ''}>🎲</button>`;
+    html += `<button class="tool" id="hide" title="Hide the shortlist">▾</button>`;
     panel.innerHTML = html;
     fit();
   }
