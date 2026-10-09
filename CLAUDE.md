@@ -13,7 +13,14 @@ installs update from Greasy Fork instead (`docs/adr/0002`).
 Current scripts:
 
 - `connections/connections-color-marker.user.js` — NYT Connections: mark tiles with
-  colors, submit groups in order, reconcile marks with solved groups.
+  colors (or split them between candidate colors), submit groups in order, reconcile
+  marks with solved groups.
+
+Each script folder holds the script, its `README.md` (the user guide),
+`greasyfork-description.md` (the Greasy Fork listing, synced from `main`) and
+`test/`. Screenshots live in `docs/images/<script>/`; the READMEs and the Greasy Fork
+listing link to them by path, so keep the file names. The root `README.md` only lists
+scripts and install steps. Domain terms are in `CONTEXT.md`.
 
 No bundler and no build step. `pnpm test` runs behavior tests that load a script into
 jsdom against a simulated board (`connections/test/`). Use pnpm, never npm or yarn.
@@ -54,6 +61,22 @@ Every **user-facing change** moves these together in the same PR:
 
 Don't call a change done until it has run in the real game (desktop and phone
 width), not only in jsdom.
+
+## Testing in the real game
+
+- Use 2023 archive puzzles (`/games/connections/2023-MM-DD`): the owner won't replay
+  them. Answers: `/svc/connections/v2/YYYY-MM-DD.json` on nytimes.com. Leave puzzles
+  the owner opened for you unsolved and cleared afterwards unless asked.
+- Desktop: the owner's Chrome tab group "Claude" (desktop and phone-width tabs). Set
+  localStorage `ccm:debug` to `true` and reload to expose the palette's shadow root as
+  `window.__ccmRoot`; remove it when done. The phone-width tab doesn't take real
+  clicks, so drive it from page JavaScript.
+- iPhone: real taps through iPhone Mirroring. It lags several seconds and drops quick
+  taps, so tap slowly and screenshot after each step. Typing garbles text, so navigate
+  by tapping (or ask the owner to open a URL). Zooming the full window gives a 2×
+  screenshot good enough for the README.
+- Installed copies update only after the owner updates them in Tampermonkey and the
+  Userscripts app, so ask before testing a new version.
 
 ## Agent skills
 
