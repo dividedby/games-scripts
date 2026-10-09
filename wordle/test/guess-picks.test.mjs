@@ -179,3 +179,9 @@ test('the picks sit just above the game keyboard, and saved picks expire after 6
   assert.equal(g.w.localStorage.getItem('wgp:2023-01-01'), null);
   assert.notEqual(g.w.localStorage.getItem('wgp:2023-07-10'), null);
 });
+
+test('when only one answer fits, it is the single pick, labeled as the only fit', async () => {
+  const g = await game({ answer: 'earth', played: ['crane', 'tales'] });
+  assert.deepEqual(g.picks(), ['earth']);
+  assert.equal(g.pick('earth').querySelector('small').textContent, 'only fit');
+});

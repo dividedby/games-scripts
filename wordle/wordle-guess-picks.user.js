@@ -447,10 +447,12 @@ zonedzoneszooms
     const first = !board.rows.length;
     let html = first ? '<span class="lead">Start with</span>' : '';
     if (!state.picks.length) html += '<span class="note">No word on my list fits these colors</span>';
+    const last = state.left === 1;
     for (const p of state.picks) {
-      const tip = `${p.word.toUpperCase()}: about ${Math.max(1, Math.round(p.left))} answer${Math.round(p.left) > 1 ? 's' : ''} left on average after this guess` +
-        (p.answer ? ', and it could be the answer' : '') + '. Tap to play it';
-      html += `<button class="pick${p.answer ? ' ans' : ''}" data-w="${p.word}" title="${tip}"${busy ? ' disabled' : ''}><b>${p.word}</b><small>${leftText(p.left)}</small></button>`;
+      const tip = last ? `${p.word.toUpperCase()}: the only likely answer that fits. Tap to play it`
+        : `${p.word.toUpperCase()}: about ${Math.max(1, Math.round(p.left))} answer${Math.round(p.left) > 1 ? 's' : ''} left on average after this guess` +
+          (p.answer ? ', and it could be the answer' : '') + '. Tap to play it';
+      html += `<button class="pick${p.answer ? ' ans' : ''}" data-w="${p.word}" title="${tip}"${busy ? ' disabled' : ''}><b>${p.word}</b><small>${last ? 'only fit' : leftText(p.left)}</small></button>`;
     }
     html += `<button class="tool" id="roll" title="Different picks"${busy ? ' disabled' : ''}>🎲</button>`;
     html += `<button class="tool" id="hide" title="Hide picks">▾</button>`;
