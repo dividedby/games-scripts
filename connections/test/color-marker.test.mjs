@@ -9,7 +9,7 @@ import { JSDOM } from 'jsdom';
 
 const SRC = readFileSync(new URL('../connections-color-marker.user.js', import.meta.url), 'utf8');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const BTN = { yellow: 0, green: 1, blue: 2, purple: 3, erase: 4, sort: 5, go: 6, gear: 7, toggle: 8 };
+const BTN = { yellow: 0, green: 1, blue: 2, purple: 3, erase: 4, undo: 5, sort: 6, go: 7, gear: 8, toggle: 9 };
 const RGB = { yellow: 'rgb(249, 223, 109)', blue: 'rgb(176, 196, 239)', purple: 'rgb(186, 129, 197)' };
 
 // words: tiles on the board; solved: [{ level, words }]; stored: localStorage seed
@@ -21,16 +21,20 @@ async function board({ words = [], solved = [], date = '2023-07-01', marks = {},
   { url: `https://www.nytimes.com/games/connections/${date}`, runScripts: 'outside-only', pretendToBeVisual: true });
   const w = dom.window;
   w.PointerEvent = w.PointerEvent || w.MouseEvent;
+  w.__CCM_TEST__ = true;
   w.localStorage.setItem(`ccm:${date}`, JSON.stringify(marks));
   for (const [k, v] of Object.entries(stored)) w.localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
   w.eval(SRC);
   await sleep(60);
   const d = w.document;
-  const panel = d.getElementById('ccm-panel');
+  const root = w.__ccmRoot; // the palette's (closed) shadow root, exposed for tests
+  const panel = root.getElementById('ccm-panel');
   const b = {
     w, d, panel,
     btn: k => panel.querySelectorAll(':scope > button')[BTN[k]],
-    box: k => d.querySelector(`#ccm-settings input[data-k="${k}"]`),
+    root,
+    sheet: () => root.getElementById('ccm-settings'),
+    box: k => root.querySelector(`#ccm-settings input[data-k="${k}"]`),
     async setOpt(k, on) { const x = b.box(k); x.checked = on; x.dispatchEvent(new w.Event('change', { bubbles: true })); await sleep(40); },
     tile: x => d.querySelector(`[data-flip-id="${x}"]`),
     select(ws) {
@@ -214,11 +218,11 @@ test('settings: defaults, saved choices, and each toggle takes effect', async ()
   // defaults: one-away off, everything else on, palette on the right
   assert.equal(b.box('oneAway').checked, false);
   for (const k of ['autoFill', 'reconcile', 'goButton', 'orderWarn', 'keys']) assert.equal(b.box(k).checked, true, k);
-  assert.ok(b.d.getElementById('ccm-settings').hidden);
+  assert.ok(b.sheet().hidden);
   await b.tap('gear');
-  assert.ok(!b.d.getElementById('ccm-settings').hidden, '⚙ opens the panel');
+  assert.ok(!b.sheet().hidden, '⚙ opens the panel');
   b.d.body.click(); await sleep(20);
-  assert.ok(b.d.getElementById('ccm-settings').hidden, 'clicking outside closes it');
+  assert.ok(b.sheet().hidden, 'clicking outside closes it');
 
   // auto-fill off: three full colors leave the last 4 unmarked
   await b.setOpt('autoFill', false);
@@ -266,4 +270,56 @@ test('settings: "One away" off by default records nothing', async () => {
   await sleep(80);
   assert.equal(b.w.localStorage.getItem('ccm:1away:2023-07-01'), null);
   assert.equal(b.tile('A').dataset.ccmAway, undefined);
+});
+
+test('marks are drawn in a sealed overlay inside each tile, and follow the mark', async () => {
+  const b = await board({ words: ['A', 'B'], marks: { A: 'blue' } });
+  const m = b.tile('A').querySelector('ccm-mark');
+  assert.ok(m, 'overlay present');
+  assert.equal(m.shadowRoot, null, 'closed shadow root: page extensions cannot restyle it');
+  assert.equal(b.tile('B').querySelector('ccm-mark'), null);
+  b.select(['A']); await b.tap('erase');
+  assert.equal(b.tile('A').querySelector('ccm-mark'), null, 'erasing removes the overlay');
+});
+
+test('undo reverses assign, swap and exchange, and dims when there is nothing to undo', async () => {
+  const b = await board({ words: ['A', 'B', 'C', 'D', 'E'], marks: { A: 'blue', B: 'purple' } });
+  assert.ok(b.btn('undo').classList.contains('off'));
+  b.select(['C']); await b.tap('green');
+  assert.equal(b.store().C, 'green');
+  assert.ok(!b.btn('undo').classList.contains('off'));
+  b.select([]); // jsdom has no game to deselect for us
+  await b.tap('blue'); await b.tap('purple'); // swap
+  assert.equal(b.store().A, 'purple');
+  await b.tap('undo');
+  assert.equal(b.store().A, 'blue', 'swap undone');
+  await b.tap('undo');
+  assert.equal(b.store().C, undefined, 'assign undone');
+  assert.ok(b.btn('undo').classList.contains('off'));
+  await b.tap('undo');
+  assert.ok(b.shook(), 'nothing left to undo');
+  b.select(['D']);
+  b.w.dispatchEvent(new b.w.KeyboardEvent('keydown', { key: '2' })); await sleep(40);
+  b.w.dispatchEvent(new b.w.KeyboardEvent('keydown', { key: 'z' })); await sleep(40);
+  assert.equal(b.store().D, undefined, 'Z undoes');
+});
+
+test('color letters: swatches and dots show Y/G/B/P when turned on', async () => {
+  const b = await board({ words: ['A', 'B'], marks: { A: 'purple' }, stored: { 'ccm:settings': { letters: true } } });
+  assert.equal(b.btn('purple').textContent, 'P1');
+  assert.equal(b.btn('yellow').textContent, 'Y0');
+  await b.setOpt('letters', false);
+  assert.equal(b.btn('purple').textContent, '1');
+});
+
+test('dark theme follows NYT dark mode or Dark Reader', async () => {
+  const b = await board({ words: ['A'] });
+  const host = b.d.getElementById('ccm-root');
+  assert.equal(host.dataset.theme, 'light');
+  b.d.body.dataset.mode = 'dark'; await sleep(80);
+  assert.equal(host.dataset.theme, 'dark');
+  delete b.d.body.dataset.mode; await sleep(80);
+  assert.equal(host.dataset.theme, 'light');
+  b.d.documentElement.dataset.darkreaderScheme = 'dark'; await sleep(80);
+  assert.equal(host.dataset.theme, 'dark');
 });

@@ -15,6 +15,7 @@ Mark each tile with the color you think it is, then submit the groups in the ord
 **Marking**
 - Select tiles in the game, then tap a color on the palette. The tiles keep that color and get deselected.
 - ⌫ removes marks from the selected tiles. Each color holds at most 4 tiles.
+- ↶ undoes your last color change (marking, erasing, swapping, exchanging or clearing).
 - A color is full? Select one of its tiles plus the one you want in, then tap the color: the two swap colors.
 - With nothing selected, tap two colors to swap them everywhere.
 - Once three colors have 4 tiles, the last 4 get the remaining color automatically.
@@ -31,7 +32,8 @@ Mark each tile with the color you think it is, then submit the groups in the ord
 **Layout**
 - The sort button cycles **P→Y** (reverse rainbow), **Y→P** (rainbow) and **Off**. Each color gets its own row; Shuffle still works.
 - The palette stays tucked away (🎨) until the board is on screen. ▾ hides it, 🎨 brings it back.
-- Keys on desktop: 1–4 colors, 0 erase, G go, Esc cancel.
+- Keys on desktop: 1–4 colors, 0 erase, Z undo, G go, Esc cancel.
+- Follows NYT's dark mode, and the marks keep their true colors under dark-mode extensions like Dark Reader.
 
 **Settings (⚙ on the palette)**
 
@@ -42,6 +44,7 @@ Mark each tile with the color you think it is, then submit the groups in the ord
 | Fix my colors after a solve (off: only the solved tiles change) | On |
 | Go button (off: marking only) | On |
 | Ask before going out of order | On |
+| Show color letters (Y/G/B/P on marks and the palette, for colorblind players) | Off |
 | Keyboard shortcuts | On |
 | Palette on the left | Off |
 

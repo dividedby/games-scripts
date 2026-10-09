@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Mark NYT Connections tiles with the color you think they are, then submit them in order (built for reverse-rainbow solves)
-// @version      0.2.1
+// @version      0.3.0
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -104,7 +104,8 @@
     { key: 'reconcile', def: true,  label: 'Fix my colors after a solve', help: 'If your purple turns out to be blue, swap purple and blue everywhere. Off: only the solved tiles change' },
     { key: 'goButton',  def: true,  label: 'Go button', help: 'Submit a color\'s 4 tiles for you. Off: marking only' },
     { key: 'orderWarn', def: true,  label: 'Ask before going out of order', help: 'Go asks "Sure?" when you submit a color ahead of your sort order' },
-    { key: 'keys',      def: true,  label: 'Keyboard shortcuts', help: '1–4 colors, 0 erase, G go, Esc cancel' },
+    { key: 'letters',   def: false, label: 'Show color letters', help: 'Y, G, B, P on each marked tile, for telling the colors apart without color' },
+    { key: 'keys',      def: true,  label: 'Keyboard shortcuts', help: '1–4 colors, 0 erase, Z undo, G go, Esc cancel' },
     { key: 'left',      def: false, label: 'Palette on the left', help: 'Move the palette to the bottom-left corner' },
   ];
   const DEFAULTS = Object.fromEntries(SETTINGS.map(o => [o.key, o.def]));
@@ -164,65 +165,97 @@
   const nextColor = () => { const s = solvedColors(); return playOrder().find(c => !s.has(c)) || null; };
 
   // ---------- styles ----------
-  const css = document.createElement('style');
-  css.textContent = `
+  // Everything with a color lives inside closed shadow roots (the palette, and a <ccm-mark>
+  // overlay inside each tile), so page-darkening extensions like Dark Reader can't recolor
+  // the marks. The page-level CSS below only positions things.
+  const pageCss = document.createElement('style');
+  pageCss.textContent = `
     [data-ccm], [data-ccm-away] { position: relative; }
-    [data-ccm] { box-shadow: inset 0 0 0 5px var(--ccm) !important; }
-    [data-ccm]::after {
-      content: ''; position: absolute; top: 6px; right: 6px; width: 12px; height: 12px;
-      border-radius: 50%; background: var(--ccm); border: 1px solid rgba(0,0,0,.35);
-      pointer-events: none;
+    ccm-mark { position: absolute; inset: 0; display: block; pointer-events: none; border-radius: inherit; z-index: 1; }
+  `;
+  document.head.appendChild(pageCss);
+
+  const MARK_CSS = `
+    :host { border-radius: inherit; }
+    .ring { position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 5px var(--c); }
+    .dot {
+      position: absolute; top: 6px; right: 6px; min-width: 12px; height: 12px; box-sizing: border-box;
+      border-radius: 6px; background: var(--c); border: 1px solid rgba(0,0,0,.35);
+      font: 800 10px/10px system-ui, sans-serif; color: #111; text-align: center;
     }
-    [data-ccm-away]::before {
-      content: attr(data-ccm-away); position: absolute; left: 6px; bottom: 6px;
-      font: 700 10px/1 system-ui, sans-serif; letter-spacing: 1px; color: #fff;
-      background: #c0392b; border-radius: 4px; padding: 2px 3px; pointer-events: none;
+    .dot.letter { min-width: 16px; height: 16px; border-radius: 8px; line-height: 14px; top: 5px; right: 5px; }
+    .away {
+      position: absolute; left: 6px; bottom: 6px; font: 700 10px/1 system-ui, sans-serif; letter-spacing: 1px;
+      color: #fff; background: #c0392b; border-radius: 4px; padding: 2px 3px;
     }
+  `;
+
+  const PANEL_CSS = `
+    :host { all: initial; }
     #ccm-panel {
-      position: fixed; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 99999;
+      --bg: rgba(255,255,255,.96); --fg: #222; --line: #ccc; --btn: #eee; --sheet: #fff; --muted: #666; --sep: #eee; --on: #000;
+      position: fixed; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 2147483000;
       display: flex; gap: 6px; align-items: center; padding: 6px 8px;
-      background: rgba(255,255,255,.95); border: 1px solid #ccc; border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,.15); font: 600 12px/1 system-ui, sans-serif; color: #222;
+      background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.15); font: 600 12px/1 system-ui, sans-serif; color: var(--fg);
+      -webkit-tap-highlight-color: transparent;
     }
-    #ccm-panel button {
+    :host([data-theme=dark]) #ccm-panel {
+      --bg: rgba(32,33,34,.96); --fg: #eee; --line: #4a4b4c; --btn: #3a3b3c; --sheet: #26272a; --muted: #aaa; --sep: #3a3b3c; --on: #fff;
+      box-shadow: 0 2px 10px rgba(0,0,0,.5);
+    }
+    button {
       min-width: 30px; height: 30px; border-radius: 6px; border: 2px solid transparent;
-      cursor: pointer; font: inherit; color: #222; background: #eee; padding: 0 6px;
+      cursor: pointer; font: inherit; color: var(--fg); background: var(--btn); padding: 0 6px; margin: 0;
     }
-    #ccm-panel button.active { border-color: #000; }
-    #ccm-panel .full { text-decoration: line-through; opacity: .7; }
-    #ccm-panel .solved { opacity: .45; }
-    #ccm-panel .warn { background: #c0392b !important; color: #fff; opacity: 1; }
-    #ccm-panel .notready { opacity: .45; }
+    button.swatch { color: #222; }
+    button.active { border-color: var(--on); }
+    .full { text-decoration: line-through; opacity: .7; }
+    .solved { opacity: .45; }
+    .warn { background: #c0392b !important; color: #fff !important; opacity: 1; }
+    .notready, .off { opacity: .45; }
     #ccm-panel.shake { animation: ccm-shake .3s; }
     #ccm-panel.collapsed > :not(.ccm-toggle) { display: none; }
     #ccm-panel.collapsed { padding: 4px; }
     #ccm-panel.left { right: auto; left: 12px; }
-    #ccm-panel .ccm-gear { font-size: 17px; line-height: 1; }
+    .ccm-gear { font-size: 17px; line-height: 1; }
+    .ccm-undo { font-size: 15px; }
+    #ccm-panel.nogo .ccm-go { display: none; }
     #ccm-settings {
       position: absolute; right: 0; bottom: calc(100% + 8px); width: 270px; max-width: calc(100vw - 24px);
-      background: #fff; border: 1px solid #ccc; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.18);
-      padding: 10px 12px; font: 500 13px/1.3 system-ui, sans-serif; color: #222; cursor: default;
+      background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.25);
+      padding: 10px 12px; font: 500 13px/1.3 system-ui, sans-serif; color: var(--fg); cursor: default;
+      max-height: calc(100vh - 90px); overflow-y: auto;
     }
     #ccm-panel.left #ccm-settings { right: auto; left: 0; }
     #ccm-settings[hidden] { display: none; }
-    #ccm-settings h4 { margin: 0 0 6px; font: 700 13px/1.2 system-ui, sans-serif; }
-    #ccm-settings label { display: flex; gap: 8px; align-items: flex-start; padding: 5px 0; cursor: pointer; }
-    #ccm-settings input { margin: 2px 0 0; width: 16px; height: 16px; flex: none; accent-color: #5a594e; }
-    #ccm-settings small { display: block; color: #666; font-size: 11px; }
-    #ccm-settings .row { display: flex; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; }
-    #ccm-settings .row button { flex: 1; height: 30px; font: 600 12px system-ui, sans-serif; }
-    #ccm-panel.nogo .ccm-go { display: none; }
+    h4 { margin: 0 0 6px; font: 700 13px/1.2 system-ui, sans-serif; }
+    label { display: flex; gap: 8px; align-items: flex-start; padding: 5px 0; cursor: pointer; }
+    input { margin: 2px 0 0; width: 16px; height: 16px; flex: none; accent-color: #6a6958; }
+    small { display: block; color: var(--muted); font-size: 11px; }
+    .row { display: flex; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--sep); }
+    .row button { flex: 1; height: 30px; font: 600 12px system-ui, sans-serif; }
     @keyframes ccm-shake { 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
     @media (max-width: 480px) {
-      #ccm-panel { right: 6px; bottom: calc(6px + env(safe-area-inset-bottom, 0px)); gap: 3px; padding: 4px 5px; font-size: 12px; }
+      #ccm-panel { right: 6px; bottom: calc(6px + env(safe-area-inset-bottom, 0px)); gap: 3px; padding: 4px 5px; }
       #ccm-panel.left { right: auto; left: 6px; }
-      #ccm-settings label { padding: 7px 0; }
-      #ccm-panel button { min-width: 32px; height: 42px; padding: 0 5px; }
+      label { padding: 7px 0; }
+      #ccm-panel > button { min-width: 30px; height: 42px; padding: 0 4px; }
     }
   `;
-  document.head.appendChild(css);
+
+  // dark when NYT's own dark mode or Dark Reader is on
+  const isDark = () => document.body?.dataset.mode === 'dark' ||
+    document.documentElement.dataset.darkreaderScheme === 'dark';
 
   // ---------- panel ----------
+  const host = document.createElement('div');
+  host.id = 'ccm-root';
+  const shadow = host.attachShadow({ mode: 'closed' });
+  if (window.__CCM_TEST__) window.__ccmRoot = shadow; // tests only
+  const shadowCss = document.createElement('style');
+  shadowCss.textContent = PANEL_CSS;
+  shadow.appendChild(shadowCss);
   const panel = document.createElement('div');
   panel.id = 'ccm-panel';
   panel.title = 'Select tiles, then tap a color to mark them (⌫ removes marks). With nothing selected: tap two colors to swap them, or a color then Go to submit it; Go alone submits the next color. ⚙ for settings.';
@@ -236,8 +269,11 @@
     return b;
   };
   const btns = {};
-  for (const c of COLORS) btns[c.key] = addButton('0', () => assign(c.key), c.hex);
+  for (const c of COLORS) { btns[c.key] = addButton('0', () => assign(c.key), c.hex); btns[c.key].classList.add('swatch'); }
   addButton('⌫', () => assign('erase'));
+  const undoBtn = addButton('↶', () => undo());
+  undoBtn.classList.add('ccm-undo');
+  undoBtn.title = 'Undo your last color change';
   const sortBtn = addButton('', () => {
     sortMode = SORT_CYCLE[(SORT_CYCLE.indexOf(sortMode) + 1) % SORT_CYCLE.length];
     try { localStorage.setItem(SORT_KEY, sortMode); } catch {}
@@ -273,7 +309,7 @@
     applySettings();
   });
   sheet.querySelector('[data-act=clear]').addEventListener('click', () => {
-    if (confirm('Clear all color marks for this puzzle?')) { marks = {}; save(); apply(); }
+    if (confirm('Clear all color marks for this puzzle?')) { remember(); marks = {}; save(); apply(); }
   });
   sheet.querySelector('[data-act=reset]').addEventListener('click', () => {
     settings = { ...DEFAULTS };
@@ -285,7 +321,7 @@
     sheet.hidden = !open;
     gearBtn.classList.toggle('active', open);
   }
-  document.addEventListener('click', e => { if (!sheet.hidden && !panel.contains(e.target)) toggleSettings(false); });
+  document.addEventListener('click', e => { if (!sheet.hidden && !e.composedPath().includes(host)) toggleSettings(false); });
   function applySettings() {
     for (const box of sheet.querySelectorAll('input[data-k]')) box.checked = !!settings[box.dataset.k];
     panel.classList.toggle('left', opt('left'));
@@ -313,7 +349,12 @@
     toggleBtn.title = on ? 'Show the color palette' : 'Hide the palette';
   }
   showCollapsed();
-  document.body.appendChild(panel);
+  shadow.appendChild(panel);
+  document.body.appendChild(host);
+  function showTheme() {
+    const t = isDark() ? 'dark' : 'light';
+    if (host.dataset.theme !== t) host.dataset.theme = t;
+  }
 
   // a color tapped with nothing selected: waiting for a second color (swap) or Go (submit)
   let armed = null;
@@ -350,6 +391,24 @@
     }
   }
 
+  // ---------- undo: snapshots of your marks before each change you make ----------
+  let history = [];
+  const UNDO_LIMIT = 50;
+  function remember() {
+    history.push(JSON.stringify(marks));
+    if (history.length > UNDO_LIMIT) history.shift();
+    showUndo();
+  }
+  function showUndo() { undoBtn.classList.toggle('off', !history.length); }
+  function undo() {
+    if (submitting || !history.length) { shake(); return; }
+    marks = JSON.parse(history.pop());
+    arm(null);
+    save();
+    apply();
+    showUndo();
+  }
+
   // ---------- assign color to the current selection, then deselect ----------
   function assign(color) {
     if (submitting) return; // Go is selecting tiles; don't recolor them mid-submit
@@ -358,12 +417,13 @@
     if (!sel.length) {
       if (!HEX[color] || solved.has(color)) { arm(null); shake(); return; } // nothing to arm
       if (!armed) { arm(color); return; }
-      if (armed !== color) { swapColors(armed, color); save(); apply(); }
+      if (armed !== color) { remember(); swapColors(armed, color); save(); apply(); }
       arm(null);
       return;
     }
     arm(null);
     const words = sel.map(wordOf);
+    const before = JSON.stringify(marks);
     if (color === 'erase') {
       for (const w of words) delete marks[w];
     } else {
@@ -384,6 +444,7 @@
         if (opt('autoFill')) autoFill();
       }
     }
+    if (JSON.stringify(marks) !== before) { history.push(before); if (history.length > UNDO_LIMIT) history.shift(); showUndo(); }
     save();
     apply();
     deselectAll();
@@ -433,7 +494,11 @@
   window.addEventListener('click', e => {
     if (e.target.closest?.('[data-testid="submit-btn"]')) {
       const words = selectedTiles().map(wordOf).sort();
-      if (words.length === 4 && opt('oneAway')) pendingGuess = words;
+      if (words.length === 4 && opt('oneAway')) {
+        pendingGuess = words;
+        let n = 0;
+        const t = setInterval(() => { if (!pendingGuess || ++n > 40) clearInterval(t); else apply(); }, 150);
+      }
     }
   }, true);
   function checkToast() {
@@ -528,6 +593,27 @@
     if (changed) save();
   }
 
+  // ---------- the colored overlay inside each marked tile ----------
+  const markRoots = new WeakMap(); // <ccm-mark> → its closed shadow root
+  function drawMark(tile, color, away) {
+    let m = [...tile.children].find(n => n.localName === 'ccm-mark');
+    if (!color && !away) { if (m) m.remove(); return; }
+    const key = `${color || ''}|${away}|${opt('letters') ? 1 : 0}`;
+    if (m && m.dataset.k === key) return; // already drawn
+    if (!m) {
+      m = document.createElement('ccm-mark');
+      const r = m.attachShadow({ mode: 'closed' });
+      markRoots.set(m, r);
+      tile.appendChild(m);
+    }
+    m.dataset.k = key;
+    const r = markRoots.get(m);
+    const letter = color && opt('letters') ? color[0].toUpperCase() : '';
+    r.innerHTML = `<style>${MARK_CSS}</style>` +
+      (color ? `<div class="ring" style="--c:${HEX[color]}"></div><div class="dot${letter ? ' letter' : ''}" style="--c:${HEX[color]}">${letter}</div>` : '') +
+      (away ? `<div class="away">${away}</div>` : '');
+  }
+
   // ---------- draw everything ----------
   function apply() {
     if (puzzleId() !== lastId) { // moved to another date
@@ -535,6 +621,8 @@
       marks = ls.get(marksKey(), {});
       aways = ls.get(awayKey(), []);
       pendingGuess = null;
+      history = [];
+      showUndo();
     }
     checkToast();
     const groups = solvedGroups();
@@ -557,22 +645,22 @@
       const w = wordOf(el);
       present.add(w);
       const c = HEX[marks[w]] ? marks[w] : null;
-      if (c) {
-        if (el.dataset.ccm !== c) { el.dataset.ccm = c; el.style.setProperty('--ccm', HEX[c]); }
-      } else if (el.dataset.ccm) {
-        delete el.dataset.ccm; el.style.removeProperty('--ccm');
-      }
+      if (c) { if (el.dataset.ccm !== c) el.dataset.ccm = c; }
+      else if (el.dataset.ccm) delete el.dataset.ccm;
       if (badge[w]) { if (el.dataset.ccmAway !== badge[w]) el.dataset.ccmAway = badge[w]; }
       else if (el.dataset.ccmAway) delete el.dataset.ccmAway;
+      drawMark(el, c, badge[w] || '');
     }
     for (const k of ORDER) {
-      const label = solved.has(k) ? '✓' : String([...present].filter(w => marks[w] === k).length);
+      const n = [...present].filter(w => marks[w] === k).length;
+      const label = (opt('letters') ? k[0].toUpperCase() : '') + (solved.has(k) ? '✓' : n);
       if (btns[k].textContent !== label) btns[k].textContent = label; // only touch the DOM on change
       btns[k].classList.toggle('solved', solved.has(k));
-      btns[k].classList.toggle('full', !solved.has(k) && label === String(MAX_PER_COLOR));
+      btns[k].classList.toggle('full', !solved.has(k) && n === MAX_PER_COLOR);
     }
     if (armed && solved.has(armed)) arm(null);
     showGo();
+    showTheme();
     if (onBoard !== ts.length > 0) { onBoard = ts.length > 0; peek = false; showCollapsed(); }
     arrange(ts);
   }
@@ -629,19 +717,43 @@
     else if (e.key === '0') assign('erase');
     else if (e.key === 'Escape' && armed) arm(null);
     else if (e.key === 'g' || e.key === 'G') onGo();
+    else if (e.key === 'z' || e.key === 'Z') undo();
   });
 
   // ---------- redraw when the game re-renders (ignoring our own palette updates) ----------
-  let queued = false;
-  new MutationObserver(muts => {
-    if (queued || muts.every(m => panel.contains(m.target))) return;
+  // Watches the game's own container (#pz-game-root) rather than the whole page, so ads and
+  // other page activity don't cause redraws; falls back to the page until the game appears.
+  // Also watches the light/dark switches on <body> and <html>. Our own overlays are ignored.
+  const ours = n => n.nodeType === 1 && (n === host || n.localName === 'ccm-mark');
+  let queued = false, watched = null;
+  const mo = new MutationObserver(muts => {
+    if (watched === document.body || !watched?.isConnected) watch();
+    if (queued) return;
+    if (muts.every(m => m.type === 'childList' && [...m.addedNodes, ...m.removedNodes].every(ours) ||
+      m.type === 'attributes' && m.target.localName === 'ccm-mark')) return;
     queued = true;
     const run = () => { queued = false; apply(); };
     if (document.hidden) setTimeout(run, 50); else requestAnimationFrame(run);
-  }).observe(document.body, { childList: true, subtree: true, characterData: true });
+  });
+  function watch() {
+    const r = document.getElementById('pz-game-root') || document.body;
+    if (r === watched && r.isConnected) return;
+    mo.disconnect();
+    watched = r;
+    // one observe() per node: a second call on the same node would replace its options
+    const theme = { attributes: true, attributeFilter: ['data-mode'] };
+    if (r === document.body) mo.observe(r, { childList: true, subtree: true, characterData: true, ...theme });
+    else {
+      mo.observe(r, { childList: true, subtree: true, characterData: true });
+      mo.observe(document.body, { childList: true, ...theme }); // notice the game root being swapped out
+    }
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-darkreader-scheme'] });
+  }
+  watch();
 
   let ready = false;
   applySettings();
   ready = true;
+  showUndo();
   apply();
 })();

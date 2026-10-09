@@ -11,6 +11,16 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [0.3.0] - 2026-10-08
+#### Added
+- Undo (↶ or Z) reverses your last color change.
+- "Show color letters" setting puts Y/G/B/P on each mark and on the palette, so the colors can be told apart without color.
+- Dark theme for the palette and settings, following NYT's dark mode or Dark Reader.
+
+#### Fixed
+- Dark-mode extensions like Dark Reader no longer darken the marks and palette colors (blue was nearly invisible).
+- The script now only reacts to changes in the game itself, not the rest of the page.
+
 ### [0.2.1] - 2026-10-08
 #### Fixed
 - When an out-of-order "Sure?" times out, the color you picked is let go too, so tapping it again picks it instead of cancelling it.
