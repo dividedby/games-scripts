@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Mark NYT Connections tiles with the color you think they are, then submit them in order (built for reverse-rainbow solves)
-// @version      0.7.2
+// @version      0.7.3
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -906,15 +906,17 @@
     // anything else on the board (solved-group rows) stays on top, in its own order
     [...board.children].forEach((c, i) => { if (!cellSet.has(c)) setOrder(c, String(i - 1000)); });
     const unmarked = [];
-    const split = []; // undecided tiles stay together, by their first option in sort order
+    const split = []; // undecided tiles stay together, matching combinations side by side
     const byColor = Object.fromEntries(ORDER.map(k => [k, []]));
     ts.forEach((t, i) => {
       const w = wordOf(t);
       if (byColor[marks[w]]) byColor[marks[w]].push(cells[i]);
-      else if (maybes[w]?.length) split.push([Math.min(...maybes[w].map(c => sortOrder.indexOf(c))), cells[i]]);
+      else if (maybes[w]?.length) split.push([maybes[w].map(c => sortOrder.indexOf(c)).sort((a, b) => a - b), cells[i]]);
       else unmarked.push(cells[i]);
     });
-    split.sort((a, b) => a[0] - b[0]);
+    // by combination, in sort order: purple-or-blue, then purple-or-blue-or-green, then purple-or-green, …
+    const byCombo = (a, b) => { for (let i = 0; i < Math.min(a.length, b.length); i++) if (a[i] !== b[i]) return a[i] - b[i]; return a.length - b.length; };
+    split.sort((a, b) => byCombo(a[0], b[0]));
     const seq = [];
     for (const k of sortOrder) {
       if (!byColor[k].length) continue;

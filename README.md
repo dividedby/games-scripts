@@ -19,7 +19,7 @@ Mark each tile with the color you think it is, then submit the groups in the ord
 - A color is full? Select one of its tiles plus the one you want in, then tap the color: the two swap colors.
 - With nothing selected, tap two colors to swap them everywhere.
 - Once three colors have 4 tiles, the last 4 get the remaining color automatically.
-- Optional (off by default): **maybe colors**. Not sure if a tile is yellow or green? Turn on **?** on the palette, select it and tap both: its outline splits like a pie, half yellow and half green (a third each for three). Tap a color again to drop it; down to one color, the tile is decided. Split tiles don't count toward Go, auto-fill or the 4-per-color limit, and a solved color drops out of every split (yellow-or-green becomes green once yellow is solved). While **?** is on, tiles hold still instead of re-sorting; they move into place when you turn it off.
+- Optional (off by default): **maybe colors**. Not sure if a tile is yellow or green? Turn on **?** on the palette, select it and tap both: its outline splits like a pie, half yellow and half green (a third each for three). Tap a color again to drop it; down to one color, the tile is decided. Split tiles don't count toward Go, auto-fill or the 4-per-color limit, and a solved color drops out of every split (yellow-or-green becomes green once yellow is solved). While **?** is on, tiles hold still instead of re-sorting; they move into place when you turn it off, after your decided rows, with matching splits (say, every green-or-blue) side by side.
 
 **Submitting**
 - **Go ▶** submits the next color in your sort order. It's tinted with that color, and dimmed if that color doesn't have exactly 4 tiles.

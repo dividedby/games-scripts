@@ -514,3 +514,15 @@ test('maybe mode holds tiles still; they re-sort when it goes off', async () => 
   assert.equal(order(), 'HABCGDEF', 'G joins the split tiles once maybe mode is off');
   b.close();
 });
+
+test('split tiles with the same combination sit side by side', async () => {
+  const b = await board({
+    words: ['GB1', 'PG', 'YG', 'GB2', 'PB', 'GB3'],
+    stored: { 'ccm:sort': '1', 'ccm:settings': { maybes: true },
+      'ccm:maybe:2023-07-01': { GB1: ['green', 'blue'], PG: ['green', 'purple'], YG: ['yellow', 'green'], GB2: ['green', 'blue'], PB: ['blue', 'purple'], GB3: ['green', 'blue'] } },
+  });
+  const order = [...b.d.querySelectorAll('[data-testid=card-label]')].sort((x, y) => x.style.order - y.style.order).map(t => t.dataset.flipId);
+  // P→Y: purple-or-blue, purple-or-green, then the three blue-or-greens together, then green-or-yellow
+  assert.deepEqual(order, ['PB', 'PG', 'GB1', 'GB2', 'GB3', 'YG']);
+  b.close();
+});

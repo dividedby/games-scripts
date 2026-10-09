@@ -11,6 +11,10 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [0.7.3] - 2026-10-08
+#### Changed
+- Split tiles with the same colors (say, every green-or-blue) now sit side by side when sorting, ordered by your sort order.
+
 ### [0.7.2] - 2026-10-08
 #### Changed
 - With sorting on, tiles hold still while maybe mode (**?**) is on, so they don't jump rows while you're adding options; they re-sort when you turn it off.
