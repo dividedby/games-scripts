@@ -11,6 +11,10 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [0.4.0] - 2026-10-08
+#### Changed
+- Marked tiles show only the colored outline; the small corner dot now appears only when "Show color letters" is on, carrying the letter.
+
 ### [0.3.2] - 2026-10-08
 #### Fixed
 - The settings panel is now the intended width, so it fits narrow phones.

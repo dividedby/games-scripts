@@ -338,3 +338,11 @@ test('today\'s puzzle (no date in the URL) is filed under the day the page opene
   const today = new Date().toLocaleDateString('en-CA');
   assert.equal(JSON.parse(b.w.localStorage.getItem(`ccm:${today}`)).A, 'blue');
 });
+
+test('tiles show just the outline; the corner letter dot appears only with color letters on', async () => {
+  // the overlay's shadow root is closed, so check what it renders through its cache key
+  const b = await board({ words: ['A'], marks: { A: 'blue' } });
+  assert.equal(b.tile('A').querySelector('ccm-mark').dataset.k, 'blue||0');
+  await b.setOpt('letters', true);
+  assert.equal(b.tile('A').querySelector('ccm-mark').dataset.k, 'blue||1');
+});

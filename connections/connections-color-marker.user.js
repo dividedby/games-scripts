@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Mark NYT Connections tiles with the color you think they are, then submit them in order (built for reverse-rainbow solves)
-// @version      0.3.2
+// @version      0.4.0
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -614,7 +614,9 @@
     const r = markRoots.get(m);
     const letter = color && opt('letters') ? color[0].toUpperCase() : '';
     r.innerHTML = `<style>${MARK_CSS}</style>` +
-      (color ? `<div class="ring" style="--c:${HEX[color]}"></div><div class="dot${letter ? ' letter' : ''}" style="--c:${HEX[color]}">${letter}</div>` : '') +
+      // the colored outline is the mark; the corner dot only appears to carry a letter
+      (color ? `<div class="ring" style="--c:${HEX[color]}"></div>` +
+        (letter ? `<div class="dot letter" style="--c:${HEX[color]}">${letter}</div>` : '') : '') +
       (away ? `<div class="away">${away}</div>` : '');
   }
 

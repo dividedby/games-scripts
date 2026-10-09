@@ -44,7 +44,7 @@ Mark each tile with the color you think it is, then submit the groups in the ord
 | Fix my colors after a solve (off: only the solved tiles change) | On |
 | Go button (off: marking only) | On |
 | Ask before going out of order | On |
-| Show color letters (Y/G/B/P on marks and the palette, for colorblind players) | Off |
+| Show color letters (a Y/G/B/P dot on each mark and letters on the palette, for colorblind players) | Off |
 | Keyboard shortcuts | On |
 | Palette on the left | Off |
 
