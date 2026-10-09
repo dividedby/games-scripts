@@ -18,7 +18,7 @@ async function board({ words = [], solved = [], date = '2023-07-01', marks = {},
   const secs = solved.map(s => `<section data-testid="solved-category-container" data-level="${s.level}"><ol>${s.words.map(w => `<li>${w}</li>`).join('')}</ol></section>`).join('');
   const dom = new JSDOM(`<!doctype html><body>${secs}<div id="board" style="display:grid">${tiles}</div>` +
     `<button data-testid="deselect-btn">Deselect All</button><button data-testid="submit-btn" disabled>Submit</button></body>`,
-  { url: `https://www.nytimes.com/games/connections/${date}`, runScripts: 'outside-only', pretendToBeVisual: true });
+  { url: `https://www.nytimes.com/games/connections${date ? '/' + date : ''}`, runScripts: 'outside-only', pretendToBeVisual: true });
   const w = dom.window;
   w.PointerEvent = w.PointerEvent || w.MouseEvent;
   w.__CCM_TEST__ = true;
@@ -322,4 +322,19 @@ test('dark theme follows NYT dark mode or Dark Reader', async () => {
   assert.equal(host.dataset.theme, 'light');
   b.d.documentElement.dataset.darkreaderScheme = 'dark'; await sleep(80);
   assert.equal(host.dataset.theme, 'dark');
+});
+
+test('another tab changing the same puzzle is picked up', async () => {
+  const b = await board({ words: ['A', 'B'], marks: { A: 'blue' } });
+  b.w.localStorage.setItem('ccm:2023-07-01', JSON.stringify({ A: 'green' }));
+  b.w.dispatchEvent(new b.w.StorageEvent('storage', { key: 'ccm:2023-07-01' }));
+  await sleep(40);
+  assert.equal(b.tile('A').dataset.ccm, 'green');
+});
+
+test('today\'s puzzle (no date in the URL) is filed under the day the page opened', async () => {
+  const b = await board({ words: ['A'], date: '' });
+  b.select(['A']); await b.tap('blue');
+  const today = new Date().toLocaleDateString('en-CA');
+  assert.equal(JSON.parse(b.w.localStorage.getItem(`ccm:${today}`)).A, 'blue');
 });

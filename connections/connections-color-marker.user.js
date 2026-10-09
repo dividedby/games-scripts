@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Mark NYT Connections tiles with the color you think they are, then submit them in order (built for reverse-rainbow solves)
-// @version      0.3.1
+// @version      0.3.2
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -46,9 +46,10 @@
   };
 
   // ---------- storage (per puzzle date, keyed by word so shuffles don't matter) ----------
-  const puzzleId = () =>
-    location.pathname.match(/\d{4}-\d{2}-\d{2}/)?.[0] ||
-    new Date().toLocaleDateString('en-CA'); // today's puzzle has no date in the URL
+  // Today's puzzle has no date in its URL, so it's filed under the day the page was opened:
+  // left open past midnight, it still shows (and saves to) that day's puzzle.
+  const openedOn = new Date().toLocaleDateString('en-CA');
+  const puzzleId = () => location.pathname.match(/\d{4}-\d{2}-\d{2}/)?.[0] || openedOn;
   const marksKey = () => 'ccm:' + puzzleId();
   const awayKey = () => 'ccm:1away:' + puzzleId();
   const USED_KEY = 'ccm:used';
@@ -225,7 +226,7 @@
       position: absolute; right: 0; bottom: calc(100% + 8px); width: 270px; max-width: calc(100vw - 24px);
       background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.25);
       padding: 10px 12px; font: 500 13px/1.3 system-ui, sans-serif; color: var(--fg); cursor: default;
-      max-height: calc(100vh - 90px); overflow-y: auto;
+      max-height: calc(100vh - 90px); overflow-y: auto; box-sizing: border-box;
     }
     #ccm-panel.left #ccm-settings { right: auto; left: 0; }
     #ccm-settings[hidden] { display: none; }
@@ -239,6 +240,7 @@
     @media (max-width: 480px) {
       #ccm-panel { right: 6px; bottom: calc(6px + env(safe-area-inset-bottom, 0px)); gap: 3px; padding: 4px 5px; }
       #ccm-panel.left { right: auto; left: 6px; }
+      #ccm-panel.offboard { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } /* clear NYT's buttons and banners */
       label { padding: 7px 0; }
       #ccm-panel > button { min-width: 30px; height: 42px; padding: 0 4px; }
     }
@@ -345,6 +347,7 @@
   function showCollapsed() {
     const on = onBoard ? userCollapsed : !peek;
     panel.classList.toggle('collapsed', on);
+    panel.classList.toggle('offboard', !onBoard);
     if (on) toggleSettings(false);
     toggleBtn.textContent = on ? '🎨' : '▾';
     toggleBtn.title = on ? 'Show the color palette' : 'Hide the palette';
@@ -708,6 +711,16 @@
     seq.push(...unmarked);
     seq.forEach((c, i) => setOrder(c, String(i)));
   }
+
+  // ---------- another tab on the same puzzle changed something: pick it up ----------
+  window.addEventListener('storage', e => {
+    if (e.key === marksKey()) marks = ls.get(marksKey(), {});
+    else if (e.key === awayKey()) aways = ls.get(awayKey(), []);
+    else if (e.key === SETTINGS_KEY) { settings = { ...DEFAULTS, ...ls.get(SETTINGS_KEY, {}) }; applySettings(); return; }
+    else if (e.key === SORT_KEY) { const v = e.newValue; if (SORT_MODES[v]) { sortMode = v; showSort(); } }
+    else return;
+    apply();
+  });
 
   // ---------- keyboard ----------
   window.addEventListener('keydown', e => {

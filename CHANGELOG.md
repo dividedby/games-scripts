@@ -11,6 +11,13 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [0.3.2] - 2026-10-08
+#### Fixed
+- The settings panel is now the intended width, so it fits narrow phones.
+- On phones, the tucked-away 🎨 button sits higher off the board so it no longer covers NYT's buttons and banners.
+- Today's puzzle left open past midnight keeps saving to its own day.
+- Two tabs open on the same puzzle stay in sync.
+
 ### [0.3.1] - 2026-10-08
 #### Fixed
 - Full colors on the palette are no longer dimmed, and solved ones are easier to read, especially in dark mode.
