@@ -593,3 +593,22 @@ test('auto-fill also runs when a split settles into the third full color', async
   for (const w of four('B')) assert.equal(b.store()[w], 'blue', w);
   b.close();
 });
+
+test('Go presses tiles again if the game drops presses (as it does mid-animation)', async () => {
+  const b = await board({ words: [...four('P'), 'X1'], marks: Object.fromEntries(four('P').map(x => [x, 'purple'])) });
+  // a game that ignores the first two presses, then toggles selection and enables Submit at 4
+  let ignore = 2, submitted = null;
+  const submit = b.d.querySelector('[data-testid=submit-btn]');
+  b.d.addEventListener('pointerdown', e => {
+    const t = e.target.closest?.('[data-testid=card-label]');
+    if (!t) return;
+    if (ignore-- > 0) return;
+    t.classList.toggle('Card-module_selected');
+    submit.disabled = b.d.querySelectorAll('.Card-module_selected').length !== 4;
+  }, true);
+  submit.addEventListener('click', () => { submitted = [...b.d.querySelectorAll('.Card-module_selected')].map(t => t.dataset.flipId).sort(); });
+  await b.tap('go');
+  await sleep(1500);
+  assert.deepEqual(submitted, four('P'));
+  b.close();
+});

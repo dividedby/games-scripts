@@ -11,6 +11,10 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [0.7.8] - 2026-10-09
+#### Fixed
+- Go pressed right after a solve could fail with a shake, because the game ignores taps while it animates; Go now taps the tiles again if they don't register.
+
 ### [0.7.7] - 2026-10-09
 #### Fixed
 - With the same puzzle open in two tabs, turning a split tile into a single color in one tab could leave it with no color at all in both.

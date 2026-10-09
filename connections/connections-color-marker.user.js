@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Color-code NYT Connections tiles as you work out the groups, then submit them in the order you choose, like purple first for a reverse rainbow
-// @version      0.7.7
+// @version      0.7.8
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -757,8 +757,17 @@
         const t = tiles().find(x => wordOf(x) === w); // re-find in case of re-render
         if (t && !isSelected(t)) { press(t); await sleep(80); }
       }
-      // wait for the game to register all 4 and enable Submit
-      for (let i = 0; i < 30; i++) {
+      // wait for the game to register all 4 and enable Submit. Presses made while the game
+      // is still animating a solve can be dropped, so press any that didn't take again.
+      for (let i = 0; i < 40; i++) {
+        if (i % 8 === 7) {
+          const sel = selectedTiles().map(wordOf);
+          if (sel.length < 4 && sel.every(w => targets.includes(w)))
+            for (const w of targets) {
+              const t = tiles().find(x => wordOf(x) === w);
+              if (t && !isSelected(t)) { press(t); await sleep(80); }
+            }
+        }
         const btn = submitButton();
         const sel = selectedTiles().map(wordOf);
         if (btn && !btn.disabled && sel.length === 4 && targets.every(w => sel.includes(w))) {

@@ -60,6 +60,8 @@ Works on desktop and iPhone.
 <center>
 <img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/connections/desktop-maybe.png" alt="Maybe mode: dashed color buttons, a tile split three ways and a selected tile split two ways" width="460">
 <br><br>
+<img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/connections/desktop-solved.png" alt="Purple and blue solved, green and yellow still in their rows, checkmarks on the palette" width="400">
+<br><br>
 <img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/connections/desktop-guesses.png" alt="One-away letters on tiles and the list of wrong guesses" width="460">
 <br><br>
 <img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/connections/desktop-settings.png" alt="The settings panel open above the palette" width="460">

@@ -70,6 +70,12 @@ For tiles you're unsure about. Turn this on in ⚙, and a **?** button appears o
 - Optional: **guess history**. The 📜 button lists your wrong guesses on this puzzle and flags the ones that were one away, in case you missed the pop-up. If you repeat a wrong guess, the game only says "Already guessed"; the script also tells you whether it was one away. Wrong guesses are recorded even with this off, so you can turn it on partway through.
 
 <details>
+<summary>Screenshot: two groups solved</summary>
+<br>
+<img src="../docs/images/connections/desktop-solved.png" alt="Purple and blue solved and shown as bars at the top, green and yellow still in their rows, the palette showing checkmarks for purple and blue and Go tinted green" width="480">
+</details>
+
+<details>
 <summary>Screenshot: one-away letters and guess history</summary>
 <br>
 <img src="../docs/images/connections/desktop-guesses.png" alt="Tiles from two one-away guesses marked with red A and B badges, and the 📜 list of three wrong guesses with two flagged one away" width="560">
