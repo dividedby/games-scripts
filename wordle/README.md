@@ -1,18 +1,18 @@
 # Wordle Shortlist
 
-For people who want to have played Wordle today without really playing Wordle.
+For people who want to play the daily Wordle without really playing Wordle.
 
 You get a random starting word (not CRANE, not SLATE, just whatever comes up), then each turn a shortlist of five words that could be the answer. Tap one. That's the job. It's easy, but it isn't autopilot: the five aren't equally good, so there's still a right call to make, and on Hard nobody tells you which one it is.
 
 **Install:** [GitHub](https://raw.githubusercontent.com/dividedby/games-scripts/main/wordle/wordle-shortlist.user.js) · [Changelog](../CHANGELOG.md#wordle-shortlist)
 
 <p align="center">
-  <img src="../docs/images/wordle/desktop-board.png" alt="Wordle after HIJAB and SNORE: above the keyboard, '25 possible answers · Medium' and a shortlist of DROOL, FLOOR, GROWL, ROOMY and FROCK, each with about how many answers it would leave" width="460">
+  <img src="../docs/images/wordle/desktop-board.png" alt="Wordle after KAZOO and LITRE: above the keyboard, '12 possible answers · Medium' and a shortlist of BLUER, CRUEL, REVEL, REPLY and FLYER, each with about how many answers it would leave" width="460">
 </p>
 
 ## How it works
 
-1. Install the script (see [Installing](../README.md#installing)) and open Wordle. Above the keyboard you get a starting word: any of the roughly 3,000 likely answers, picked at random. Some days it's a decent opener. Some days it's HIJAB.
+1. Install the script (see [Installing](../README.md#installing)) and open Wordle. Above the keyboard you get a starting word: any of the roughly 3,000 likely answers, picked at random. Some days it's a decent opener. Some days it's KAZOO.
 2. Tap it to play it, or type your own word if you feel strongly.
 3. After each guess you get 5 picks, and every one of them could be the answer: no clever filler words that only narrow things down, so you're always playing by hard mode's rules. Under each word is roughly how many answers would still be possible if it isn't the one (fewer is better). The line above says how many answers still fit.
 4. Tap a pick to play it. Anything you'd already typed is cleared first.
@@ -23,7 +23,7 @@ The picks are drawn at random from the best possible answers, so some are better
 <details>
 <summary>Screenshot: the recap</summary>
 <br>
-<img src="../docs/images/wordle/desktop-recap.png" alt="The finished board, HIJAB, SNORE, DROOL, DROOP, with 'Solved in 4 · best pick 1 of 2 · Medium' below it" width="320">
+<img src="../docs/images/wordle/desktop-recap.png" alt="The finished board, KAZOO, LITRE, GRUEL, ELDER, FLYER, with 'Solved in 5 · best pick 2 of 3 · Medium' below it" width="320">
 </details>
 
 ## Levels
@@ -39,7 +39,7 @@ Tap the level in the line above the picks (**Medium ▸**) to switch it, any tim
 <details>
 <summary>Screenshot: Hard</summary>
 <br>
-<img src="../docs/images/wordle/hard-strip.png" alt="The same turn on Hard: TROMP, DROOL, GROOM, VROOM and CROCK, with no hints" width="460">
+<img src="../docs/images/wordle/hard-strip.png" alt="The same turn on Hard: BLUER, GRUEL, ULCER, RULER and ELDER, with no hints" width="460">
 </details>
 
 ## Buttons

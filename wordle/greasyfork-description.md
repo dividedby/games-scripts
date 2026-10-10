@@ -7,7 +7,7 @@ allows img width/height, <center> and <details>.
 The full README (with the dev/test info) lives on GitHub.
 -->
 
-For people who want to have played **NYT Wordle** today without really playing Wordle.
+For people who want to play the daily **NYT Wordle** without really playing Wordle.
 
 You get a random starting word (not CRANE, not SLATE, just whatever comes up), then
 each turn a shortlist of five words that could be the answer. Tap one. That's the job.
@@ -15,13 +15,13 @@ It's easy, but it isn't autopilot: the five aren't equally good, so there's stil
 right call to make. Works on desktop, iPhone and Android.
 
 <center>
-<img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/wordle/desktop-board.png" alt="Wordle after HIJAB and SNORE: '25 possible answers · Medium' and a shortlist of DROOL, FLOOR, GROWL, ROOMY and FROCK above the keyboard" width="340">
+<img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/wordle/desktop-board.png" alt="Wordle after KAZOO and LITRE: '12 possible answers · Medium' and a shortlist of BLUER, CRUEL, REVEL, REPLY and FLYER above the keyboard" width="340">
 </center>
 
 **What it does**
 
 - A **starting word** picked at random from about 3,000 likely answers. Some days
-  it's a decent opener. Some days it's HIJAB.
+  it's a decent opener. Some days it's KAZOO.
 - After each guess, **five picks**, every one a possible answer, so you're always
   playing by hard mode's rules. Each shows roughly how many answers would be left
   if it isn't the one; the line above shows how many still fit.
@@ -41,9 +41,9 @@ The recap names the easiest level you used, so dropping to Easy for one turn sho
 <summary>More screenshots</summary>
 
 <center>
-<img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/wordle/hard-strip.png" alt="The same turn on Hard: TROMP, DROOL, GROOM, VROOM and CROCK, with no hints" width="460">
+<img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/wordle/hard-strip.png" alt="The same turn on Hard: BLUER, GRUEL, ULCER, RULER and ELDER, with no hints" width="460">
 <br><br>
-<img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/wordle/desktop-recap.png" alt="The finished board with 'Solved in 4 · best pick 1 of 2 · Medium' below it" width="260">
+<img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/wordle/desktop-recap.png" alt="The finished board with 'Solved in 5 · best pick 2 of 3 · Medium' below it" width="260">
 </center>
 </details>
 
