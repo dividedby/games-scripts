@@ -263,7 +263,7 @@ zonedzoneszooms
     ALL.push(w.toLowerCase());
     ANSWER.push(w !== w.toLowerCase());
   }
-  const codes = w => [...w].map(c => c.charCodeAt(0) - 97);
+  const codes = w => Uint8Array.from(w, c => c.charCodeAt(0) - 97);
   const CODES = ALL.map(codes);
   const ANSWERS = ALL.map((_, i) => i).filter(i => ANSWER[i]);
 
@@ -283,7 +283,7 @@ zonedzoneszooms
     }
     let p = 0;
     for (let i = 4; i >= 0; i--) p = p * 3 + res[i];
-    spare.fill(0);
+    for (let i = 0; i < 5; i++) spare[a[i]] = 0;
     return p;
   }
   const STATE = { absent: 0, present: 1, correct: 2 };
@@ -297,14 +297,15 @@ zonedzoneszooms
 
   // Expected number of answers still possible after guessing g (0 when g is the only one left)
   const buckets = new Int32Array(243);
+  const seen = new Int16Array(243); // the patterns hit, so only those get cleared
   function expectedLeft(g, cands) {
-    const touched = [];
+    const touched = seen; let n = 0;
     for (const a of cands) {
       const p = pattern(g, CODES[a]);
-      if (buckets[p]++ === 0) touched.push(p);
+      if (buckets[p]++ === 0) touched[n++] = p;
     }
     let sum = 0;
-    for (const p of touched) { if (p !== GREEN_ALL) sum += buckets[p] * buckets[p]; buckets[p] = 0; }
+    for (let k = 0; k < n; k++) { const p = touched[k]; if (p !== GREEN_ALL) sum += buckets[p] * buckets[p]; buckets[p] = 0; }
     return sum / cands.length;
   }
 
