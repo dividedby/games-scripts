@@ -48,7 +48,8 @@ The recap names the easiest level you used, so dropping to Easy for one turn sho
 </details>
 
 **No spoilers:** the script never looks up the day's answer; it only knows the colors
-on your board and NYT WordleBot's list of likely answers. Your shortlist is saved per
+on your board and NYT WordleBot's list of likely answers. Every pick comes from NYT's
+own word lists, so the game never rejects one as "not in word list". Your shortlist is saved per
 puzzle, so reloading doesn't deal a new one. Archive puzzles work too.
 
 **Install:** use [Tampermonkey](https://www.tampermonkey.net/) in Chrome, Edge or

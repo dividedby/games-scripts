@@ -11,6 +11,13 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [1.0.0] - 2026-10-10
+#### Fixed
+- The shortlist was nearly invisible in Wordle's dark theme; it now uses the game's own text color.
+- Tapping picks quickly could briefly re-enable the buttons while a word was still being entered; the level button is now also locked during entry.
+- A tab left open on today's puzzle past midnight could mix two days into one recap.
+- Button outlines show on iPhones and iPads older than iOS 16.2.
+
 ### [0.1.0] - 2026-10-09
 #### Added
 - First version: a starting word picked at random from the likely answers, then 5 picks each turn, all possible answers, each with roughly how many answers it would leave. Tap a pick to play it; 🎲 deals new picks; ▾ tucks them away. The picks always fit hard mode, the script never looks up the answer, and the board shrinks on short screens so the keyboard stays in view.
