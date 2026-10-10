@@ -142,12 +142,72 @@ test('with five or fewer answers left, those are the picks', async () => {
   assert.deepEqual(g.picks().sort(), cands.sort());
 });
 
-test('a solved or lost puzzle hides the picks', async () => {
-  const g = await game({ played: ['crane'] });
-  await g.guess('pouch');
-  assert.ok(g.panel().hidden);
+test('a finished puzzle shows a recap: guesses, how often you took the best pick, level', async () => {
+  const g = await game({ answer: 'pouch' });
+  await g.guess(g.picks()[0]);                       // the starting word: no choice, not counted
+  for (let turn = 0; turn < 5 && g.row < 6 && g.submitted.at(-1) !== 'pouch'; turn++) {
+    const picks = g.picks();
+    const lefts = picks.map(x => +g.pick(x).querySelector('small')?.textContent.match(/\d+/)?.[0] || 0);
+    const pick = picks.includes('pouch') ? 'pouch' : picks[turn % 2 ? 0 : picks.length - 1];
+    g.pick(pick).click(); await sleep(600);
+  }
+  assert.ok(!g.panel().hidden, 'the recap stays up');
+  assert.equal(g.picks().length, 0, 'no picks once it is over');
+  const text = g.panel().textContent;
+  assert.match(text, new RegExp(`Solved in ${g.row}`));
+  assert.match(text, /best pick \d+ of \d+/);
+  assert.match(text, /Medium/);
+  const saved = g.saved();
+  assert.equal(saved.turns.length, g.row - 1, 'every guess after the start is a turn');
   const lost = await game({ answer: 'pouch', played: ['crane', 'pilot', 'shtum', 'dodgy', 'jazzy', 'fifty'] });
-  assert.ok(lost.panel().hidden);
+  assert.match(lost.panel().textContent, /Out of guesses/);
+});
+
+test('the best-pick count survives a reload and only counts each guess once', async () => {
+  const g = await game({ answer: 'pouch', played: ['crane'] });
+  const best = g.picks()[0];
+  g.pick(best).click(); await sleep(600);
+  assert.deepEqual(g.saved().turns.map(t => ({ ...t })), [{ used: true, best: true }]);
+  const again = await game({ answer: 'pouch', played: ['crane', best], stored: { 'wsl:2023-07-11': g.saved() } });
+  assert.equal(again.saved().turns.length, 1);
+  const own = await game({ answer: 'pouch', played: ['crane'] });
+  await own.guess('pilot');
+  assert.deepEqual(own.saved().turns.map(t => ({ ...t })), [{ used: false, best: false }], 'your own word is not a pick');
+});
+
+test('the info line shows how many answers still fit', async () => {
+  const g = await game({ played: ['crane'] });
+  const n = g.E.candidates([{ word: 'crane', states: colors('crane', 'pouch') }], g.E.ANSWERS).length;
+  assert.match(g.root.querySelector('.info').textContent, new RegExp(`^${n.toLocaleString()} possible answers · Medium$`));
+  const start = await game();
+  assert.match(start.root.querySelector('.info').textContent, /^2,983 possible answers · Medium/);
+});
+
+test('levels: set before the first guess; Easy draws from the best 10, Hard from all and hides hints', async () => {
+  const g = await game();
+  const lv = () => g.root.getElementById('level');
+  assert.match(lv().textContent, /Medium/);
+  const cycle = [];
+  for (let i = 0; i < 4; i++) { lv().click(); await sleep(20); cycle.push(lv().textContent.split(' ')[0]); }
+  assert.deepEqual(cycle, ['Hard', 'Easy', 'Medium', 'Hard']);
+  assert.equal(g.w.localStorage.getItem('wsl:level'), '"hard"', 'the level is remembered for the next puzzles');
+  const start = g.picks()[0];
+  await g.guess(start);
+  await sleep(800); // Hard scores every answer that fits
+  assert.equal(g.root.getElementById('level'), null, 'no level button after the first guess');
+  assert.match(g.root.querySelector('.info').textContent, /· Hard$/);
+  assert.ok(g.picks().length > 0);
+  for (const p of g.picks()) assert.equal(g.pick(p).querySelector('small'), null, `${p} has no hint in Hard`);
+
+  const easy = await game({ played: ['crane'], stored: { 'wsl:level': '"easy"' } });
+  const rows = [{ word: 'crane', states: colors('crane', 'pouch') }];
+  const cands = easy.E.candidates(rows, easy.E.ANSWERS);
+  const cutoff = Array.from(cands, i => easy.E.expectedLeft(easy.E.codes(easy.E.ALL[i]), cands)).sort((a, b) => a - b)[9];
+  for (const p of easy.picks()) assert.ok(easy.E.expectedLeft(easy.E.codes(p), cands) <= cutoff + 1e-9, `${p} is among the best 10`);
+  assert.ok(easy.pick(easy.picks()[0]).querySelector('small'), 'Easy shows hints');
+
+  const locked = await game({ played: ['crane'], stored: { 'wsl:level': '"hard"', 'wsl:2023-07-11': { sig: '', left: 2983, picks: [{ word: 'crane', left: 100 }], level: 'easy', turns: [], at: Date.now() } } });
+  assert.match(locked.root.querySelector('.info').textContent, /· Easy$/, 'a puzzle keeps the level it started with');
 });
 
 test('🎲 deals new picks and ▾ tucks them away until 🎲 Shortlist is tapped', async () => {

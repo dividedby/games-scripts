@@ -18,7 +18,14 @@
   'use strict';
 
   const PICKS = 5;     // guesses offered each turn
-  const POOL = 30;     // drawn at random from this many of the best, so some picks are better than others
+  // Each level draws the picks at random from this many of the best possible answers, so
+  // some picks are better than others; Hard draws from all of them and hides the hints.
+  const LEVELS = {
+    easy:   { name: 'Easy',   pool: 10,       hints: true },
+    medium: { name: 'Medium', pool: 30,       hints: true },
+    hard:   { name: 'Hard',   pool: Infinity, hints: false },
+  };
+  const LEVEL_ORDER = ['easy', 'medium', 'hard'];
   const KEEP_DAYS = 60;
 
   // ---------- words ----------
@@ -314,7 +321,7 @@ zonedzoneszooms
   // Returns { left: number of answers still possible, picks: [{ word, left }] }.
   // Every pick could be the answer (no "filler" words that only narrow things down),
   // so they follow hard mode's rules on their own.
-  function choose(rows) {
+  function choose(rows, pool = LEVELS.medium.pool) {
     if (!rows.length) { // truly random, not a good starter: any likely answer
       const i = ANSWERS[Math.floor(Math.random() * ANSWERS.length)];
       return { left: ANSWERS.length, picks: [{ word: ALL[i], left: expectedLeft(CODES[i], ANSWERS) }] };
@@ -323,7 +330,7 @@ zonedzoneszooms
     if (!cands.length) cands = candidates(rows, ALL.map((_, i) => i)); // the answer isn't on our list
     const scored = cands.map(i => ({ word: ALL[i], left: expectedLeft(CODES[i], cands) }))
       .sort((x, y) => x.left - y.left); // fewer answers left after it first
-    const picks = scored.length <= PICKS ? scored : shuffle(scored.slice(0, POOL)).slice(0, PICKS).sort((x, y) => x.left - y.left);
+    const picks = scored.length <= PICKS ? scored : shuffle(scored.slice(0, pool)).slice(0, PICKS).sort((x, y) => x.left - y.left);
     return { left: cands.length, picks };
   }
 
@@ -338,6 +345,7 @@ zonedzoneszooms
   const puzzleId = () => location.pathname.match(/\d{4}-\d{2}-\d{2}/)?.[0] || openedOn;
   const picksKey = () => 'wsl:' + puzzleId();
   const COLLAPSED_KEY = 'wsl:collapsed';
+  const LEVEL_KEY = 'wsl:level';
 
   function tidy() {
     const cutoff = Date.now() - KEEP_DAYS * 864e5;
@@ -362,7 +370,7 @@ zonedzoneszooms
       else { typed = states.filter(s => s === 'tbd').length; break; }
     }
     const won = rows.some(r => r.states.every(s => s === 'correct'));
-    return { rows, typed, ready: t.length >= 30, over: won || rows.length >= 6 };
+    return { rows, typed, ready: t.length >= 30, won, over: won || rows.length >= 6 };
   }
   const key = k => document.querySelector(`[data-key="${k}"]`);
   const keyboard = () => key('↵')?.closest('[class*="Keyboard-module_keyboard"]') || key('↵')?.parentElement?.parentElement;
@@ -374,7 +382,10 @@ zonedzoneszooms
   root.innerHTML = `<style>
     /* padding goes on #wsl: the page's own CSS overrides any padding set on :host */
     :host { display: block; width: 100%; max-width: 500px; margin: 0 auto; box-sizing: border-box; }
-    #wsl { display: flex; align-items: stretch; justify-content: center; gap: 6px; margin: 6px 0 8px; padding: 0 8px; font-family: inherit; }
+    #wsl { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 8px; padding: 0 8px; font-family: inherit; }
+    .row { display: flex; align-items: stretch; justify-content: center; gap: 6px; }
+    .info { text-align: center; font-size: 12px; opacity: .7; line-height: 18px; }
+    .info button { padding: 0 6px; font-size: 12px; line-height: 16px; }
     #wsl[hidden] { display: none; }
     .lead { align-self: center; font-size: 13px; opacity: .7; white-space: nowrap; }
     button { font: inherit; color: inherit; background: transparent; cursor: pointer; border-radius: 6px;
@@ -389,7 +400,8 @@ zonedzoneszooms
     /* phones: room at the screen edges, a bit more than the keyboard has, and slimmer
        tools so the five words keep their width */
     @media (max-width: 480px) {
-      #wsl { gap: 4px; padding: 0 12px; }
+      #wsl { padding: 0 12px; }
+      .row { gap: 4px; }
       .tools { gap: 4px; }
       .pick b { font-size: 14px; letter-spacing: 0; }
       .tool { width: 30px; padding: 0; }
@@ -403,49 +415,85 @@ zonedzoneszooms
   const panel = root.getElementById('wsl');
   const show = root.getElementById('show');
 
-  let state = null;   // { sig, left, picks }
+  // state: what's saved for this puzzle: { sig, left, picks, level, turns, at }.
+  // turns: one entry per guess made with a choice of picks: { used, best } (played a pick,
+  // and was it one of the best on offer)
+  let state = null;
   let busy = false;   // typing a pick in
   let collapsed = ls.get(COLLAPSED_KEY, false);
+  let level = LEVELS[ls.get(LEVEL_KEY, 'medium')] ? ls.get(LEVEL_KEY, 'medium') : 'medium';
 
   const leftText = n => n < 1.5 ? '~1 left' : `~${Math.round(n)} left`;
   const sigOf = rows => rows.map(r => r.word + ':' + toPattern(r.states)).join(',');
+  const plural = (n, w) => `${n.toLocaleString()} ${w}${n === 1 ? '' : 's'}`;
+
+  function recap(board) {
+    const turns = state.turns || [];
+    const best = turns.filter(t => t.best).length;
+    return [board.won ? `Solved in ${board.rows.length}` : 'Out of guesses',
+      turns.length ? `best pick ${best} of ${turns.length}` : '',
+      LEVELS[state.level || level].name].filter(Boolean).join(' · ');
+  }
 
   function render(board) {
-    const showPanel = state && !board.over;
+    const showPanel = !!state;
     show.hidden = !showPanel || !collapsed;
     panel.hidden = !showPanel || collapsed;
     if (!showPanel || collapsed) { fit(); return; }
+    const hide = '<button class="tool" id="hide" title="Hide the shortlist">▾</button>';
+    if (board.over) {
+      panel.innerHTML = `<div class="row"><span class="note">${recap(board)}</span><span class="tools">${hide}</span></div>`;
+      fit();
+      return;
+    }
     const first = !board.rows.length;
+    const lv = LEVELS[first ? level : state.level || level];
+    const info = first
+      ? `${plural(ANSWERS.length, 'possible answer')} · <button id="level" title="Easy: picks from the best 10, with hints. Medium: the best 30, with hints. Hard: any possible answer, no hints. Set before your first guess">${lv.name} ▸</button>`
+      : `${plural(state.left, 'possible answer')} · ${lv.name}`;
     let html = first ? '<span class="lead">Start with</span>' : '';
     if (!state.picks.length) html += '<span class="note">No word on my list fits these colors</span>';
     const last = state.left === 1;
     for (const p of state.picks) {
+      const hint = last ? 'only fit' : lv.hints || first ? leftText(p.left) : '';
       const tip = last ? `${p.word.toUpperCase()}: the only likely answer that fits. Tap to play it`
-        : `${p.word.toUpperCase()}: if it isn't the answer, about ${Math.max(1, Math.round(p.left))} answer${Math.round(p.left) > 1 ? 's' : ''} left on average. Tap to play it`;
-      html += `<button class="pick" data-w="${p.word}" title="${tip}"${busy ? ' disabled' : ''}><b>${p.word}</b><small>${last ? 'only fit' : leftText(p.left)}</small></button>`;
+        : hint ? `${p.word.toUpperCase()}: if it isn't the answer, about ${Math.max(1, Math.round(p.left))} answer${Math.round(p.left) > 1 ? 's' : ''} left on average. Tap to play it`
+        : `${p.word.toUpperCase()}: tap to play it`;
+      html += `<button class="pick" data-w="${p.word}" title="${tip}"${busy ? ' disabled' : ''}><b>${p.word}</b>${hint ? `<small>${hint}</small>` : ''}</button>`;
     }
-    html += `<span class="tools"><button class="tool" id="roll" title="Deal a different shortlist"${busy ? ' disabled' : ''}>🎲</button>`;
-    html += `<button class="tool" id="hide" title="Hide the shortlist">▾</button></span>`;
-    panel.innerHTML = html;
+    html += `<span class="tools"><button class="tool" id="roll" title="Deal a different shortlist"${busy ? ' disabled' : ''}>🎲</button>${hide}</span>`;
+    panel.innerHTML = `<div class="info">${info}</div><div class="row">${html}</div>`;
     fit();
   }
 
   function refresh(force = false) {
     const board = readBoard();
-    if (!board.ready || !keyboard()) return;
-    place();
+    if (!board.ready) return;
+    place(board);
+    if (!host.isConnected) return;
     const sig = sigOf(board.rows);
-    if (board.over) { state = state && { ...state, sig }; busy = false; render(board); return; }
-    if (force || !state || state.sig !== sig) {
-      busy = false;
-      const saved = ls.get(picksKey(), null);
-      if (!force && saved?.sig === sig && saved.picks) state = { sig, left: saved.left, picks: saved.picks };
-      else {
-        const c = choose(board.rows);
-        state = { sig, left: c.left, picks: c.picks.map(p => ({ ...p, left: Math.round(p.left * 10) / 10 })) };
-        ls.set(picksKey(), { ...state, at: Date.now() });
+    if (state?.sig !== sig) busy = false;
+    let saved = ls.get(picksKey(), null);
+    if (saved && saved.sig !== sig) {
+      // one new guess since the last shortlist: note whether it was one of the best picks
+      const before = saved.sig ? saved.sig.split(',').length : 0;
+      if (board.rows.length === before + 1 && sig.startsWith(saved.sig) && saved.picks?.length > 1) {
+        const word = board.rows[before].word;
+        const p = saved.picks.find(x => x.word === word);
+        const min = Math.min(...saved.picks.map(x => x.left));
+        saved.turns = [...(saved.turns || []), { used: !!p, best: !!p && p.left <= min }];
       }
     }
+    if (board.over) {
+      state = { ...(saved || {}), sig, picks: [], at: Date.now() };
+      ls.set(picksKey(), state);
+    } else if (force || !saved || saved.sig !== sig || !saved.picks) {
+      const lv = board.rows.length && saved?.level ? saved.level : level; // the level is set before the first guess
+      const c = choose(board.rows, LEVELS[lv].pool);
+      state = { sig, left: c.left, picks: c.picks.map(p => ({ ...p, left: Math.round(p.left * 10) / 10 })),
+        level: lv, turns: saved?.turns || [], at: Date.now() };
+      ls.set(picksKey(), state);
+    } else state = saved;
     render(board);
   }
 
@@ -467,14 +515,24 @@ zonedzoneszooms
     if (!b || b.disabled) return;
     if (b.dataset.w) play(b.dataset.w);
     else if (b.id === 'roll') refresh(true);
+    else if (b.id === 'level') {
+      level = LEVEL_ORDER[(LEVEL_ORDER.indexOf(level) + 1) % LEVEL_ORDER.length];
+      ls.set(LEVEL_KEY, level);
+      if (state) { state.level = level; ls.set(picksKey(), state); }
+      render(readBoard());
+    }
     else if (b.id === 'hide') { collapsed = true; ls.set(COLLAPSED_KEY, true); render(readBoard()); }
   });
   show.addEventListener('click', () => { collapsed = false; ls.set(COLLAPSED_KEY, false); render(readBoard()); });
 
   // the picks sit right above the game's keyboard
-  function place() {
+  function place(board) {
     const kb = keyboard();
-    if (kb && host.nextElementSibling !== kb) kb.parentElement.insertBefore(host, kb);
+    if (kb) { if (host.nextElementSibling !== kb) kb.parentElement.insertBefore(host, kb); return; }
+    // after the game ends the keyboard can be swapped for the game's result buttons:
+    // keep the recap just below the board
+    const bc = document.querySelector('[class*="Board-module_boardContainer"]');
+    if (board?.over && bc && !host.isConnected) bc.after(host);
   }
   // The game sizes its board to the screen, not to the space left, so on a short screen the
   // picks would push the keyboard off the bottom. Then shrink the board by that much instead.

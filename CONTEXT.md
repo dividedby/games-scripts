@@ -100,6 +100,17 @@ still be the answer (never "filler" words played just to narrow things down): 5 
 at random from the best 30 of them, so they are good but not equally good; with 5 or
 fewer left, all of them. Picks are kept per puzzle and turn until 🎲 deals new ones.
 
+### Level
+How hard the picks make it, chosen before the first guess and kept for that puzzle:
+**Easy** draws the picks from the best 10 possible answers, **Medium** (default) from
+the best 30, both with hints; **Hard** from every possible answer, without hints.
+
+### Best pick / recap
+A turn's **best pick** is the pick with the fewest answers left (ties all count). Turns
+are only counted when there was a choice (not the starting word or a lone pick), and a
+word you typed yourself is never a best pick. When the puzzle ends, the **recap**
+shows the guesses taken, best picks out of turns, and the level.
+
 ### Answers left
 A pick's hint: the number of likely answers you'd expect to still fit after playing
 it, if it isn't the answer (averaged over the answers that fit now). Fewer is better.
