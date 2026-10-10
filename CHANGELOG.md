@@ -12,8 +12,8 @@ Versions below 1.0.0 are pre-release.
 ### [Unreleased]
 #### Added
 - First version: a starting word picked at random from the likely answers, then 5 picks each turn, all possible answers, drawn from the best 30 of them, each with roughly how many answers it would leave. Tap a pick to play it; 🎲 deals new picks; ▾ tucks them away. The picks always fit hard mode, the script never looks up the answer, and the board shrinks on short screens so the keyboard stays in view.
-- Levels, set before the first guess: Easy (picks from the best 10, with hints), Medium (the best 30, with hints) and Hard (any possible answer, no hints).
-- A line above the picks with how many answers still fit, and a recap when the puzzle is over: guesses, how often you played the best pick, and the level.
+- Levels, switchable any time: Easy (picks from the best 10, with hints), Medium (the best 30, with hints) and Hard (any possible answer, no hints).
+- A line above the picks with how many answers still fit, and a recap when the puzzle is over: guesses, how often you played the best pick, and the easiest level used.
 
 ## Connections Color Marker
 

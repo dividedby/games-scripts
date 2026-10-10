@@ -432,7 +432,7 @@ zonedzoneszooms
     const best = turns.filter(t => t.best).length;
     return [board.won ? `Solved in ${board.rows.length}` : 'Out of guesses',
       turns.length ? `best pick ${best} of ${turns.length}` : '',
-      LEVELS[state.level || level].name].filter(Boolean).join(' · ');
+      LEVELS[LEVEL_ORDER[state.easiest ?? LEVEL_ORDER.indexOf(state.level || level)]].name].filter(Boolean).join(' · ');
   }
 
   function render(board) {
@@ -447,10 +447,9 @@ zonedzoneszooms
       return;
     }
     const first = !board.rows.length;
-    const lv = LEVELS[first ? level : state.level || level];
-    const info = first
-      ? `${plural(ANSWERS.length, 'possible answer')} · <button id="level" title="Easy: picks from the best 10, with hints. Medium: the best 30, with hints. Hard: any possible answer, no hints. Set before your first guess">${lv.name} ▸</button>`
-      : `${plural(state.left, 'possible answer')} · ${lv.name}`;
+    const lv = LEVELS[level];
+    const info = `${plural(first ? ANSWERS.length : state.left, 'possible answer')} · ` +
+      `<button id="level" title="Level. Easy: picks from the best 10, with hints. Medium: the best 30, with hints. Hard: any possible answer, no hints. The recap shows the easiest level you used">${lv.name} ▸</button>`;
     let html = first ? '<span class="lead">Start with</span>' : '';
     if (!state.picks.length) html += '<span class="note">No word on my list fits these colors</span>';
     const last = state.left === 1;
@@ -487,11 +486,13 @@ zonedzoneszooms
     if (board.over) {
       state = { ...(saved || {}), sig, picks: [], at: Date.now() };
       ls.set(picksKey(), state);
-    } else if (force || !saved || saved.sig !== sig || !saved.picks) {
-      const lv = board.rows.length && saved?.level ? saved.level : level; // the level is set before the first guess
-      const c = choose(board.rows, LEVELS[lv].pool);
+    } else if (force || !saved || saved.sig !== sig || !saved.picks || (board.rows.length && saved.level !== level)) {
+      const c = choose(board.rows, LEVELS[level].pool);
+      // the recap names the easiest level any shortlist was dealt at (the start word doesn't count)
+      const idx = LEVEL_ORDER.indexOf(level);
+      const easiest = board.rows.length ? Math.min(saved?.easiest ?? idx, idx) : saved?.easiest;
       state = { sig, left: c.left, picks: c.picks.map(p => ({ ...p, left: Math.round(p.left * 10) / 10 })),
-        level: lv, turns: saved?.turns || [], at: Date.now() };
+        level, easiest, turns: saved?.turns || [], at: Date.now() };
       ls.set(picksKey(), state);
     } else state = saved;
     render(board);
@@ -518,8 +519,9 @@ zonedzoneszooms
     else if (b.id === 'level') {
       level = LEVEL_ORDER[(LEVEL_ORDER.indexOf(level) + 1) % LEVEL_ORDER.length];
       ls.set(LEVEL_KEY, level);
-      if (state) { state.level = level; ls.set(picksKey(), state); }
-      render(readBoard());
+      const board = readBoard();
+      if (board.rows.length) refresh(true); // deal a new shortlist at the new level
+      else { if (state) { state.level = level; ls.set(picksKey(), state); } render(board); }
     }
     else if (b.id === 'hide') { collapsed = true; ls.set(COLLAPSED_KEY, true); render(readBoard()); }
   });

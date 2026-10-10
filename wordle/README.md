@@ -10,13 +10,13 @@ NYT Wordle with a nudge. You get a random starting word, then each turn a handfu
 2. Tap it to play it, or type your own word as usual.
 3. After each guess you get 5 picks, and every one of them could be the answer: no words that only narrow things down. Under each word is roughly how many answers would still be possible if it isn't the one (fewer is better). The line above the picks says how many answers still fit.
 4. Tap a pick to play it. Anything you'd already typed is cleared first.
-5. Once only one answer fits, it's the only pick. When the puzzle is over, a recap takes the picks' place: how many guesses it took, how often you played the best pick on offer, and the level.
+5. Once only one answer fits, it's the only pick. When the puzzle is over, a recap takes the picks' place: how many guesses it took, how often you played the best pick on offer, and the easiest level you used.
 
 The picks are drawn at random from the best possible answers, so some are better than others, and you won't get the same five as everyone else. With 5 or fewer answers left, you see all of them.
 
 ## Levels
 
-Tap the level next to the starting word to switch it before your first guess. It's remembered for the next puzzles.
+Tap the level in the line above the picks (**Medium ▸**) to switch it, any time. Mid-puzzle, the new level deals a fresh shortlist. Your choice is remembered for the next puzzles, and the recap names the easiest level you used.
 
 | Level | Picks come from | Hints |
 | --- | --- | --- |

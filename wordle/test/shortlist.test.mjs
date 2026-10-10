@@ -178,12 +178,12 @@ test('the best-pick count survives a reload and only counts each guess once', as
 test('the info line shows how many answers still fit', async () => {
   const g = await game({ played: ['crane'] });
   const n = g.E.candidates([{ word: 'crane', states: colors('crane', 'pouch') }], g.E.ANSWERS).length;
-  assert.match(g.root.querySelector('.info').textContent, new RegExp(`^${n.toLocaleString()} possible answers · Medium$`));
+  assert.match(g.root.querySelector('.info').textContent, new RegExp(`^${n.toLocaleString()} possible answers · Medium ▸$`));
   const start = await game();
   assert.match(start.root.querySelector('.info').textContent, /^2,983 possible answers · Medium/);
 });
 
-test('levels: set before the first guess; Easy draws from the best 10, Hard from all and hides hints', async () => {
+test('levels: Easy draws from the best 10, Hard from all with hints hidden; switch any time', async () => {
   const g = await game();
   const lv = () => g.root.getElementById('level');
   assert.match(lv().textContent, /Medium/);
@@ -192,22 +192,35 @@ test('levels: set before the first guess; Easy draws from the best 10, Hard from
   assert.deepEqual(cycle, ['Hard', 'Easy', 'Medium', 'Hard']);
   assert.equal(g.w.localStorage.getItem('wsl:level'), '"hard"', 'the level is remembered for the next puzzles');
   const start = g.picks()[0];
+  lv().click(); await sleep(20); lv().click(); await sleep(20); lv().click(); await sleep(20); // back to Hard
+  assert.equal(g.picks()[0], start, 'switching before the first guess keeps the starting word');
   await g.guess(start);
-  await sleep(800); // Hard scores every answer that fits
-  assert.equal(g.root.getElementById('level'), null, 'no level button after the first guess');
-  assert.match(g.root.querySelector('.info').textContent, /· Hard$/);
+  await sleep(300);
+  assert.match(g.root.querySelector('.info').textContent, /· Hard ▸$/);
   assert.ok(g.picks().length > 0);
   for (const p of g.picks()) assert.equal(g.pick(p).querySelector('small'), null, `${p} has no hint in Hard`);
+
+  // mid-puzzle: switching deals a new shortlist at the new level
+  lv().click(); await sleep(300); // Easy
+  assert.match(g.root.querySelector('.info').textContent, /· Easy ▸$/);
+  assert.ok(g.pick(g.picks()[0]).querySelector('small'), 'Easy shows hints');
+  assert.equal(g.saved().level, 'easy');
+  lv().click(); await sleep(300); lv().click(); await sleep(300); // Medium, then Hard
+  assert.equal(g.saved().easiest, 0, 'the recap remembers Easy was used');
 
   const easy = await game({ played: ['crane'], stored: { 'wsl:level': '"easy"' } });
   const rows = [{ word: 'crane', states: colors('crane', 'pouch') }];
   const cands = easy.E.candidates(rows, easy.E.ANSWERS);
   const cutoff = Array.from(cands, i => easy.E.expectedLeft(easy.E.codes(easy.E.ALL[i]), cands)).sort((a, b) => a - b)[9];
   for (const p of easy.picks()) assert.ok(easy.E.expectedLeft(easy.E.codes(p), cands) <= cutoff + 1e-9, `${p} is among the best 10`);
-  assert.ok(easy.pick(easy.picks()[0]).querySelector('small'), 'Easy shows hints');
+});
 
-  const locked = await game({ played: ['crane'], stored: { 'wsl:level': '"hard"', 'wsl:2023-07-11': { sig: '', left: 2983, picks: [{ word: 'crane', left: 100 }], level: 'easy', turns: [], at: Date.now() } } });
-  assert.match(locked.root.querySelector('.info').textContent, /· Easy$/, 'a puzzle keeps the level it started with');
+test('the recap names the easiest level a shortlist was dealt at', async () => {
+  const g = await game({ answer: 'pouch', played: ['crane'], stored: { 'wsl:level': '"easy"' } });
+  g.root.getElementById('level').click(); await sleep(300); // Medium
+  g.root.getElementById('level').click(); await sleep(300); // Hard
+  await g.guess('pouch');
+  assert.match(g.panel().querySelector(".note").textContent, /^Solved in 2 · .*Easy$/);
 });
 
 test('🎲 deals new picks and ▾ tucks them away until 🎲 Shortlist is tapped', async () => {
