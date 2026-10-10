@@ -136,11 +136,7 @@
   const opt = k => settings[k];
 
   // ---------- reading the board ----------
-  function tiles() {
-    const t = [...document.querySelectorAll('[data-testid="card-label"]')];
-    return t.length ? t : [...document.querySelectorAll('label')]
-      .filter(l => l.querySelector('input[type="checkbox"]') && !l.closest('#ccm-panel')); // not our settings
-  }
+  const tiles = () => [...document.querySelectorAll('[data-testid="card-label"]')];
   const wordOf = el => el.dataset.flipId ? up(el.dataset.flipId) : undouble(el.textContent);
   const isSelected = el => /selected/i.test(el.className); // the game's Card-module_selected class
   const selectedTiles = () => tiles().filter(isSelected);
@@ -320,7 +316,7 @@
   `;
 
   // dark when NYT's own dark mode or Dark Reader is on
-  const isDark = () => document.body?.dataset.mode === 'dark' ||
+  const isDark = () => document.body?.dataset.mode === 'dark' || document.body?.classList.contains('dark') ||
     document.documentElement.dataset.darkreaderScheme === 'dark';
 
   // ---------- panel ----------
@@ -346,7 +342,10 @@
   };
   const btns = {};
   for (const c of COLORS) { btns[c.key] = addButton('0', () => assign(c.key), c.hex); btns[c.key].classList.add('swatch'); }
-  addButton('⌫', () => assign('erase')).classList.add('ccm-erase');
+  const eraseBtn = addButton('⌫', () => assign('erase'));
+  eraseBtn.classList.add('ccm-erase');
+  eraseBtn.title = 'Remove the color from the selected tiles';
+  eraseBtn.setAttribute('aria-label', 'Remove color');
   const undoBtn = addButton('↶', () => undo());
   undoBtn.classList.add('ccm-undo');
   undoBtn.title = 'Undo your last color change';
@@ -374,6 +373,7 @@
     const was = maybeMode;
     maybeMode = !!on && opt('maybes');
     maybeBtn.classList.toggle('active', maybeMode);
+    maybeBtn.setAttribute('aria-pressed', String(maybeMode));
     panel.classList.toggle('maybemode', maybeMode);
     if (maybeMode) arm(null);
     else if (was && ready) apply(); // catch up on the sorting held back during maybe mode
@@ -479,7 +479,7 @@
   let armed = null;
   function arm(c) {
     armed = c;
-    for (const k of ORDER) btns[k].classList.toggle('active', k === c);
+    for (const k of ORDER) { btns[k].classList.toggle('active', k === c); btns[k].setAttribute('aria-pressed', String(k === c)); }
     clearConfirm();
     showGo();
   }
@@ -706,7 +706,7 @@
     if (histBtn.textContent !== label) histBtn.textContent = label;
     if (histSheet.hidden) return;
     histSheet.innerHTML = '<h4>Wrong guesses</h4>' + (wrong
-      ? '<ol>' + guesses.map(g => `<li>${g.w.map(x => x.replace(/[<&]/g, '')).join(' · ')}${g.away ? ' <span class="away">one away</span>' : ''}</li>`).join('') + '</ol>'
+      ? '<ol>' + guesses.map(g => `<li>${g.w.map(x => x.replace(/&/g, '&amp;').replace(/</g, '&lt;')).join(' · ')}${g.away ? ' <span class="away">one away</span>' : ''}</li>`).join('') + '</ol>'
       : '<p class="empty">No wrong guesses yet.</p>');
   }
   function toggleHistory(open = histSheet.hidden) {
@@ -859,6 +859,8 @@
       pending = null;
       undoStack = [];
       showUndo();
+      arm(null);
+      if (maybeMode) { maybeMode = false; maybeBtn.classList.remove('active'); maybeBtn.setAttribute('aria-pressed', 'false'); panel.classList.remove('maybemode'); }
     }
     checkGuess();
     const groups = solvedGroups();
@@ -897,7 +899,12 @@
     for (const k of ORDER) {
       const n = [...present].filter(w => marks[w] === k).length;
       const label = (opt('letters') ? k[0].toUpperCase() : '') + (solved.has(k) ? '✓' : n);
-      if (btns[k].textContent !== label) btns[k].textContent = label; // only touch the DOM on change
+      if (btns[k].textContent !== label) { // only touch the DOM on change
+        btns[k].textContent = label;
+        const name = k[0].toUpperCase() + k.slice(1);
+        btns[k].setAttribute('aria-label', solved.has(k) ? `${name}, solved` : `${name}, ${n} marked`);
+        btns[k].title = solved.has(k) ? `${name} is solved` : `${name}: ${n} of 4 marked. Tap to color the selected tiles`;
+      }
       btns[k].classList.toggle('solved', solved.has(k));
       btns[k].classList.toggle('full', !solved.has(k) && n === MAX_PER_COLOR);
     }
@@ -969,7 +976,10 @@
   window.addEventListener('storage', e => {
     // marks and maybes are written together; read both so a half-arrived update
     // can't be "settled" and saved back over the other tab's change
-    if (e.key === marksKey() || e.key === maybeKey()) { marks = ls.get(marksKey(), {}); maybes = ls.get(maybeKey(), {}); }
+    if (e.key === marksKey() || e.key === maybeKey()) {
+      marks = ls.get(marksKey(), {}); maybes = ls.get(maybeKey(), {});
+      undoStack = []; showUndo(); // undoing here would quietly revert the other tab's change
+    }
     else if (e.key === guessKey()) guesses = loadGuesses();
     else if (e.key === SETTINGS_KEY) { settings = { ...DEFAULTS, ...ls.get(SETTINGS_KEY, {}) }; applySettings(); return; }
     else if (e.key === SORT_KEY) { const v = e.newValue; if (SORT_MODES[v]) { sortMode = v; showSort(); } }
@@ -979,7 +989,10 @@
 
   // ---------- keyboard ----------
   window.addEventListener('keydown', e => {
-    if (e.target.closest?.('input[type="text"], textarea, [contenteditable]')) return;
+    // never while typing somewhere (including inside another extension's shadow root)
+    const t = e.composedPath?.()[0] || e.target;
+    if (e.isComposing || t.isContentEditable ||
+        t.closest?.('textarea, select, input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"])')) return;
     if (e.metaKey || e.ctrlKey || e.altKey || !opt('keys')) return;
     const digit = e.code?.match(/^(?:Digit|Numpad)([0-4])$/)?.[1];
     if (e.shiftKey && digit && opt('maybes')) { // Shift+1–4: a maybe without entering maybe mode

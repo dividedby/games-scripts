@@ -612,3 +612,49 @@ test('Go presses tiles again if the game drops presses (as it does mid-animation
   assert.deepEqual(submitted, four('P'));
   b.close();
 });
+
+test('number and letter keys are ignored while typing in any field', async () => {
+  const b = await board({ words: ['A', 'B', 'C', 'D'] });
+  for (const type of [null, 'search', 'email']) {
+    const input = b.d.createElement('input');
+    if (type) input.type = type;
+    b.d.body.appendChild(input);
+    b.select(['A']);
+    input.dispatchEvent(new b.w.KeyboardEvent('keydown', { key: '4', bubbles: true, composed: true }));
+    await sleep(30);
+    assert.equal(b.store().A, undefined, `typing 4 in an ${type || 'untyped'} input doesn't mark a tile`);
+    input.remove();
+  }
+  b.d.body.dispatchEvent(new b.w.KeyboardEvent('keydown', { key: '4', bubbles: true }));
+  await sleep(30);
+  assert.equal(b.store().A, 'purple', 'outside a field the key still works');
+  b.close();
+});
+
+test('guess history keeps & and < in words', async () => {
+  const b = await board({ words: ['R&B', 'AT&T', 'A<B', 'X', 'Y'], stored: { 'ccm:settings': { history: true } } });
+  await b.guess(['R&B', 'AT&T', 'A<B', 'X'], 'wrong');
+  await b.tap('hist');
+  assert.match(b.root.getElementById('ccm-history').textContent, /A<B · AT&T · R&B · X/);
+  b.close();
+});
+
+test('a change from another tab clears undo, so undo cannot revert it', async () => {
+  const b = await board({ words: ['A', 'B', 'C', 'D'] });
+  b.select(['A']); await b.tap('green');
+  assert.ok(!b.btn('undo').classList.contains('off'));
+  b.w.localStorage.setItem('ccm:2023-07-01', JSON.stringify({ A: 'green', B: 'blue' }));
+  b.w.dispatchEvent(new b.w.StorageEvent('storage', { key: 'ccm:2023-07-01' })); await sleep(40);
+  assert.ok(b.btn('undo').classList.contains('off'));
+  b.close();
+});
+
+test('color buttons have names for screen readers and say which is armed', async () => {
+  const b = await board({ words: ['A', 'B', 'C', 'D'], marks: { A: 'purple' } });
+  assert.equal(b.btn('purple').getAttribute('aria-label'), 'Purple, 1 marked');
+  assert.equal(b.btn('erase').getAttribute('aria-label'), 'Remove color');
+  await b.tap('blue');
+  assert.equal(b.btn('blue').getAttribute('aria-pressed'), 'true');
+  assert.equal(b.btn('purple').getAttribute('aria-pressed'), 'false');
+  b.close();
+});

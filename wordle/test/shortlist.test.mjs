@@ -275,7 +275,8 @@ test('the picks and the level button are disabled while a word is being entered'
   // the second pick: the game takes a while to color the row
   const slow = g.enter; let release;
   g.enter = word => { release = () => slow(word); };
-  const p = g.picks().find(x => x !== 'pouch');
+  await sleep(400);
+  const p = g.picks()[0]; // whatever is left, even the answer: the row won't color until release()
   g.pick(p).click(); await sleep(300);
   assert.ok(g.root.querySelector('.pick').disabled, 'disabled while the word is being entered');
   assert.ok(g.root.getElementById('level').disabled, 'level too');
