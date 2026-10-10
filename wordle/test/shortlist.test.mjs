@@ -147,14 +147,13 @@ test('a finished puzzle shows a recap: guesses, how often you took the best pick
   await g.guess(g.picks()[0]);                       // the starting word: no choice, not counted
   for (let turn = 0; turn < 5 && g.row < 6 && g.submitted.at(-1) !== 'pouch'; turn++) {
     const picks = g.picks();
-    const lefts = picks.map(x => +g.pick(x).querySelector('small')?.textContent.match(/\d+/)?.[0] || 0);
     const pick = picks.includes('pouch') ? 'pouch' : picks[turn % 2 ? 0 : picks.length - 1];
     g.pick(pick).click(); await sleep(600);
   }
   assert.ok(!g.panel().hidden, 'the recap stays up');
   assert.equal(g.picks().length, 0, 'no picks once it is over');
   const text = g.panel().textContent;
-  assert.match(text, new RegExp(`Solved in ${g.row}`));
+  assert.match(text, g.submitted.at(-1) === 'pouch' ? new RegExp(`Solved in ${g.row}`) : /Out of guesses/);
   assert.match(text, /best pick \d+ of \d+/);
   assert.match(text, /Medium/);
   const saved = g.saved();
