@@ -653,6 +653,7 @@ test('color buttons have names for screen readers and say which is armed', async
   const b = await board({ words: ['A', 'B', 'C', 'D'], marks: { A: 'purple' } });
   assert.equal(b.btn('purple').getAttribute('aria-label'), 'Purple, 1 marked');
   assert.equal(b.btn('erase').getAttribute('aria-label'), 'Remove color');
+  assert.equal(b.btn('yellow').getAttribute('aria-label'), 'Yellow, 0 marked', 'named from the start, not only after a change');
   await b.tap('blue');
   assert.equal(b.btn('blue').getAttribute('aria-pressed'), 'true');
   assert.equal(b.btn('purple').getAttribute('aria-pressed'), 'false');

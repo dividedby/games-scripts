@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Color-code NYT Connections tiles as you work out the groups, then submit them in the order you choose, like purple first for a reverse rainbow
-// @version      1.0.0
+// @version      1.0.1
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -899,10 +899,11 @@
     for (const k of ORDER) {
       const n = [...present].filter(w => marks[w] === k).length;
       const label = (opt('letters') ? k[0].toUpperCase() : '') + (solved.has(k) ? '✓' : n);
-      if (btns[k].textContent !== label) { // only touch the DOM on change
-        btns[k].textContent = label;
-        const name = k[0].toUpperCase() + k.slice(1);
-        btns[k].setAttribute('aria-label', solved.has(k) ? `${name}, solved` : `${name}, ${n} marked`);
+      const name = k[0].toUpperCase() + k.slice(1);
+      const aria = solved.has(k) ? `${name}, solved` : `${name}, ${n} marked`;
+      if (btns[k].textContent !== label) btns[k].textContent = label; // only touch the DOM on change
+      if (btns[k].getAttribute('aria-label') !== aria) {
+        btns[k].setAttribute('aria-label', aria);
         btns[k].title = solved.has(k) ? `${name} is solved` : `${name}: ${n} of 4 marked. Tap to color the selected tiles`;
       }
       btns[k].classList.toggle('solved', solved.has(k));

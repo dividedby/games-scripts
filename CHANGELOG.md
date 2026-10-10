@@ -28,6 +28,10 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [1.0.1] - 2026-10-10
+#### Fixed
+- Color buttons with no tiles yet had no name for screen readers.
+
 ### [1.0.0] - 2026-10-10
 #### Changed
 - Renamed from Connections Color Marker to Connections Palette. Your colors and settings carry over, and updates keep coming from the same place. If your userscript manager ever lists both names, delete Connections Color Marker.
