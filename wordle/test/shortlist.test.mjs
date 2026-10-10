@@ -261,3 +261,23 @@ test('when only one answer fits, it is the single pick, labeled as the only fit'
   assert.deepEqual(g.picks(), ['earth']);
   assert.equal(g.pick('earth').querySelector('small').textContent, 'only fit');
 });
+
+test('a board that does not continue the saved game starts a fresh record', async () => {
+  const stale = { sig: 'crane:0,pilot:0', left: 3, picks: [{ word: 'pouch', left: 0 }], level: 'easy', easiest: 0, turns: [{ used: true, best: true }], at: Date.now() };
+  const g = await game({ played: ['shtum'], stored: { 'wsl:2023-07-11': stale } });
+  assert.deepEqual([...g.saved().turns], [], 'turns from the other game are dropped');
+  assert.equal(g.saved().easiest, 1, 'and so is its easiest level');
+});
+
+test('the picks and the level button are disabled while a word is being entered', async () => {
+  const g = await game({ played: ['crane'] });
+  g.pick(g.picks().find(x => x !== 'pouch')).click(); await sleep(600);
+  // the second pick: the game takes a while to color the row
+  const slow = g.enter; let release;
+  g.enter = word => { release = () => slow(word); };
+  const p = g.picks().find(x => x !== 'pouch');
+  g.pick(p).click(); await sleep(300);
+  assert.ok(g.root.querySelector('.pick').disabled, 'disabled while the word is being entered');
+  assert.ok(g.root.getElementById('level').disabled, 'level too');
+  release(); await sleep(300);
+});

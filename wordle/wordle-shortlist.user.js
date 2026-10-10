@@ -382,6 +382,8 @@ zonedzoneszooms
   root.innerHTML = `<style>
     /* padding goes on #wsl: the page's own CSS overrides any padding set on :host */
     :host { display: block; width: 100%; max-width: 500px; margin: 0 auto; box-sizing: border-box; }
+    /* the game's own text color, so dark theme works (the page leaves body text black) */
+    #wsl, #show { color: var(--color-tone-1, #1a1a1b); }
     #wsl { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 8px; padding: 0 8px; font-family: inherit; }
     .row { display: flex; align-items: stretch; justify-content: center; gap: 6px; }
     .info { text-align: center; font-size: 12px; opacity: .7; line-height: 18px; }
@@ -389,8 +391,9 @@ zonedzoneszooms
     #wsl[hidden] { display: none; }
     .lead { align-self: center; font-size: 13px; opacity: .7; white-space: nowrap; }
     button { font: inherit; color: inherit; background: transparent; cursor: pointer; border-radius: 6px;
+      border: 1px solid rgba(128, 128, 128, .45); /* before color-mix (iOS 16.2+) */
       border: 1px solid color-mix(in srgb, currentColor 30%, transparent); padding: 4px 2px; touch-action: manipulation; }
-    button:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
+    button:hover { background: rgba(128, 128, 128, .12); background: color-mix(in srgb, currentColor 8%, transparent); }
     button:disabled { opacity: .45; cursor: default; }
     .pick { flex: 1 1 0; min-width: 0; max-width: 92px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
     .pick b { font-size: 15px; letter-spacing: .04em; text-transform: uppercase; }
@@ -450,7 +453,7 @@ zonedzoneszooms
     const first = !board.rows.length;
     const lv = LEVELS[level];
     const info = `${plural(first ? ANSWERS.length : state.left, 'possible answer')} · ` +
-      `<button id="level" title="Level. Easy: picks from the best 10, with hints. Medium: the best 30, with hints. Hard: any possible answer, no hints. The recap shows the easiest level you used">${lv.name} ▸</button>`;
+      `<button id="level"${busy ? ' disabled' : ''} title="Level. Easy: picks from the best 10, with hints. Medium: the best 30, with hints. Hard: any possible answer, no hints. The recap shows the easiest level you used">${lv.name} ▸</button>`;
     let html = first ? '<span class="lead">Start with</span>' : '';
     if (!state.picks.length) html += '<span class="note">No word on my list fits these colors</span>';
     const last = state.left === 1;
@@ -474,10 +477,14 @@ zonedzoneszooms
     const sig = sigOf(board.rows);
     if (state?.sig !== sig) busy = false;
     let saved = ls.get(picksKey(), null);
+    // a board that doesn't continue the saved one is a different game (say, today's tab left
+    // open past midnight): start its record fresh
+    const continues = (from, to) => !from || to === from || to.startsWith(from + ',');
+    if (saved && !continues(saved.sig, sig)) saved = null;
     if (saved && saved.sig !== sig) {
       // one new guess since the last shortlist: note whether it was one of the best picks
       const before = saved.sig ? saved.sig.split(',').length : 0;
-      if (board.rows.length === before + 1 && sig.startsWith(saved.sig) && saved.picks?.length > 1) {
+      if (board.rows.length === before + 1 && saved.picks?.length > 1) {
         const word = board.rows[before].word;
         const p = saved.picks.find(x => x.word === word);
         const min = Math.min(...saved.picks.map(x => x.left));
@@ -500,16 +507,18 @@ zonedzoneszooms
   }
 
   const sleep = ms => new Promise(r => setTimeout(r, ms));
+  let playId = 0;
   async function play(word) {
     if (busy) return;
     const board = readBoard();
     if (board.over) return;
+    const id = ++playId;
     busy = true; render(board);
     for (let i = 0; i < board.typed; i++) { key('←')?.click(); await sleep(30); }
     for (const c of word) { key(c)?.click(); await sleep(30); }
     key('↵')?.click();
     // the board update clears busy; if the game didn't take the word, give the buttons back
-    setTimeout(() => { if (busy) { busy = false; render(readBoard()); } }, 4000);
+    setTimeout(() => { if (busy && id === playId) { busy = false; render(readBoard()); } }, 4000);
   }
 
   panel.addEventListener('click', e => {
@@ -556,8 +565,14 @@ zonedzoneszooms
   }
   addEventListener('resize', () => setTimeout(fit, 200));
 
-  let timer = 0;
-  const later = () => { clearTimeout(timer); timer = setTimeout(() => refresh(), 120); };
+  // wait for the page to settle, but never more than 400ms, so a busy page can't starve it
+  let timer = 0, firstChange = 0;
+  const later = () => {
+    clearTimeout(timer);
+    if (!firstChange) firstChange = Date.now();
+    const run = () => { firstChange = 0; refresh(); };
+    if (Date.now() - firstChange > 400) run(); else timer = setTimeout(run, 120);
+  };
   new MutationObserver(later).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-state'] });
 
   tidy();

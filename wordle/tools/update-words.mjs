@@ -59,8 +59,16 @@ if (changed) {
   if (!parts.length) parts.push('the wider guess list changed');
   const entry = `- Word lists updated from NYT WordleBot: ${parts.join(', ')}.`;
   let log = readFileSync(CHANGELOG, 'utf8');
-  const head = log.indexOf('## Wordle Shortlist');
-  const unrel = log.indexOf('### [Unreleased]', head);
+  const head = log.indexOf('## Wordle Shortlist\n');
+  if (head < 0) throw new Error('CHANGELOG.md has no "## Wordle Shortlist" section');
+  let sectionEnd = log.indexOf('\n## ', head + 1); // the next script's section
+  if (sectionEnd < 0) sectionEnd = log.length;
+  let unrel = log.indexOf('### [Unreleased]', head);
+  if (unrel < 0 || unrel > sectionEnd) { // no Unreleased heading in this section: add one
+    const at = head + '## Wordle Shortlist\n'.length;
+    log = log.slice(0, at) + '\n### [Unreleased]\n' + log.slice(at);
+    unrel = at + 1;
+  }
   const next = log.indexOf('\n### ', unrel + 1);
   const section = log.slice(unrel, next < 0 ? undefined : next);
   const changedAt = section.indexOf('#### Changed\n');
