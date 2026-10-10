@@ -1,8 +1,10 @@
-# Connections Color Marker
+# Connections Palette
+
+*Formerly Connections Color Marker.*
 
 Color-code the tiles in NYT Connections as you work out the groups, then submit them in whatever order you like. It's especially handy if you go for a **reverse rainbow**: solving the hardest group (purple) first and the easiest (yellow) last.
 
-**Install:** [Greasy Fork](https://greasyfork.org/en/scripts/599362-connections-color-marker) · [GitHub](https://raw.githubusercontent.com/dividedby/games-scripts/main/connections/connections-color-marker.user.js) · [Changelog](../CHANGELOG.md#connections-color-marker)
+**Install:** [Greasy Fork](https://greasyfork.org/en/scripts/599362-connections-color-marker) · [GitHub](https://raw.githubusercontent.com/dividedby/games-scripts/main/connections/connections-color-marker.user.js) · [Changelog](../CHANGELOG.md#connections-palette)
 
 <p align="center">
   <img src="../docs/images/connections/desktop-board.png" alt="Desktop: tiles outlined in purple, blue, green and yellow, sorted into rows, with two tiles split between green and yellow, and the two-row palette below" width="560">

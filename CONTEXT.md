@@ -4,7 +4,7 @@ Domain glossary for the userscripts in this repo. Glossary only: no implementati
 details, no specs. When a term here conflicts with how code or an issue uses a word,
 the glossary wins (or the glossary is wrong and gets fixed here).
 
-## Connections Color Marker
+## Connections Palette
 
 ### Tile
 One of the 16 word cards on the Connections board. Identified by its word (the

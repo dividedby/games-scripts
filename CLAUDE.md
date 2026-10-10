@@ -12,7 +12,8 @@ installs update from Greasy Fork instead (`docs/adr/0002`).
 
 Current scripts:
 
-- `connections/connections-color-marker.user.js` — NYT Connections: mark tiles with
+- `connections/connections-color-marker.user.js` — Connections Palette (renamed from
+  Connections Color Marker at 1.0; the file keeps its old name) — NYT Connections: mark tiles with
   colors (or split them between candidate colors), submit groups in order, reconcile
   marks with solved groups.
 - `wordle/wordle-shortlist.user.js` — NYT Wordle: a random starting word, then a

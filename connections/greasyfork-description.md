@@ -1,5 +1,5 @@
 <!--
-GreasyFork listing description for Connections Color Marker. Greasy Fork syncs this
+GreasyFork listing description for Connections Palette. Greasy Fork syncs this
 file from main automatically (along with the script), so edit it here, not on the site.
 GreasyFork renders Markdown. Keep links and image URLs absolute —
 relative ones won't resolve there. Images use <img width> to stay small (Markdown
@@ -17,18 +17,14 @@ Works on desktop, iPhone and Android.
 <img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/connections/iphone-board.jpg" alt="iPhone: the same kind of board in Safari, with the one-row phone palette" width="160">
 </center>
 
-**New in 0.7**
+**New in 1.0**
 
+- **New name**: Connections Color Marker is now Connections Palette. Your colors
+  and settings carry over. If your userscript manager lists both, delete the old one.
 - **Maybe colors**: torn between two colors? The tile's outline splits between
-  them, half yellow and half green, for example (or in thirds for three). Split
-  tiles don't count toward a color's 4, and once a color is solved it drops out of
-  every split.
-- Tiles stay put while you're adding maybe colors, then tiles with the same
-  colors are grouped together.
-- New palette layout: colors and Go on top, other buttons below. On phones it's
-  a single row, with the extra buttons behind **⋯**.
-- After an out-of-order **Sure?** runs out, Go ignores taps for a moment, so a
-  late tap can't submit the wrong group.
+  them (half yellow, half green, or thirds for three).
+- Keyboard shortcuts stay out of the way while you type in other fields, and the
+  buttons have names for screen readers.
 
 **What it does**
 

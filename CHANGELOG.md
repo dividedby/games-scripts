@@ -24,9 +24,21 @@ Versions below 1.0.0 are pre-release.
 - Levels, switchable any time: Easy (picks from the best 10, with hints), Medium (the best 30, with hints) and Hard (any possible answer, no hints).
 - A line above the picks with how many answers still fit, and a recap when the puzzle is over: guesses, how often you played the best pick, and the easiest level used.
 
-## Connections Color Marker
+## Connections Palette
 
 ### [Unreleased]
+
+### [1.0.0] - 2026-10-10
+#### Changed
+- Renamed from Connections Color Marker to Connections Palette. Your colors and settings carry over, and updates keep coming from the same place. If your userscript manager ever lists both names, delete Connections Color Marker.
+- The color and ⌫ buttons have names and hover tips, and the chosen color and **?** say they're on, for screen readers.
+
+#### Fixed
+- Keyboard shortcuts no longer fire while you type in a search box or other field on the page (typing "g" could submit a guess).
+- Before the board appeared, a cookie banner or other checkbox form could open the palette and get rearranged.
+- Guess history showed words like R&B as "RB".
+- After a change in another tab, undo could quietly revert it.
+- Moving to another puzzle without reloading kept a color you'd tapped and maybe mode switched on.
 
 ### [0.7.8] - 2026-10-09
 #### Fixed
