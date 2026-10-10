@@ -371,8 +371,9 @@ zonedzoneszooms
   host.id = 'wsl-root';
   const root = host.attachShadow({ mode: 'closed' });
   root.innerHTML = `<style>
-    :host { display: block; width: 100%; max-width: 500px; margin: 0 auto; box-sizing: border-box; padding: 0 8px; }
-    #wsl { display: flex; align-items: stretch; justify-content: center; gap: 6px; margin: 6px 0 8px; font-family: inherit; }
+    /* padding goes on #wsl: the page's own CSS overrides any padding set on :host */
+    :host { display: block; width: 100%; max-width: 500px; margin: 0 auto; box-sizing: border-box; }
+    #wsl { display: flex; align-items: stretch; justify-content: center; gap: 6px; margin: 6px 0 8px; padding: 0 8px; font-family: inherit; }
     #wsl[hidden] { display: none; }
     .lead { align-self: center; font-size: 13px; opacity: .7; white-space: nowrap; }
     button { font: inherit; color: inherit; background: transparent; cursor: pointer; border-radius: 6px;
@@ -384,14 +385,13 @@ zonedzoneszooms
     .pick small { font-size: 11px; opacity: .75; white-space: nowrap; }
     .tools { flex: 0 0 auto; display: flex; gap: 6px; }
     .tool { width: 34px; font-size: 16px; }
-    /* phones: a little room at the screen edges, like the keyboard has, and the two tools
-       stacked so the five words keep their width */
+    /* phones: room at the screen edges, a bit more than the keyboard has, and slimmer
+       tools so the five words keep their width */
     @media (max-width: 480px) {
-      :host { padding: 0 12px; }
-      #wsl { gap: 4px; }
+      #wsl { gap: 4px; padding: 0 12px; }
+      .tools { gap: 4px; }
       .pick b { font-size: 14px; letter-spacing: 0; }
-      .tools { flex-direction: column; gap: 3px; }
-      .tool { width: 30px; flex: 1 1 0; padding: 0; font-size: 13px; line-height: 1; }
+      .tool { width: 30px; padding: 0; }
     }
     #show { margin: 6px auto 8px; display: block; padding: 4px 10px; font-size: 13px; }
     #show[hidden] { display: none; }
