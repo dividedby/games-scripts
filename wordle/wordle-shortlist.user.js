@@ -405,6 +405,7 @@ zonedzoneszooms
       .tools { gap: 4px; }
       .pick b { font-size: 14px; letter-spacing: 0; }
       .tool { width: 30px; padding: 0; }
+      .info button { padding: 2px 10px; line-height: 18px; } /* big enough to tap */
     }
     #show { margin: 6px auto 8px; display: block; padding: 4px 10px; font-size: 13px; }
     #show[hidden] { display: none; }
