@@ -79,6 +79,10 @@ width), not only in jsdom.
   localStorage `ccm:debug` to `true` and reload to expose the palette's shadow root as
   `window.__ccmRoot`; remove it when done. The phone-width tab doesn't take real
   clicks, so drive it from page JavaScript.
+- Phone width without a phone: Chrome won't size a window below ~500px, but a 390px
+  same-origin iframe of the game (`/games/wordle/2023-MM-DD`) gets phone media queries,
+  the real page CSS and the installed script. The page's CSS overrides `padding` and
+  `margin` on a script's host element, so put spacing inside the shadow root.
 - iPhone: real taps through iPhone Mirroring. It lags several seconds and drops quick
   taps, so tap slowly and screenshot after each step. Typing garbles text, so navigate
   by tapping (or ask the owner to open a URL). Zooming the full window gives a 2×
