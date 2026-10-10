@@ -1,43 +1,60 @@
 # Wordle Shortlist
 
-NYT Wordle with a nudge. You get a random starting word, then each turn a handful of words that could be the answer to choose from. It makes Wordle easy, but you still pick the word: the choices aren't all equally good, so it's on you to spot the better ones.
+For people who want to have played Wordle today without really playing Wordle.
+
+You get a random starting word (not CRANE, not SLATE, just whatever comes up), then each turn a shortlist of five words that could be the answer. Tap one. That's the job. It's easy, but it isn't autopilot: the five aren't equally good, so there's still a right call to make, and on Hard nobody tells you which one it is.
 
 **Install:** [GitHub](https://raw.githubusercontent.com/dividedby/games-scripts/main/wordle/wordle-shortlist.user.js) · [Changelog](../CHANGELOG.md#wordle-shortlist)
 
+<p align="center">
+  <img src="../docs/images/wordle/desktop-board.png" alt="Wordle after HIJAB and SNORE: above the keyboard, '25 possible answers · Medium' and a shortlist of DROOL, FLOOR, GROWL, ROOMY and FROCK, each with about how many answers it would leave" width="460">
+</p>
+
 ## How it works
 
-1. Install the script (see [Installing](../README.md#installing)) and open Wordle. Above the keyboard, the script suggests a starting word: any of the roughly 3,000 likely answers, picked at random, not a well-known good opener.
-2. Tap it to play it, or type your own word as usual.
-3. After each guess you get 5 picks, and every one of them could be the answer: no words that only narrow things down. Under each word is roughly how many answers would still be possible if it isn't the one (fewer is better). The line above the picks says how many answers still fit.
+1. Install the script (see [Installing](../README.md#installing)) and open Wordle. Above the keyboard you get a starting word: any of the roughly 3,000 likely answers, picked at random. Some days it's a decent opener. Some days it's HIJAB.
+2. Tap it to play it, or type your own word if you feel strongly.
+3. After each guess you get 5 picks, and every one of them could be the answer: no clever filler words that only narrow things down, so you're always playing by hard mode's rules. Under each word is roughly how many answers would still be possible if it isn't the one (fewer is better). The line above says how many answers still fit.
 4. Tap a pick to play it. Anything you'd already typed is cleared first.
-5. Once only one answer fits, it's the only pick. When the puzzle is over, a recap takes the picks' place: how many guesses it took, how often you played the best pick on offer, and the easiest level you used.
+5. When one answer is left, it's the only pick. When the puzzle's over, the shortlist turns into a recap: how many guesses it took, how often you played the best pick on offer, and the level.
 
-The picks are drawn at random from the best possible answers, so some are better than others, and you won't get the same five as everyone else. With 5 or fewer answers left, you see all of them.
+The picks are drawn at random from the best possible answers, so some are better than others, and you won't get the same five as anyone else. With 5 or fewer answers left, you see all of them.
+
+<details>
+<summary>Screenshot: the recap</summary>
+<br>
+<img src="../docs/images/wordle/desktop-recap.png" alt="The finished board, HIJAB, SNORE, DROOL, DROOP, with 'Solved in 4 · best pick 1 of 2 · Medium' below it" width="320">
+</details>
 
 ## Levels
 
-Tap the level in the line above the picks (**Medium ▸**) to switch it, any time. Mid-puzzle, the new level deals a fresh shortlist. Your choice is remembered for the next puzzles, and the recap names the easiest level you used.
+Tap the level in the line above the picks (**Medium ▸**) to switch it, any time. Mid-puzzle, the new level deals a fresh shortlist. Your choice is remembered for the next puzzles, and the recap names the easiest level you used, so dropping to Easy for one turn shows.
 
 | Level | Picks come from | Hints |
 | --- | --- | --- |
 | Easy | the 10 best possible answers | shown |
 | Medium (default) | the 30 best | shown |
-| Hard | any possible answer | hidden, so picking well is up to you |
+| Hard | any possible answer | hidden: you're on your own |
+
+<details>
+<summary>Screenshot: Hard</summary>
+<br>
+<img src="../docs/images/wordle/hard-strip.png" alt="The same turn on Hard: TROMP, DROOL, GROOM, VROOM and CROCK, with no hints" width="460">
+</details>
 
 ## Buttons
 
 | Button | Does |
 | --- | --- |
-| 🎲 | Deal a different set of picks for this turn |
-| ▾ | Tuck the picks away; tap **🎲 Shortlist** to bring them back |
+| 🎲 | Deal a different shortlist for this turn |
+| ▾ | Tuck the shortlist away; tap **🎲 Shortlist** to bring it back |
 
 ## Good to know
 
-- **Hard mode:** every pick fits all the colors so far, so the picks always follow hard mode's rules.
-- **No spoilers:** the script never looks up the day's answer. It only knows the colors on your board, and a list of likely answers.
-- Your picks are saved for each puzzle in your browser, so reloading the page doesn't deal new ones. Puzzles you haven't opened in 60 days are cleaned up.
+- **No spoilers:** the script never looks up the day's answer. It only knows the colors on your board and a list of likely answers.
+- Your shortlist is saved for each puzzle in your browser, so reloading the page doesn't deal a new one. Puzzles you haven't opened in 60 days are cleaned up.
 - Works on archive puzzles too (`nytimes.com/games/wordle/YYYY-MM-DD`).
-- On a short screen, the board shrinks a little to make room for the picks, so the keyboard stays in view.
+- Works on phones. On a short screen, the board shrinks a little to make room, so the keyboard stays in view.
 
 ## Word lists
 
@@ -54,4 +71,4 @@ pnpm install
 pnpm test
 ```
 
-Report bugs and ideas in the [issues](https://github.com/dividedby/games-scripts/issues).
+The [Greasy Fork listing](greasyfork-description.md) text lives here too. Report bugs and ideas in the [issues](https://github.com/dividedby/games-scripts/issues).
