@@ -1,7 +1,7 @@
 <!--
-GreasyFork listing description for Wordle Shortlist. Once the listing is set to sync from
-main, Greasy Fork pulls this file automatically (along with the script), so edit it
-here, not on the site. GreasyFork renders Markdown. Keep links and image URLs absolute —
+GreasyFork listing description for Wordle Shortlist
+(https://greasyfork.org/en/scripts/599505-wordle-shortlist). Greasy Fork syncs this
+file from main automatically (along with the script), so edit it here, not on the site. GreasyFork renders Markdown. Keep links and image URLs absolute —
 relative ones won't resolve there. Images use <img width> to stay small; GreasyFork
 allows img width/height, <center> and <details>.
 The full README (with the dev/test info) lives on GitHub.

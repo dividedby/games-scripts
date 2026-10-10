@@ -7,7 +7,7 @@ Userscripts for browser word and puzzle games. Each one adds features to the gam
 | Script | What it does | Install |
 | --- | --- | --- |
 | [**Connections Palette**](connections/README.md) | NYT Connections: color-code the tiles as you work out the groups, with each color in its own row, then submit the groups in the order you choose (purple first for a reverse rainbow). | [Greasy Fork](https://greasyfork.org/en/scripts/599362-connections-color-marker) · [GitHub](https://raw.githubusercontent.com/dividedby/games-scripts/main/connections/connections-color-marker.user.js) |
-| [**Wordle Shortlist**](wordle/README.md) | NYT Wordle, for people who'd rather not do all of Wordle: a random starting word, then a shortlist of five possible answers each turn. Easy, but you still make the call. | [GitHub](https://raw.githubusercontent.com/dividedby/games-scripts/main/wordle/wordle-shortlist.user.js) |
+| [**Wordle Shortlist**](wordle/README.md) | NYT Wordle, for people who'd rather not do all of Wordle: a random starting word, then a shortlist of five possible answers each turn. Easy, but you still make the call. | [Greasy Fork](https://greasyfork.org/en/scripts/599505-wordle-shortlist) · [GitHub](https://raw.githubusercontent.com/dividedby/games-scripts/main/wordle/wordle-shortlist.user.js) |
 
 <p align="center">
   <a href="connections/README.md"><img src="docs/images/connections/desktop-board.png" alt="Connections Palette on desktop: tiles outlined in purple, blue, green and yellow, sorted into rows" width="440"></a>

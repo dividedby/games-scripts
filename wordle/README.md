@@ -4,7 +4,7 @@ For people who want to play the daily Wordle without really playing Wordle.
 
 You get a random starting word (not CRANE, not SLATE, just whatever comes up), then each turn a shortlist of five words that could be the answer. Tap one. That's the job. It's easy, but it isn't autopilot: the five aren't equally good, so there's still a right call to make, and on Hard nobody tells you which one it is.
 
-**Install:** [GitHub](https://raw.githubusercontent.com/dividedby/games-scripts/main/wordle/wordle-shortlist.user.js) · [Changelog](../CHANGELOG.md#wordle-shortlist)
+**Install:** [Greasy Fork](https://greasyfork.org/en/scripts/599505-wordle-shortlist) · [GitHub](https://raw.githubusercontent.com/dividedby/games-scripts/main/wordle/wordle-shortlist.user.js) · [Changelog](../CHANGELOG.md#wordle-shortlist)
 
 <p align="center">
   <img src="../docs/images/wordle/desktop-and-iphone.png" alt="Desktop, after KAZOO and LITRE: '12 possible answers · Medium' and a shortlist of BLUER, CRUEL, REVEL, REPLY and FLYER, each with about how many answers it would leave. iPhone, after BASIL: 235 possible answers and a shortlist of CRATE, GRATE, HEART, HEARD and CEDAR" width="620">
