@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test \"*/test/*.test.mjs\""
+    "test": "node --test \"*/test/*.test.mjs\"",
+    "update-words": "node wordle/tools/update-words.mjs"
   },
   "devDependencies": {
     "jsdom": "^24.1.0"

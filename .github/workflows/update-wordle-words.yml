@@ -1,0 +1,44 @@
+name: update Wordle word lists
+
+# Once a month, refresh Wordle Shortlist's word lists from WordGamesBot (NYT WordleBot's
+# lists). If they changed, open a pull request with the new lists, a version bump and a
+# changelog line. Nothing is released until that pull request is merged into main.
+on:
+  schedule:
+    - cron: '17 14 1 * *' # the 1st of each month, 14:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - id: words
+        run: pnpm update-words
+      - if: steps.words.outputs.changed == 'true'
+        run: pnpm test
+      - if: steps.words.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: update-wordle-words
+          delete-branch: true
+          author: dividedby <64715420+dividedby@users.noreply.github.com>
+          committer: dividedby <64715420+dividedby@users.noreply.github.com>
+          commit-message: 'Wordle Shortlist: update word lists from NYT WordleBot'
+          title: 'Wordle Shortlist: update word lists'
+          body: |
+            The word lists at [WordGamesBot](https://github.com/WordGamesBot/wordgamesbot.github.io) changed:
+
+            ${{ steps.words.outputs.summary }}
+
+            Tests passed. Merging this releases the new version.

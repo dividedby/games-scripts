@@ -33,6 +33,8 @@ The picks are drawn at random from the 30 best possible answers, so some are bet
 
 The likely answers (about 3,000 words) are NYT WordleBot's list, as curated by [WordGamesBot](https://github.com/WordGamesBot/wordgamesbot.github.io). If the answer turns out not to be on it, the picks come from WordleBot's wider list of about 4,600 common words instead.
 
+The lists change a few times a year. Once a month a GitHub Action checks for changes and, if there are any, opens a pull request with the new lists; merging it releases a new version. To update by hand, run `pnpm update-words`.
+
 ## Development
 
 The script is a single file, [`wordle-shortlist.user.js`](wordle-shortlist.user.js), with no build step. Behavior tests load it into jsdom against a simulated Wordle board ([`test/`](test/)):
