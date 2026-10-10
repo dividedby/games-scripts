@@ -83,6 +83,12 @@ width), not only in jsdom.
   same-origin iframe of the game (`/games/wordle/2023-MM-DD`) gets phone media queries,
   the real page CSS and the installed script. The page's CSS overrides `padding` and
   `margin` on a script's host element, so put spacing inside the shadow root.
+- iPhone: real taps through iPhone Mirroring. It lags several seconds and drops quick
+  taps, so tap slowly and screenshot after each step. Typing garbles text, so navigate
+  by tapping (or ask the owner to open a URL). Zooming the full window gives a 2×
+  screenshot good enough for the README.
+- Installed copies update only after the owner updates them in Tampermonkey and the
+  Userscripts app, so ask before testing a new version.
 
 ## Wordle word lists
 
@@ -92,12 +98,6 @@ from WordGamesBot and bumps the patch version and changelog when it changed. The
 monthly workflow `.github/workflows/update-wordle-words.yml` runs the same command and
 opens a pull request (it needs "Allow GitHub Actions to create and approve pull
 requests" on in the repo's Actions settings).
-- iPhone: real taps through iPhone Mirroring. It lags several seconds and drops quick
-  taps, so tap slowly and screenshot after each step. Typing garbles text, so navigate
-  by tapping (or ask the owner to open a URL). Zooming the full window gives a 2×
-  screenshot good enough for the README.
-- Installed copies update only after the owner updates them in Tampermonkey and the
-  Userscripts app, so ask before testing a new version.
 
 ## Agent skills
 
