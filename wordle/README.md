@@ -7,9 +7,7 @@ You get a random starting word (not CRANE, not SLATE, just whatever comes up), t
 **Install:** [GitHub](https://raw.githubusercontent.com/dividedby/games-scripts/main/wordle/wordle-shortlist.user.js) · [Changelog](../CHANGELOG.md#wordle-shortlist)
 
 <p align="center">
-  <img src="../docs/images/wordle/desktop-board.png" alt="Wordle after KAZOO and LITRE: above the keyboard, '12 possible answers · Medium' and a shortlist of BLUER, CRUEL, REVEL, REPLY and FLYER, each with about how many answers it would leave" width="400">
-  &nbsp;
-  <img src="../docs/images/wordle/iphone-board.jpg" alt="iPhone: after BASIL, 235 possible answers and a shortlist of CRATE, GRATE, HEART, HEARD and CEDAR above the keyboard" width="216">
+  <img src="../docs/images/wordle/desktop-and-iphone.png" alt="Desktop, after KAZOO and LITRE: '12 possible answers · Medium' and a shortlist of BLUER, CRUEL, REVEL, REPLY and FLYER, each with about how many answers it would leave. iPhone, after BASIL: 235 possible answers and a shortlist of CRATE, GRATE, HEART, HEARD and CEDAR" width="620">
 </p>
 
 ## How it works

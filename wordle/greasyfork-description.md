@@ -15,8 +15,7 @@ It's easy, but it isn't autopilot: the five aren't equally good, so there's stil
 right call to make. Works on desktop, iPhone and Android.
 
 <center>
-<img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/wordle/desktop-board.png" alt="Wordle after KAZOO and LITRE: '12 possible answers · Medium' and a shortlist of BLUER, CRUEL, REVEL, REPLY and FLYER above the keyboard" width="340">
-<img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/wordle/iphone-board.jpg" alt="iPhone: after BASIL, a shortlist of CRATE, GRATE, HEART, HEARD and CEDAR above the keyboard" width="183">
+<img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/wordle/desktop-and-iphone.png" alt="Desktop and iPhone: a shortlist of five possible answers above the keyboard, each with about how many answers it would leave" width="520">
 </center>
 
 **What it does**
