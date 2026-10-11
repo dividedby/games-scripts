@@ -127,7 +127,8 @@
   const PANELS = [
     '[class*="Welcome-module_contentWelcome"]', '[class*="_moment_"]', '[role="dialog"]',
     '[class*="Modal-module"]', '[class*="pz-moment"]',
-    '#hub-root', '.pz-footer', '[class*="ArchiveLayout-module_wrapper"]',
+    '[id$="-root"]:not(#pz-game-root)', '.pz-footer', // home, stats and Spelling Bee pages: #hub-root, #stats-root…
+    '[class*="ArchiveLayout-module_wrapper"]',
     '.tab__tabNav', '.archive_date-selector-container', '.archive_buttons-right', '.archive_mode-toggle',
   ].join(', ');
   const SCAN = 'div, section, aside, article, header, footer, nav, ul, li, a, button, span, h1, h2, h3, h4, p, label, img, i';
