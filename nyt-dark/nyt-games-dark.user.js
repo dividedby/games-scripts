@@ -67,6 +67,7 @@
     html.nytd-dark [data-nytd-ink=light] { color: #f8f8f8 !important; }
     html.nytd-dark [data-nytd-ink=dark] { color: #121212 !important; }
     html.nytd-dark [data-nytd-flip] { filter: invert(.93) hue-rotate(180deg); }
+    html.nytd-dark [data-nytd-panel]:not(a, button) { border-color: #3a3a3c !important; }
     html.nytd-dark [data-nytd-panel] hr { background: #3a3a3c !important; border-color: #3a3a3c !important; }
     html.nytd-dark [data-nytd-panel] button[class*=primary i] { background: #f8f8f8 !important; color: #121212 !important; }
     html.nytd-dark [data-nytd-panel] button:not([class*=primary i]) { color: #f8f8f8 !important; border-color: #f8f8f8 !important; }
