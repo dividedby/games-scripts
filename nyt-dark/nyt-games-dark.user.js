@@ -57,6 +57,7 @@
     html.nytd-dark .pz-nav-drawer * { border-top-color: #3a3a3c !important; border-bottom-color: #3a3a3c !important; }
     html.nytd-dark .pz-nav-drawer :is(a, a *, h2, h3, h4, li, p):not([class*=ctaButton i]):not([class*=ctaButton i] *) { color: #f8f8f8 !important; }
     html.nytd-dark .pz-nav-drawer svg:not([class*=icon i]) path { fill: currentColor; }
+    html.nytd-dark .pz-nav-drawer .pz-icon:is([class*=arrow], [class*=chevron], [class*=caret]) { filter: invert(1); }
     html.nytd-dark .pz-nav-drawer .pz-nav__button { background: transparent !important; color: #f8f8f8 !important; border-color: #565758 !important; }
 
     /* plain white or gray areas NYT gave no dark colors (Wordle's start screen, promo cards,
