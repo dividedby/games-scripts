@@ -24,6 +24,10 @@ Current scripts:
   and `.pz-nav-drawer` menu by CSS, and plain white/gray panels inside start, results and
   modal screens by marking them `data-nytd-panel` (colorful brand panels are left alone). Adds `<meta name="darkreader-lock">` so Dark Reader stands back;
   Noir ignores it (and `color-scheme`), so Noir users turn it off for nytimes.com.
+  Archives, the home page, stats and footer get the same plain-white marking (scoped by
+  `PANELS`), plus text fixed by its real backdrop (`data-nytd-ink`) and black icons flipped
+  (`data-nytd-flip`). News-style pages (hints, forums, the bots, help.nytimes.com) swap NYT's
+  `tpl-always-light` class on `<html>` for `tpl-always-dark` and scan the whole body.
 
 Each script folder holds the script, its `README.md` (the user guide),
 `greasyfork-description.md` (the Greasy Fork listing, synced from `main`) and
