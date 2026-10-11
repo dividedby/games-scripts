@@ -382,8 +382,10 @@ zonedzoneszooms
   root.innerHTML = `<style>
     /* padding goes on #wsl: the page's own CSS overrides any padding set on :host */
     :host { display: block; width: 100%; max-width: 500px; margin: 0 auto; box-sizing: border-box; }
-    /* the game's own text color, so dark theme works (the page leaves body text black) */
+    /* the game's own text color in its light and dark themes; light text whenever the page
+       behind us is dark some other way (a dark-mode extension like Dark Reader or Noir) */
     #wsl, #show { color: var(--color-tone-1, #1a1a1b); }
+    :host([data-dark]) #wsl, :host([data-dark]) #show { color: #e8e6e3; }
     #wsl { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 8px; padding: 0 8px; font-family: inherit; }
     .row { display: flex; align-items: stretch; justify-content: center; gap: 6px; }
     .info { text-align: center; font-size: 12px; opacity: .7; line-height: 18px; }
@@ -439,7 +441,20 @@ zonedzoneszooms
       LEVELS[LEVEL_ORDER[state.easiest ?? LEVEL_ORDER.indexOf(state.level || level)]].name].filter(Boolean).join(' · ');
   }
 
+  // dark if whatever is painted behind the shortlist is dark, however it got that way
+  function checkTheme() {
+    let bg = '';
+    for (let e = host.parentElement; e; e = e.parentElement) {
+      const c = getComputedStyle(e).backgroundColor;
+      if (c && c !== 'transparent' && !/rgba\(.*,\s*0\)$/.test(c)) { bg = c; break; }
+    }
+    const [r, g, b] = (bg.match(/[\d.]+/g) || [255, 255, 255]).map(Number);
+    const dark = 0.2126 * r + 0.7152 * g + 0.0722 * b < 128;
+    if (dark !== ('dark' in host.dataset)) { if (dark) host.dataset.dark = ''; else delete host.dataset.dark; }
+  }
+
   function render(board) {
+    checkTheme();
     const showPanel = !!state;
     show.hidden = !showPanel || !collapsed;
     panel.hidden = !showPanel || collapsed;
@@ -574,6 +589,12 @@ zonedzoneszooms
     if (Date.now() - firstChange > 400) run(); else timer = setTimeout(run, 120);
   };
   new MutationObserver(later).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-state'] });
+  // dark modes switch by attributes on <html> or <body> (Dark Reader, NYT, Wordle's own),
+  // sometimes with a stylesheet that lands a moment later
+  new MutationObserver(() => { checkTheme(); setTimeout(checkTheme, 300); })
+    .observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-darkreader-scheme', 'data-mode'] });
+  new MutationObserver(() => { checkTheme(); setTimeout(checkTheme, 300); })
+    .observe(document.body, { attributes: true, attributeFilter: ['class', 'data-mode'] });
 
   tidy();
   refresh();

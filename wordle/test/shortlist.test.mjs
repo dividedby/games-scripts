@@ -282,3 +282,17 @@ test('the picks and the level button are disabled while a word is being entered'
   assert.ok(g.root.getElementById('level').disabled, 'level too');
   release(); await sleep(300);
 });
+
+test('light text when the page behind is dark (Wordle dark theme or an extension like Dark Reader)', async () => {
+  const g = await game();
+  const host = g.d.getElementById('wsl-root');
+  assert.ok(!('dark' in host.dataset), 'light page: game text color');
+  g.d.body.style.backgroundColor = 'rgb(24, 26, 27)';
+  g.d.documentElement.setAttribute('data-darkreader-scheme', 'dark');
+  await sleep(400);
+  assert.ok('dark' in host.dataset, 'dark page: light text');
+  g.d.body.style.backgroundColor = 'rgb(255, 255, 255)';
+  g.d.documentElement.setAttribute('data-darkreader-scheme', 'light');
+  await sleep(400);
+  assert.ok(!('dark' in host.dataset), 'back to light');
+});
