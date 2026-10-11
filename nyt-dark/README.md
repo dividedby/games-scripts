@@ -26,10 +26,6 @@ It turns out the website already ships NYT's dark colors for the games themselve
 
 Wordle's own page has no top bar, so set the mode from another game or the Games home page; it carries over.
 
-## Also
-
-Safari's **Open in the NYT Games app** banner at the top of the page is hidden, whichever mode you're in.
-
 ## Development
 
 The script is a single file, [`nyt-games-dark.user.js`](nyt-games-dark.user.js), with no build step. Behavior tests run it in jsdom ([`test/`](test/)):

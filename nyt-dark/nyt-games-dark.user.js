@@ -314,19 +314,6 @@
       : mode === 'dark' ? 'Dark mode: always on (tap for always light)' : 'Dark mode: off (tap to follow your device)';
   }
 
-  // ---------- no "Open in the NYT Games app" banner (Safari's Smart App Banner), in any mode ----------
-  // Safari shows it for a <meta name="apple-itunes-app"> in the page; take it out as it arrives.
-  const APP_BANNER = 'meta[name="apple-itunes-app"]';
-  const dropBanner = () => document.querySelectorAll(APP_BANNER).forEach(m => m.remove());
-  dropBanner();
-  const bannerWatch = new MutationObserver(records => {
-    for (const r of records) for (const n of r.addedNodes) if (n.nodeType === 1 && (n.matches(APP_BANNER) || n.querySelector?.(APP_BANNER))) dropBanner();
-  });
-  bannerWatch.observe(document.documentElement, { childList: true, subtree: true });
-  // once the page is parsed, only the head needs watching (for a tag added later by script)
-  const headOnly = () => { dropBanner(); bannerWatch.disconnect(); if (document.head) bannerWatch.observe(document.head, { childList: true }); };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', headOnly, { once: true }); else headOnly();
-
   // ---------- start as early as possible, and keep it on as the page re-renders ----------
   const style = document.createElement('style');
   style.id = 'nytd-style';
