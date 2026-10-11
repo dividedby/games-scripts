@@ -51,7 +51,39 @@
       opacity: .75; align-self: center; white-space: nowrap; }
     #nytd-toggle:hover { opacity: 1; }
     html.nytd-dark #nytd-toggle { color: #f8f8f8; }
+
+    /* the site menu (the ☰ drawer) */
+    html.nytd-dark .pz-nav-drawer, html.nytd-dark .pz-nav-drawer__account { background: #121212 !important; color: #f8f8f8 !important; }
+    html.nytd-dark .pz-nav-drawer * { border-top-color: #3a3a3c !important; border-bottom-color: #3a3a3c !important; }
+    html.nytd-dark .pz-nav-drawer :is(a, a *, h2, h3, h4, li, p):not([class*=ctaButton i]):not([class*=ctaButton i] *) { color: #f8f8f8 !important; }
+    html.nytd-dark .pz-nav-drawer svg:not([class*=icon i]) path { fill: currentColor; }
+    html.nytd-dark .pz-nav-drawer .pz-nav__button { background: transparent !important; color: #f8f8f8 !important; border-color: #565758 !important; }
+
+    /* plain white or gray panels NYT gave no dark colors (Wordle's start screen, promo cards):
+       marked by the script, since only the neutral ones should change, not the colorful ones */
+    html.nytd-dark [data-nytd-panel] { background-color: #1b1b1b !important; color: #f8f8f8 !important; }
+    html.nytd-dark [data-nytd-panel] :is(h1, h2, h3, h4, p, span, div, a):not([style*=background]) { color: #f8f8f8; }
+    html.nytd-dark [data-nytd-panel] button[class*=primary i] { background: #f8f8f8 !important; color: #121212 !important; }
+    html.nytd-dark [data-nytd-panel] button:not([class*=primary i]) { color: #f8f8f8 !important; border-color: #f8f8f8 !important; }
   `;
+
+  // A light, colorless background (white or light gray), as opposed to a game's brand color
+  const isPlainLight = el => {
+    const m = getComputedStyle(el).backgroundColor.match(/[\d.]+/g);
+    if (!m || (m[3] !== undefined && +m[3] < 0.5)) return false;
+    const [r, g, b] = m.map(Number);
+    return Math.min(r, g, b) > 200 && Math.max(r, g, b) - Math.min(r, g, b) < 14;
+  };
+  // only inside the screens NYT draws over the game: start screens, results and promos
+  const PANELS = '[class*="Welcome-module_contentWelcome"], [class*="_moment_"], [role="dialog"], [class*="Modal-module"], [class*="pz-moment"]';
+  function markPanels() {
+    if (!document.documentElement.classList.contains('nytd-dark')) return;
+    for (const root of document.querySelectorAll(PANELS)) {
+      for (const el of [root, ...root.querySelectorAll('div, section, aside, a')]) {
+        if (!('nytdPanel' in el.dataset) && isPlainLight(el)) el.dataset.nytdPanel = '';
+      }
+    }
+  }
 
   // ---------- switching ----------
   // what we switched on, so turning dark off only undoes our own changes
@@ -85,6 +117,8 @@
       }
       added.set(el, mine);
     }
+    if (dark) markPanels();
+    else for (const el of document.querySelectorAll('[data-nytd-panel]')) delete el.dataset.nytdPanel;
     showToggle();
   }
 
@@ -121,15 +155,17 @@
   system?.addEventListener?.('change', apply);
   window.addEventListener('storage', e => { if (e.key === MODE_KEY) { mode = ls.get(MODE_KEY, 'auto'); apply(); } });
 
-  let queued = false;
+  let queued = false, panelQueued = false;
   const later = () => { if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; apply(); }); } };
   const watch = () => {
     // the game sometimes rewrites <body>'s attributes; put ours back
     new MutationObserver(later).observe(document.body, { attributes: true, attributeFilter: ['class', 'data-mode'] });
     new MutationObserver(later).observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-mode'] });
     // the header is rendered late; place the toggle when it appears
-    new MutationObserver(() => { if (!document.getElementById('nytd-toggle')?.isConnected) later(); })
-      .observe(document.body, { childList: true, subtree: true });
+    new MutationObserver(() => {
+      if (!document.getElementById('nytd-toggle')?.isConnected) later();
+      else if (!panelQueued) { panelQueued = true; setTimeout(() => { panelQueued = false; markPanels(); }, 150); }
+    }).observe(document.body, { childList: true, subtree: true });
     if (style.parentNode !== document.head) document.head.appendChild(style);
     apply();
   };
