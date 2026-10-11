@@ -16,6 +16,7 @@
 // @match        https://www.nytimes.com/spotlight/wordle-review*
 // @match        https://www.nytimes.com/spotlight/games-*
 // @match        https://www.nytimes.com/column/wordplay*
+// @match        https://help.nytimes.com/*
 // @grant        none
 // @run-at       document-start
 // @downloadURL  https://raw.githubusercontent.com/dividedby/games-scripts/main/nyt-dark/nyt-games-dark.user.js
@@ -40,9 +41,10 @@
   let mode = MODES.includes(ls.get(MODE_KEY, 'auto')) ? ls.get(MODE_KEY, 'auto') : 'auto';
   const system = window.matchMedia?.('(prefers-color-scheme: dark)');
   const wantDark = () => mode === 'dark' || (mode === 'auto' && !!system?.matches);
-  // Hints, companions and the game bots are news-style pages, not game pages. NYT gives them
-  // their own dark colors (the app's), switched by a class on <html>; the script swaps it.
-  const ARTICLE = !/^\/(games|puzzles|crosswords)(\/|$)/.test(location.pathname);
+  // Hints, companions, forums and the game bots are news-style pages, not game pages. NYT gives
+  // them their own dark colors (the app's), switched by a class on <html>; the script swaps it.
+  // The help center has none, so it gets only the generic darkening below.
+  const ARTICLE = location.host !== 'www.nytimes.com' || !/^\/(games|puzzles|crosswords)(\/|$)/.test(location.pathname);
 
   // ---------- the parts NYT left out ----------
   const CSS = `
@@ -143,7 +145,7 @@
     return false;
   };
   // Dark icons (drawn as background images or <img>) that need flipping on a dark background
-  const DARK_ICON = /black|puzzle-progress|arrow|chevron|caret|print|list-view|close/i;
+  const DARK_ICON = /black|puzzle-progress|arrow|chevron|carr?et|print|list-view|close|t-logo/i;
   const iconUrl = el => {
     if (el.tagName === 'IMG') return el.getAttribute('src') || '';
     const bg = getComputedStyle(el).backgroundImage;
