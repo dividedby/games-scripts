@@ -145,7 +145,7 @@
     '[class*="ArchiveLayout-module_wrapper"]',
     '.tab__tabNav', '.archive_date-selector-container', '.archive_buttons-right', '.archive_mode-toggle',
   ].join(', ');
-  const SCAN = 'div, section, aside, article, header, footer, nav, ul, li, a, button, span, h1, h2, h3, h4, p, label, img, i';
+  const SCAN = 'div, section, aside, article, header, footer, nav, ul, ol, li, a, button, span, h1, h2, h3, h4, h5, h6, p, label, img, i, em, strong, b, small, td, th, dt, dd, figcaption, blockquote, summary, time';
   function markPanels() {
     if (!document.documentElement.classList.contains('nytd-dark')) return;
     const roots = [...document.querySelectorAll(PANELS)];
