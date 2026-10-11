@@ -38,6 +38,7 @@
   // ---------- the parts NYT left out ----------
   const CSS = `
     html.nytd-dark, html.nytd-dark body { background: var(--bg-page, #121212) !important; color-scheme: dark; }
+    html.nytd-dark .pz-ad-box, html.nytd-dark .pz-section-filled { background: transparent !important; }
     html.nytd-dark .pz-nav, html.nytd-dark .pz-nav__title,
     html.nytd-dark .pz-game-title-bar, html.nytd-dark .pz-game-title-bar * { color: #f8f8f8 !important; }
     html.nytd-dark .pz-nav__logo rect { fill: transparent !important; }
@@ -53,7 +54,8 @@
   `;
 
   // ---------- switching ----------
-  let added = { dark: false, settings: false }; // classes we put on <body>, so we only remove our own
+  // what we switched on, so turning dark off only undoes our own changes
+  const added = new Map(); // element -> { settings, dark }
   function meta(name, content) {
     let m = document.head?.querySelector(`meta[name="${name}"][data-nytd]`);
     if (content == null) { m?.remove(); return; }
@@ -67,16 +69,21 @@
     // tell dark-mode extensions (Dark Reader, Noir) the page is already dark, so they stand back
     meta('darkreader-lock', dark ? '' : null);
     meta('color-scheme', dark ? 'dark' : null);
-    const b = document.body;
-    if (!b) return;
-    if (dark) {
-      if (b.dataset.mode !== 'dark') b.dataset.mode = 'dark';
-      if (!b.classList.contains('display-settings-enabled')) { b.classList.add('display-settings-enabled'); added.settings = true; }
-      if (!b.classList.contains('dark')) { b.classList.add('dark'); added.dark = true; }
-    } else {
-      if (b.dataset.mode === 'dark') b.dataset.mode = 'light';
-      if (added.settings) { b.classList.remove('display-settings-enabled'); added.settings = false; }
-      if (added.dark) { b.classList.remove('dark'); added.dark = false; }
+    // on <html> too, so NYT's dark colors reach the page background (CSS variables set on
+    // <body> alone don't apply to <html>)
+    for (const el of [document.documentElement, document.body]) {
+      if (!el) continue;
+      const mine = added.get(el) || { settings: false, dark: false };
+      if (dark) {
+        if (el.dataset.mode !== 'dark') el.dataset.mode = 'dark';
+        if (!el.classList.contains('display-settings-enabled')) { el.classList.add('display-settings-enabled'); mine.settings = true; }
+        if (el === document.body && !el.classList.contains('dark')) { el.classList.add('dark'); mine.dark = true; }
+      } else {
+        if (el.dataset.mode === 'dark') el.dataset.mode = 'light';
+        if (mine.settings) { el.classList.remove('display-settings-enabled'); mine.settings = false; }
+        if (mine.dark) { el.classList.remove('dark'); mine.dark = false; }
+      }
+      added.set(el, mine);
     }
     showToggle();
   }
@@ -119,6 +126,7 @@
   const watch = () => {
     // the game sometimes rewrites <body>'s attributes; put ours back
     new MutationObserver(later).observe(document.body, { attributes: true, attributeFilter: ['class', 'data-mode'] });
+    new MutationObserver(later).observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-mode'] });
     // the header is rendered late; place the toggle when it appears
     new MutationObserver(() => { if (!document.getElementById('nytd-toggle')?.isConnected) later(); })
       .observe(document.body, { childList: true, subtree: true });
