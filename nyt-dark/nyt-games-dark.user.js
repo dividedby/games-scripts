@@ -163,6 +163,12 @@
       // an empty shape (a chart bar, an empty calendar day) stays a visible gray
       else el.dataset.nytdPanel = el.childElementCount || el.textContent.trim() ? '' : 'shape';
     }
+    // news-style pages: black logos and icons (the masthead, menu, search) on a dark backdrop
+    if (ARTICLE) for (const svg of document.body.querySelectorAll('svg')) {
+      if ('nytdFlip' in svg.dataset || svg.getBoundingClientRect().width > 400) continue;
+      const fill = rgb(getComputedStyle(svg).fill);
+      if (fill && lightness(fill) < 0.2 && svg.getAttribute('fill') !== 'none' && !backdropIsLight(svg)) svg.dataset.nytdFlip = '';
+    }
     for (const el of els) {
       if ('nytdFlip' in el.dataset || el.closest('[data-nytd-flip]')) continue;
       if (DARK_ICON.test(iconUrl(el))) { if (!backdropIsLight(el)) el.dataset.nytdFlip = ''; continue; }
