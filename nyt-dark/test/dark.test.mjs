@@ -110,7 +110,8 @@ test('pages around the games: white cards turn dark, and text is fixed by what i
       <div id="icon" style="background-image: url(puzzle-progress-0.svg)"></div>
     </a>
     <div style="background-color: rgb(253, 243, 195)"><h3 id="bonus" style="color: rgb(255, 255, 255)">Bonus Puzzles</h3></div>
-    <button id="arrow" style="background-color: rgb(255, 255, 255); background-image: url(arrow.svg)"></button>`;
+    <button id="arrow" style="background-color: rgb(255, 255, 255); background-image: url(arrow.svg)"></button>
+    <div id="fade" style="background-image: linear-gradient(rgb(255, 255, 255) 38px, rgba(255, 255, 255, 0))"></div>`;
   p.body.appendChild(hub);
   p.d.getElementById('pz-game-root').innerHTML = '<div id="board" style="background-color: rgb(255, 255, 255)">tile</div>';
   await sleep(600);
@@ -122,6 +123,9 @@ test('pages around the games: white cards turn dark, and text is fixed by what i
   assert.ok('nytdFlip' in $('icon'), 'a dark icon on the darkened card is flipped');
   assert.ok('nytdFlip' in $('arrow') && !('nytdPanel' in $('arrow')), 'a white button drawn with an arrow image is flipped whole');
   assert.ok(!('nytdPanel' in $('board')), 'game boards are left to NYT\'s own dark colors');
+  const fade = p.d.getElementById('fade');
+  assert.match(fade.style.backgroundImage, /rgb\(27, 27, 27\) 38px, rgba\(27, 27, 27, 0\)/, 'a white fade becomes a dark one');
   p.toggle().click(); await sleep(30); // → light
   assert.equal(p.d.querySelectorAll('[data-nytd-panel], [data-nytd-ink], [data-nytd-flip]').length, 0, 'light mode removes every mark');
+  assert.match(fade.style.backgroundImage, /^linear-gradient\(rgb\(255, 255, 255\)/, 'and puts the white fade back');
 });

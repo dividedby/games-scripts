@@ -85,9 +85,7 @@
     html.nytd-dark [class*=Header-module_archiveHeader],
     html.nytd-dark [class*=ArchiveCalendarGrid-module_daysOfWeekContainer] { border-color: #3a3a3c !important; }
     html.nytd-dark [class*=ArchiveCalendarItem-module_iconBorder] { border-color: #565758 !important; }
-    /* areas painted with gradients rather than a plain color: Spelling Bee's past puzzles, and
-       days with no solve on the crossword stats chart */
-    html.nytd-dark #sb-hub-root [class*=Layout-module_outerWrapper] { background: linear-gradient(#1b1b1b 377px, #121212 377px) !important; }
+    /* days with no solve on the crossword stats chart (striped with a gradient) */
     html.nytd-dark .time-bar.no-stats { background-color: #1b1b1b !important; background-image: repeating-linear-gradient(-45deg, #1b1b1b, #1b1b1b 5px, #262626 5px, #262626 10px) !important; }
     /* the crossword archive and the crossword itself */
     html.nytd-dark :is(.tab__tabNav, .archive_date-selector-container) { border-color: #3a3a3c !important; }
@@ -112,10 +110,24 @@
   };
   const lightness = ([r, g, b]) => (0.299 * r + 0.587 * g + 0.114 * b) / 255;
   // A light, colorless background (white or light gray), as opposed to a game's brand color
+  const neutralLight = c => Math.min(...c) > 200 && Math.max(...c) - Math.min(...c) < 14;
   const isPlainLight = el => {
     const c = rgb(getComputedStyle(el).backgroundColor);
-    return !!c && Math.min(...c) > 200 && Math.max(...c) - Math.min(...c) < 14;
+    return !!c && neutralLight(c);
   };
+  // White fades drawn with gradients (over the edge of a scrolling list or bar): the same
+  // gradient in the darkened panel color. The page's own inline value is kept to put back.
+  const fades = new Map();
+  function darkenFade(el) {
+    if (fades.has(el)) return;
+    const img = getComputedStyle(el).backgroundImage;
+    if (!img.includes('gradient')) return;
+    const dark = img.replace(/rgba?\((\d+), (\d+), (\d+)((?:, [\d.]+)?)\)/g, (m, r, g, b, a) =>
+      neutralLight([+r, +g, +b]) ? `${a ? 'rgba' : 'rgb'}(27, 27, 27${a})` : m);
+    if (dark === img) return;
+    fades.set(el, [el.style.getPropertyValue('background-image'), el.style.getPropertyPriority('background-image')]);
+    el.style.setProperty('background-image', dark, 'important');
+  }
   // The background an element's text is actually drawn on: dark if it's one we darkened,
   // or if nothing up the tree paints one (the page itself is dark)
   const backdropIsLight = el => {
@@ -157,6 +169,7 @@
       if ('nytdPanel' in el.dataset || 'nytdFlip' in el.dataset) continue;
       // the primary button is the one we deliberately make light: leave it
       if (el.matches('button[class*=primary i], button[class*=primary i] *')) continue;
+      if (!el.matches('.time-bar')) darkenFade(el);
       if (!isPlainLight(el)) continue;
       // a light button drawn with a dark icon image: flip the whole button
       if (DARK_ICON.test(iconUrl(el))) el.dataset.nytdFlip = '';
@@ -189,6 +202,8 @@
     for (const el of document.querySelectorAll('[data-nytd-panel], [data-nytd-ink], [data-nytd-flip]')) {
       delete el.dataset.nytdPanel; delete el.dataset.nytdInk; delete el.dataset.nytdFlip;
     }
+    for (const [el, [value, priority]] of fades) el.style.setProperty('background-image', value, priority);
+    fades.clear();
   }
 
   // ---------- switching ----------
