@@ -148,3 +148,12 @@ test('hint, forum and bot pages: NYT\'s own dark colors for news pages, and blac
   assert.ok('nytdFlip' in d.getElementById('logo').dataset, 'the black logo is flipped');
   assert.ok(!('nytdFlip' in d.getElementById('game').dataset), 'a colorful icon is left alone');
 });
+
+test('no app install banner: the Smart App Banner tag is removed, in light mode too', async () => {
+  const p = await page({ mode: 'light' });
+  const m = p.d.createElement('meta');
+  m.name = 'apple-itunes-app'; m.content = 'app-id=1';
+  p.d.head.appendChild(m);
+  await sleep(20);
+  assert.equal(p.d.querySelector('meta[name="apple-itunes-app"]'), null);
+});

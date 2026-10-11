@@ -122,6 +122,8 @@
     html.nytd-dark .xwd__toolbar--wrapper { background-color: var(--bg-page, #121212) !important; }
     html.nytd-dark .xwd__menu--item { background-color: #1b1b1b !important; color: #f8f8f8 !important; border-color: #3a3a3c !important; }
     html.nytd-dark .hg-button.custom { background-color: #565758 !important; }
+    /* the backspace key: an outline, not a white blob (NYT's dark colors fill its shape) */
+    html.nytd-dark .hg-button.icon svg:has(line) :is(path, line) { fill: none !important; stroke: #f8f8f8 !important; }
     html.nytd-dark .xwd__tool--active { background-color: #3a3a3c !important; }
     html.nytd-dark .xwd__modal--close .pz-icon-close { filter: brightness(2.5); }
     /* menus and toolbars that light up on hover (crossword Reveal/Check, Spelling Bee's More) */
@@ -311,6 +313,19 @@
     t.title = mode === 'auto' ? 'Dark mode: following your device (tap for always dark)'
       : mode === 'dark' ? 'Dark mode: always on (tap for always light)' : 'Dark mode: off (tap to follow your device)';
   }
+
+  // ---------- no "Open in the NYT Games app" banner (Safari's Smart App Banner), in any mode ----------
+  // Safari shows it for a <meta name="apple-itunes-app"> in the page; take it out as it arrives.
+  const APP_BANNER = 'meta[name="apple-itunes-app"]';
+  const dropBanner = () => document.querySelectorAll(APP_BANNER).forEach(m => m.remove());
+  dropBanner();
+  const bannerWatch = new MutationObserver(records => {
+    for (const r of records) for (const n of r.addedNodes) if (n.nodeType === 1 && (n.matches(APP_BANNER) || n.querySelector?.(APP_BANNER))) dropBanner();
+  });
+  bannerWatch.observe(document.documentElement, { childList: true, subtree: true });
+  // once the page is parsed, only the head needs watching (for a tag added later by script)
+  const headOnly = () => { dropBanner(); bannerWatch.disconnect(); if (document.head) bannerWatch.observe(document.head, { childList: true }); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', headOnly, { once: true }); else headOnly();
 
   // ---------- start as early as possible, and keep it on as the page re-renders ----------
   const style = document.createElement('style');
