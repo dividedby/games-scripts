@@ -20,8 +20,9 @@ Current scripts:
   shortlist of 5 possible answers each turn; tap one to play it.
 - `nyt-dark/nyt-games-dark.user.js` — NYT Games Dark: switches on the dark color set NYT
   already ships (`[data-mode=dark].display-settings-enabled` on `<html>` and `<body>`,
-  plus `.dark` on `<body>`) and patches the parts without dark colors (`.pz-nav` header,
-  page background). Adds `<meta name="darkreader-lock">` so Dark Reader stands back;
+  plus `.dark` on `<body>`) and patches the parts without dark colors: `.pz-nav` header
+  and `.pz-nav-drawer` menu by CSS, and plain white/gray panels inside start, results and
+  modal screens by marking them `data-nytd-panel` (colorful brand panels are left alone). Adds `<meta name="darkreader-lock">` so Dark Reader stands back;
   Noir ignores it (and `color-scheme`), so Noir users turn it off for nytimes.com.
 
 Each script folder holds the script, its `README.md` (the user guide),

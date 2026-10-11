@@ -4,7 +4,7 @@ A proper dark mode for NYT Games in the browser.
 
 The NYT Games app has a dark mode; the website doesn't, so on the web you're stuck with a bright page or a dark-mode extension like Dark Reader or Noir. Those extensions guess at every color, and puzzle colors suffer: in Connections, the blue group ends up the same gray as an unsolved tile.
 
-It turns out the website already ships NYT's full dark color set, the same one the app uses. It just never switches it on. This script does, and fills in the few spots NYT left out (the site header and the page background). Game colors stay exactly as NYT designed them.
+It turns out the website already ships NYT's dark colors for the games themselves (the same ones the app uses). It just never switches them on. This script does, so game colors stay exactly as NYT designed them. The older parts of the site never got dark colors (the top bar, the ☰ menu, Wordle's start screen, white promo cards), so the script darkens those itself.
 
 **Install:** [GitHub](https://raw.githubusercontent.com/dividedby/games-scripts/main/nyt-dark/nyt-games-dark.user.js) · [Changelog](../CHANGELOG.md#nyt-games-dark)
 
@@ -20,7 +20,8 @@ It turns out the website already ships NYT's full dark color set, the same one t
 
 - **Connections**: the board, selected tiles, solved groups in their real colors, and the results screen.
 - **Wordle**: the board and keyboard. (Wordle also has its own Dark Theme in its settings; either works.)
-- **The Games home page** and the shared top bar. Some promo cards stay light; that's how NYT designed them.
+- **The ☰ menu, the top bar, start screens and results screens.** Colorful start screens (Connections' purple, for example) keep their color; plain white or gray ones turn dark.
+- **The Games home page**: the background and top bar. The white puzzle cards there stay white for now.
 
 Other games use the same color set, so they should look right too, but they haven't all been checked yet.
 
