@@ -97,7 +97,25 @@
     html.nytd-dark :is(.tab__tabNav, .archive_date-selector-container) { border-color: #3a3a3c !important; }
     html.nytd-dark .tab__tabNav .active { box-shadow: inset 0 -2px #f8f8f8; }
     html.nytd-dark .archive_today[data-nytd-panel] { border-color: #565758 !important; }
-    html.nytd-dark :is(.xwd__clue--selected, .xwd__clue--selected *) { color: #121212 !important; }
+    /* the crossword grid, in dark colors like the NYT app's: dark squares with light letters,
+       the current word in deep blue, the selected square still yellow */
+    html.nytd-dark .xwd__cell--cell { fill: #2c2c2e !important; }
+    html.nytd-dark .xwd__cell--block { fill: #000 !important; }
+    html.nytd-dark .xwd__cell--shaded { fill: #48484a !important; }
+    html.nytd-dark .xwd__cell--related { fill: #4d4529 !important; }
+    html.nytd-dark .xwd__cell--highlighted { fill: #24476a !important; }
+    html.nytd-dark .xwd__cell--highlighted.xwd__cell--shaded { fill: #2f5578 !important; }
+    html.nytd-dark .xwd__cell--related.xwd__cell--highlighted { fill: #2c5459 !important; }
+    html.nytd-dark .xwd__cell--selected { fill: #ffda00 !important; }
+    html.nytd-dark .xwd__cell--selected.xwd__cell--shaded { fill: #e6c400 !important; }
+    html.nytd-dark .xwd__cell text { fill: #f8f8f8; }
+    html.nytd-dark .xwd__cell--penciled text:last-of-type { fill: #9a9a9e; }
+    html.nytd-dark .xwd__cell:has(.xwd__cell--selected) text { fill: #121212; }
+    html.nytd-dark .xwd__cell--penciled:has(.xwd__cell--selected) text:last-of-type { fill: #5a5a5e; }
+    /* the clue for the current word (in the list, above the grid, and over the phone keyboard) */
+    html.nytd-dark .xwd__clue--selected, html.nytd-dark [class*=xwd__clue-bar][class*=--bar] { background-color: #24476a !important; }
+    html.nytd-dark :is(.xwd__clue--selected, [class*=xwd__clue-bar][class*=--bar]) :is(*, *::before) { color: #f8f8f8 !important; }
+    html.nytd-dark .xwd__clue--highlighted { border-color: #24476a !important; }
     html.nytd-dark [class*=xwd__toolbar_icon] { filter: invert(1); }
     /* the crossword on phones: its sticky toolbar, dropdown menus and the special keyboard keys */
     html.nytd-dark .xwd__toolbar--wrapper { background-color: var(--bg-page, #121212) !important; }
