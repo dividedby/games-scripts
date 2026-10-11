@@ -78,6 +78,10 @@
     html.nytd-dark [class*=Header-module_archiveHeader],
     html.nytd-dark [class*=ArchiveCalendarGrid-module_daysOfWeekContainer] { border-color: #3a3a3c !important; }
     html.nytd-dark [class*=ArchiveCalendarItem-module_iconBorder] { border-color: #565758 !important; }
+    /* areas painted with gradients rather than a plain color: Spelling Bee's past puzzles, and
+       days with no solve on the crossword stats chart */
+    html.nytd-dark #sb-hub-root [class*=Layout-module_outerWrapper] { background: linear-gradient(#1b1b1b 377px, #121212 377px) !important; }
+    html.nytd-dark .time-bar.no-stats { background-image: repeating-linear-gradient(-45deg, #1b1b1b, #1b1b1b 5px, #262626 5px, #262626 10px) !important; }
     /* the crossword archive and the crossword itself */
     html.nytd-dark :is(.tab__tabNav, .archive_date-selector-container) { border-color: #3a3a3c !important; }
     html.nytd-dark .tab__tabNav .active { box-shadow: inset 0 -2px #f8f8f8; }
