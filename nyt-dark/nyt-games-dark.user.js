@@ -99,6 +99,11 @@
     html.nytd-dark .archive_today[data-nytd-panel] { border-color: #565758 !important; }
     html.nytd-dark :is(.xwd__clue--selected, .xwd__clue--selected *) { color: #121212 !important; }
     html.nytd-dark [class*=xwd__toolbar_icon] { filter: invert(1); }
+    /* the crossword on phones: its sticky toolbar, dropdown menus and the special keyboard keys */
+    html.nytd-dark .xwd__toolbar--wrapper { background-color: var(--bg-page, #121212) !important; }
+    html.nytd-dark .xwd__menu--item { background-color: #1b1b1b !important; color: #f8f8f8 !important; border-color: #3a3a3c !important; }
+    html.nytd-dark .hg-button.custom { background-color: #565758 !important; }
+    html.nytd-dark .xwd__modal--close .pz-icon-close { filter: brightness(2.5); }
     /* menus and toolbars that light up on hover (crossword Reveal/Check, Spelling Bee's More) */
     html.nytd-dark :is(.xwd__tool--button :hover, .pz-dropdown__button:hover, .pz-dropdown__menu-item:hover, .pz-toolbar-button:hover),
     html.nytd-dark :is(.xwd__tool--button :hover, .pz-dropdown__button:hover) * { background-color: #2c2c2e !important; color: #f8f8f8 !important; }
