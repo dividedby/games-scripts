@@ -11,6 +11,10 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [1.0.1] - 2026-10-11
+#### Fixed
+- With a dark-mode extension like Dark Reader or Noir, the shortlist was dark text on a dark page; it now switches to light text whenever the page behind it is dark.
+
 ### [1.0.0] - 2026-10-10
 #### Fixed
 - The shortlist was nearly invisible in Wordle's dark theme; it now uses the game's own text color.
