@@ -98,3 +98,30 @@ test('plain white or gray start and promo panels turn dark; colorful ones keep t
   p.toggle().click(); await sleep(30); // → light
   assert.equal(p.d.querySelectorAll('[data-nytd-panel]').length, 0, 'light mode removes the marks');
 });
+
+test('pages around the games: white cards turn dark, and text is fixed by what it sits on', async () => {
+  const p = await page({ mode: 'dark' });
+  const hub = p.d.createElement('div');
+  hub.id = 'hub-root';
+  hub.innerHTML = `
+    <a id="card" class="hub-game-card" style="background-color: rgb(255, 255, 255)">
+      <div style="background-color: rgb(247, 218, 33)"><h3 id="onYellow" style="color: rgb(0, 0, 0)">Spelling Bee</h3></div>
+      <p id="desc" style="color: rgb(0, 0, 0)">Make words</p>
+      <div id="icon" style="background-image: url(puzzle-progress-0.svg)"></div>
+    </a>
+    <div style="background-color: rgb(253, 243, 195)"><h3 id="bonus" style="color: rgb(255, 255, 255)">Bonus Puzzles</h3></div>
+    <button id="arrow" style="background-color: rgb(255, 255, 255); background-image: url(arrow.svg)"></button>`;
+  p.body.appendChild(hub);
+  p.d.getElementById('pz-game-root').innerHTML = '<div id="board" style="background-color: rgb(255, 255, 255)">tile</div>';
+  await sleep(600);
+  const $ = id => p.d.getElementById(id).dataset;
+  assert.ok('nytdPanel' in $('card'), 'the white card');
+  assert.equal($('desc').nytdInk, 'light', 'black text on the darkened card turns light');
+  assert.ok(!('nytdInk' in $('onYellow')), 'black text on a yellow cover stays');
+  assert.equal($('bonus').nytdInk, 'dark', 'white text on a pale yellow card turns dark');
+  assert.ok('nytdFlip' in $('icon'), 'a dark icon on the darkened card is flipped');
+  assert.ok('nytdFlip' in $('arrow') && !('nytdPanel' in $('arrow')), 'a white button drawn with an arrow image is flipped whole');
+  assert.ok(!('nytdPanel' in $('board')), 'game boards are left to NYT\'s own dark colors');
+  p.toggle().click(); await sleep(30); // → light
+  assert.equal(p.d.querySelectorAll('[data-nytd-panel], [data-nytd-ink], [data-nytd-flip]').length, 0, 'light mode removes every mark');
+});

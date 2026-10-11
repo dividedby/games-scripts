@@ -13,7 +13,7 @@ Versions below 1.0.0 are pre-release.
 
 ### [0.1.0] - 2026-10-11
 #### Added
-- First version: switches on NYT's own dark colors on the Games website (the ones the app uses) and darkens the parts of the site NYT never gave dark colors: the top bar, the ☰ menu, the page background, Wordle's start screen and white promo cards. Follows your device's dark mode, or tap ◐ in the top bar for always dark or always light. Tells Dark Reader to stand back so the page isn't darkened twice (Noir needs turning off for nytimes.com).
+- First version: switches on NYT's own dark colors on the Games website (the ones the app uses) and darkens the parts of the site NYT never gave dark colors: the top bar, the ☰ menu, the page background, Wordle's start screen, white promo cards, the Games home page, the puzzle archives, the stats page and the footer. Follows your device's dark mode, or tap ◐ in the top bar for always dark or always light. Tells Dark Reader to stand back so the page isn't darkened twice (Noir needs turning off for nytimes.com).
 
 ## Wordle Shortlist
 
