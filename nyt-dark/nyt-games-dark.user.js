@@ -208,6 +208,7 @@
     const els = new Set();
     for (const root of roots) { els.add(root); for (const el of root.querySelectorAll(SCAN)) els.add(el); }
     const fresh = [...els].filter(changed);
+    for (const el of fades.keys()) if (!el.isConnected) fades.delete(el); // don't hold on to removed elements
     let marked = false;
     // backgrounds first (outside in), so the text pass sees the final backdrops
     for (const el of fresh) {
@@ -310,8 +311,9 @@
   }
 
   // ---------- the toggle in the site header ----------
+  const NAV = '.pz-nav__title, #js-logo-nav';
   function showToggle() {
-    const nav = document.querySelector('.pz-nav__title, #js-logo-nav');
+    const nav = document.querySelector(NAV);
     let t = document.getElementById('nytd-toggle');
     if (!nav) return;
     if (!t) {
@@ -349,8 +351,9 @@
     new MutationObserver(later).observe(document.body, { attributes: true, attributeFilter: ['class', 'data-mode'] });
     new MutationObserver(later).observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-mode'] });
     // the header is rendered late; place the toggle when it appears
+    // (pages without the header, like Wordle's, never get a toggle: don't keep trying)
     new MutationObserver(() => {
-      if (!document.getElementById('nytd-toggle')?.isConnected) later();
+      if (!document.getElementById('nytd-toggle')?.isConnected && document.querySelector(NAV)) later();
       else if (!panelQueued) { panelQueued = true; setTimeout(() => { panelQueued = false; markPanels(); }, 150); }
     }).observe(document.body, { childList: true, subtree: true });
     if (style.parentNode !== document.head) document.head.appendChild(style);
