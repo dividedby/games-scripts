@@ -22,7 +22,7 @@ It turns out the website already ships NYT's dark colors for the games themselve
 - **The ☰ menu, the top bar and start screens.** Colorful start screens (Connections' purple, for example) keep their color; plain white or gray ones turn dark.
 - **The Games home page, archives, stats and the footer**: white cards and panels turn dark; colorful game cards keep their color.
 - **Hints and bots**: the Connections Companion, Spelling Bee Forum, Wordle Review and Wordplay pages (comments included), Wordle Bot and Connections Bot, and the NYT Help Center.
-- **The crossword grid** stays white, like paper.
+- **The crossword grid**: dark squares with light letters, the current word in deep blue and the selected square still yellow, like the NYT app.
 
 Wordle's own page has no top bar, so set the mode from another game or the Games home page; it carries over.
 
