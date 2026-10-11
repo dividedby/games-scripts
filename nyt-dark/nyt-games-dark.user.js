@@ -59,12 +59,30 @@
     html.nytd-dark .pz-nav-drawer svg:not([class*=icon i]) path { fill: currentColor; }
     html.nytd-dark .pz-nav-drawer .pz-nav__button { background: transparent !important; color: #f8f8f8 !important; border-color: #565758 !important; }
 
-    /* plain white or gray panels NYT gave no dark colors (Wordle's start screen, promo cards):
-       marked by the script, since only the neutral ones should change, not the colorful ones */
+    /* plain white or gray areas NYT gave no dark colors (Wordle's start screen, promo cards,
+       archives, the home page, the footer): marked by the script, since only the neutral ones
+       should change, not the colorful ones. Text is marked separately (data-nytd-ink), by the
+       background it actually sits on. */
     html.nytd-dark [data-nytd-panel] { background-color: #1b1b1b !important; color: #f8f8f8 !important; }
-    html.nytd-dark [data-nytd-panel] :is(h1, h2, h3, h4, p, span, div, a):not([style*=background]) { color: #f8f8f8; }
+    html.nytd-dark [data-nytd-ink=light] { color: #f8f8f8 !important; }
+    html.nytd-dark [data-nytd-ink=dark] { color: #121212 !important; }
+    html.nytd-dark [data-nytd-flip] { filter: invert(.93) hue-rotate(180deg); }
+    html.nytd-dark [data-nytd-panel] hr { background: #3a3a3c !important; border-color: #3a3a3c !important; }
     html.nytd-dark [data-nytd-panel] button[class*=primary i] { background: #f8f8f8 !important; color: #121212 !important; }
     html.nytd-dark [data-nytd-panel] button:not([class*=primary i]) { color: #f8f8f8 !important; border-color: #f8f8f8 !important; }
+    html.nytd-dark [data-nytd-panel] button:disabled, html.nytd-dark button[data-nytd-panel]:disabled { opacity: .35; }
+
+    /* game archives (Wordle, Connections, Strands…) */
+    html.nytd-dark [class*=ArchiveDatePicker-module_dropDownSelect] { filter: invert(.93); }
+    html.nytd-dark [class*=Header-module_archiveHeader],
+    html.nytd-dark [class*=ArchiveCalendarGrid-module_daysOfWeekContainer] { border-color: #3a3a3c !important; }
+    html.nytd-dark [class*=ArchiveCalendarItem-module_iconBorder] { border-color: #565758 !important; }
+    /* the crossword archive and the crossword itself */
+    html.nytd-dark :is(.tab__tabNav, .archive_date-selector-container) { border-color: #3a3a3c !important; }
+    html.nytd-dark .tab__tabNav .active { box-shadow: inset 0 -2px #f8f8f8; }
+    html.nytd-dark .archive_today[data-nytd-panel] { border-color: #565758 !important; }
+    html.nytd-dark :is(.xwd__clue--selected, .xwd__clue--selected *) { color: #121212 !important; }
+    html.nytd-dark [class*=xwd__toolbar_icon] { filter: invert(1); }
     /* black icons (like a promo card's › arrow) turn light; colored ones are left as they are */
     html.nytd-dark [data-nytd-panel] svg :is(path, polyline, line):is(:not([fill]), [fill="#000"], [fill="#000000"], [fill=black], [fill="#121212"]),
     html.nytd-dark [data-nytd-panel] svg[fill=none] :is(path, polyline, line):not([stroke]) { fill: currentColor; }
@@ -72,23 +90,74 @@
     html.nytd-dark [data-nytd-panel] img:is([src*=arrow i], [src*=chevron i], [src*=caret i]) { filter: invert(1); }
   `;
 
+  const rgb = color => {
+    const m = color.match(/[\d.]+/g);
+    if (!m || (m[3] !== undefined && +m[3] < 0.5)) return null; // (mostly) transparent
+    return m.slice(0, 3).map(Number);
+  };
+  const lightness = ([r, g, b]) => (0.299 * r + 0.587 * g + 0.114 * b) / 255;
   // A light, colorless background (white or light gray), as opposed to a game's brand color
   const isPlainLight = el => {
-    const m = getComputedStyle(el).backgroundColor.match(/[\d.]+/g);
-    if (!m || (m[3] !== undefined && +m[3] < 0.5)) return false;
-    const [r, g, b] = m.map(Number);
-    return Math.min(r, g, b) > 200 && Math.max(r, g, b) - Math.min(r, g, b) < 14;
+    const c = rgb(getComputedStyle(el).backgroundColor);
+    return !!c && Math.min(...c) > 200 && Math.max(...c) - Math.min(...c) < 14;
   };
-  // only inside the screens NYT draws over the game: start screens, results and promos
-  const PANELS = '[class*="Welcome-module_contentWelcome"], [class*="_moment_"], [role="dialog"], [class*="Modal-module"], [class*="pz-moment"]';
+  // The background an element's text is actually drawn on: dark if it's one we darkened,
+  // or if nothing up the tree paints one (the page itself is dark)
+  const backdropIsLight = el => {
+    for (let e = el; e && e !== document.body; e = e.parentElement) {
+      if ('nytdPanel' in e.dataset) return false;
+      const c = rgb(getComputedStyle(e).backgroundColor);
+      if (c) return lightness(c) > 0.55;
+    }
+    return false;
+  };
+  // Dark icons (drawn as background images or <img>) that need flipping on a dark background
+  const DARK_ICON = /black|puzzle-progress|arrow|chevron|caret|print|list-view|close/i;
+  const iconUrl = el => {
+    if (el.tagName === 'IMG') return el.getAttribute('src') || '';
+    const bg = getComputedStyle(el).backgroundImage;
+    return bg.startsWith('url(') ? bg : '';
+  };
+  const hasOwnText = el => [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
+
+  // Where neutral light areas get darkened: the screens NYT draws over a game (start screens,
+  // results, promos) and the pages around the games (home page, archives, footer). Never the
+  // game boards themselves, which NYT's own dark colors already cover.
+  const PANELS = [
+    '[class*="Welcome-module_contentWelcome"]', '[class*="_moment_"]', '[role="dialog"]',
+    '[class*="Modal-module"]', '[class*="pz-moment"]',
+    '#hub-root', '.pz-footer', '[class*="ArchiveLayout-module_wrapper"]',
+    '.tab__tabNav', '.archive_date-selector-container', '.archive_buttons-right',
+  ].join(', ');
+  const SCAN = 'div, section, aside, article, header, footer, nav, ul, li, a, button, span, h1, h2, h3, h4, p, label, img, i';
   function markPanels() {
     if (!document.documentElement.classList.contains('nytd-dark')) return;
-    for (const root of document.querySelectorAll(PANELS)) {
-      for (const el of [root, ...root.querySelectorAll('div, section, aside, a, button, span')]) {
-        // the primary button is the one we deliberately make light: leave it
-        if (el.matches('button[class*=primary i], button[class*=primary i] *')) continue;
-        if (!('nytdPanel' in el.dataset) && isPlainLight(el)) el.dataset.nytdPanel = '';
-      }
+    const roots = [...document.querySelectorAll(PANELS)];
+    const els = new Set();
+    for (const root of roots) { els.add(root); for (const el of root.querySelectorAll(SCAN)) els.add(el); }
+    // backgrounds first (outside in), so the text pass sees the final backdrops
+    for (const el of els) {
+      if ('nytdPanel' in el.dataset || 'nytdFlip' in el.dataset) continue;
+      // the primary button is the one we deliberately make light: leave it
+      if (el.matches('button[class*=primary i], button[class*=primary i] *')) continue;
+      if (!isPlainLight(el)) continue;
+      // a light button drawn with a dark icon image: flip the whole button
+      if (DARK_ICON.test(iconUrl(el))) el.dataset.nytdFlip = '';
+      else el.dataset.nytdPanel = '';
+    }
+    for (const el of els) {
+      if ('nytdFlip' in el.dataset || el.closest('[data-nytd-flip]')) continue;
+      if (DARK_ICON.test(iconUrl(el))) { if (!backdropIsLight(el)) el.dataset.nytdFlip = ''; continue; }
+      if ('nytdInk' in el.dataset || !hasOwnText(el)) continue;
+      const c = rgb(getComputedStyle(el).color);
+      if (!c) continue;
+      const lightText = lightness(c) > 0.5, lightBack = backdropIsLight(el);
+      if (lightText === lightBack) el.dataset.nytdInk = lightBack ? 'dark' : 'light';
+    }
+  }
+  function unmarkPanels() {
+    for (const el of document.querySelectorAll('[data-nytd-panel], [data-nytd-ink], [data-nytd-flip]')) {
+      delete el.dataset.nytdPanel; delete el.dataset.nytdInk; delete el.dataset.nytdFlip;
     }
   }
 
@@ -125,7 +194,7 @@
       added.set(el, mine);
     }
     if (dark) markPanels();
-    else for (const el of document.querySelectorAll('[data-nytd-panel]')) delete el.dataset.nytdPanel;
+    else unmarkPanels();
     showToggle();
   }
 
