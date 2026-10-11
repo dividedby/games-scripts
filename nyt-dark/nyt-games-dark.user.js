@@ -10,6 +10,8 @@
 // @match        https://www.nytimes.com/games/*
 // @match        https://www.nytimes.com/puzzles/*
 // @match        https://www.nytimes.com/crosswords*
+// @match        https://www.nytimes.com/*/crosswords/*
+// @match        https://www.nytimes.com/interactive/*-bot.html
 // @grant        none
 // @run-at       document-start
 // @downloadURL  https://raw.githubusercontent.com/dividedby/games-scripts/main/nyt-dark/nyt-games-dark.user.js
@@ -34,6 +36,9 @@
   let mode = MODES.includes(ls.get(MODE_KEY, 'auto')) ? ls.get(MODE_KEY, 'auto') : 'auto';
   const system = window.matchMedia?.('(prefers-color-scheme: dark)');
   const wantDark = () => mode === 'dark' || (mode === 'auto' && !!system?.matches);
+  // Hints, companions and the game bots are news-style pages, not game pages. NYT gives them
+  // their own dark colors (the app's), switched by a class on <html>; the script swaps it.
+  const ARTICLE = !/^\/(games|puzzles|crosswords)(\/|$)/.test(location.pathname);
 
   // ---------- the parts NYT left out ----------
   const CSS = `
@@ -65,6 +70,7 @@
        should change, not the colorful ones. Text is marked separately (data-nytd-ink), by the
        background it actually sits on. */
     html.nytd-dark [data-nytd-panel] { background-color: #1b1b1b !important; color: #f8f8f8 !important; }
+    html.nytd-dark [data-nytd-panel=shape] { background-color: #3a3a3c !important; }
     html.nytd-dark [data-nytd-ink=light] { color: #f8f8f8 !important; }
     html.nytd-dark [data-nytd-ink=dark] { color: #121212 !important; }
     html.nytd-dark [data-nytd-flip] { filter: invert(.93) hue-rotate(180deg); }
@@ -82,13 +88,16 @@
     /* areas painted with gradients rather than a plain color: Spelling Bee's past puzzles, and
        days with no solve on the crossword stats chart */
     html.nytd-dark #sb-hub-root [class*=Layout-module_outerWrapper] { background: linear-gradient(#1b1b1b 377px, #121212 377px) !important; }
-    html.nytd-dark .time-bar.no-stats { background-image: repeating-linear-gradient(-45deg, #1b1b1b, #1b1b1b 5px, #262626 5px, #262626 10px) !important; }
+    html.nytd-dark .time-bar.no-stats { background-color: #1b1b1b !important; background-image: repeating-linear-gradient(-45deg, #1b1b1b, #1b1b1b 5px, #262626 5px, #262626 10px) !important; }
     /* the crossword archive and the crossword itself */
     html.nytd-dark :is(.tab__tabNav, .archive_date-selector-container) { border-color: #3a3a3c !important; }
     html.nytd-dark .tab__tabNav .active { box-shadow: inset 0 -2px #f8f8f8; }
     html.nytd-dark .archive_today[data-nytd-panel] { border-color: #565758 !important; }
     html.nytd-dark :is(.xwd__clue--selected, .xwd__clue--selected *) { color: #121212 !important; }
     html.nytd-dark [class*=xwd__toolbar_icon] { filter: invert(1); }
+    /* menus and toolbars that light up on hover (crossword Reveal/Check, Spelling Bee's More) */
+    html.nytd-dark :is(.xwd__tool--button :hover, .pz-dropdown__button:hover, .pz-dropdown__menu-item:hover, .pz-toolbar-button:hover),
+    html.nytd-dark :is(.xwd__tool--button :hover, .pz-dropdown__button:hover) * { background-color: #2c2c2e !important; color: #f8f8f8 !important; }
     /* black icons (like a promo card's › arrow) turn light; colored ones are left as they are */
     html.nytd-dark [data-nytd-panel] svg :is(path, polyline, line):is(:not([fill]), [fill="#000"], [fill="#000000"], [fill=black], [fill="#121212"]),
     html.nytd-dark [data-nytd-panel] svg[fill=none] :is(path, polyline, line):not([stroke]) { fill: currentColor; }
@@ -141,6 +150,7 @@
     if (!document.documentElement.classList.contains('nytd-dark')) return;
     const roots = [...document.querySelectorAll(PANELS)];
     const els = new Set();
+    if (ARTICLE && document.body) roots.push(document.body);
     for (const root of roots) { els.add(root); for (const el of root.querySelectorAll(SCAN)) els.add(el); }
     // backgrounds first (outside in), so the text pass sees the final backdrops
     for (const el of els) {
@@ -150,7 +160,8 @@
       if (!isPlainLight(el)) continue;
       // a light button drawn with a dark icon image: flip the whole button
       if (DARK_ICON.test(iconUrl(el))) el.dataset.nytdFlip = '';
-      else el.dataset.nytdPanel = '';
+      // an empty shape (a chart bar, an empty calendar day) stays a visible gray
+      else el.dataset.nytdPanel = el.childElementCount || el.textContent.trim() ? '' : 'shape';
     }
     for (const el of els) {
       if ('nytdFlip' in el.dataset || el.closest('[data-nytd-flip]')) continue;
@@ -178,9 +189,24 @@
     if (!m) { m = document.createElement('meta'); m.name = name; m.dataset.nytd = ''; document.head.appendChild(m); }
     m.content = content;
   }
+  // news-style pages: NYT's tpl-always-light → tpl-always-dark, put back when turned off
+  let tplLight = null;
+  function tpl(dark) {
+    const c = document.documentElement.classList;
+    if (dark) {
+      if (tplLight === null) tplLight = c.contains('tpl-always-light');
+      // (only touch the class list when it changes: the observer on <html> would loop)
+      if (c.contains('tpl-always-light')) c.remove('tpl-always-light');
+      if (!c.contains('tpl-always-dark')) c.add('tpl-always-dark');
+    } else if (tplLight !== null) {
+      c.remove('tpl-always-dark'); if (tplLight) c.add('tpl-always-light');
+      tplLight = null;
+    }
+  }
   function apply() {
     const dark = wantDark();
     document.documentElement.classList.toggle('nytd-dark', dark);
+    if (ARTICLE) tpl(dark);
     // tell dark-mode extensions (Dark Reader, Noir) the page is already dark, so they stand back
     meta('darkreader-lock', dark ? '' : null);
     meta('color-scheme', dark ? 'dark' : null);
