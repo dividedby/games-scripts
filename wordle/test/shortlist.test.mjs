@@ -156,6 +156,8 @@ test('a finished puzzle shows a recap: guesses, how often you took the best pick
   assert.match(text, g.submitted.at(-1) === 'pouch' ? new RegExp(`Solved in ${g.row}`) : /Out of guesses/);
   assert.match(text, /best pick \d+ of \d+/);
   assert.match(text, /Medium/);
+  // the last turn is saved once the row's colors settle, which can lag on a busy machine
+  for (let i = 0; i < 20 && g.saved().turns.length < g.row - 1; i++) await sleep(100);
   const saved = g.saved();
   assert.equal(saved.turns.length, g.row - 1, 'every guess after the start is a turn');
   const lost = await game({ answer: 'pouch', played: ['crane', 'pilot', 'shtum', 'dodgy', 'jazzy', 'fifty'] });
