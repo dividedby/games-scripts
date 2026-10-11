@@ -167,7 +167,13 @@
     if (ARTICLE) for (const svg of document.body.querySelectorAll('svg')) {
       if ('nytdFlip' in svg.dataset || svg.getBoundingClientRect().width > 400) continue;
       const fill = rgb(getComputedStyle(svg).fill);
-      if (fill && lightness(fill) < 0.2 && svg.getAttribute('fill') !== 'none' && !backdropIsLight(svg)) svg.dataset.nytdFlip = '';
+      if (!fill || lightness(fill) >= 0.2 || svg.getAttribute('fill') === 'none' || backdropIsLight(svg)) continue;
+      // leave colorful drawings (game icons) alone
+      const colorful = [...svg.querySelectorAll('path, rect, circle, polygon')].some(p => {
+        const c = rgb(getComputedStyle(p).fill);
+        return c && Math.max(...c) - Math.min(...c) > 40;
+      });
+      if (!colorful) svg.dataset.nytdFlip = '';
     }
     for (const el of els) {
       if ('nytdFlip' in el.dataset || el.closest('[data-nytd-flip]')) continue;
