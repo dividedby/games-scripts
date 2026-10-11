@@ -1,0 +1,38 @@
+# NYT Games Dark
+
+A proper dark mode for NYT Games in the browser.
+
+The NYT Games app has a dark mode; the website doesn't, so on the web you're stuck with a bright page or a dark-mode extension like Dark Reader or Noir. Those extensions guess at every color, and puzzle colors suffer: in Connections, the blue group ends up the same gray as an unsolved tile.
+
+It turns out the website already ships NYT's full dark color set, the same one the app uses. It just never switches it on. This script does, and fills in the few spots NYT left out (the site header and the page background). Game colors stay exactly as NYT designed them.
+
+**Install:** [GitHub](https://raw.githubusercontent.com/dividedby/games-scripts/main/nyt-dark/nyt-games-dark.user.js) · [Changelog](../CHANGELOG.md#nyt-games-dark)
+
+## How it works
+
+1. Install the script (see [Installing](../README.md#installing)) and open any NYT game.
+2. By default it follows your device: dark when your phone or computer is in dark mode, light otherwise.
+3. Tap **◐ Auto** in the top bar, next to the Games logo, to switch between **Auto**, **Dark** (always) and **Light** (always). Your choice is remembered across the games.
+
+If you use Dark Reader or Noir, the script tells them the page is already dark, so they stand back on NYT Games instead of darkening it twice. If yours doesn't, turn it off for nytimes.com.
+
+## What's covered
+
+- **Connections**: the board, selected tiles, solved groups in their real colors, and the results screen.
+- **Wordle**: the board and keyboard. (Wordle also has its own Dark Theme in its settings; either works.)
+- **The Games home page** and the shared top bar. Some promo cards stay light; that's how NYT designed them.
+
+Other games use the same color set, so they should look right too, but they haven't all been checked yet.
+
+Wordle's own page has no top bar, so set the mode from another game or the Games home page; it carries over.
+
+## Development
+
+The script is a single file, [`nyt-games-dark.user.js`](nyt-games-dark.user.js), with no build step. Behavior tests run it in jsdom ([`test/`](test/)):
+
+```sh
+pnpm install
+pnpm test
+```
+
+Report bugs and pages that still look wrong in the [issues](https://github.com/dividedby/games-scripts/issues).

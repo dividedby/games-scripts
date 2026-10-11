@@ -18,6 +18,11 @@ Current scripts:
   marks with solved groups.
 - `wordle/wordle-shortlist.user.js` — NYT Wordle: a random starting word, then a
   shortlist of 5 possible answers each turn; tap one to play it.
+- `nyt-dark/nyt-games-dark.user.js` — NYT Games Dark: switches on the dark color set NYT
+  already ships (`[data-mode=dark].display-settings-enabled` on `<html>` and `<body>`,
+  plus `.dark` on `<body>`) and patches the parts without dark colors (`.pz-nav` header,
+  page background). Adds `<meta name="darkreader-lock">` and `color-scheme: dark` so
+  Dark Reader and Noir stand back.
 
 Each script folder holds the script, its `README.md` (the user guide),
 `greasyfork-description.md` (the Greasy Fork listing, synced from `main`) and

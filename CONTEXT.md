@@ -87,6 +87,16 @@ The palette state while **?** is on: tapping a color adds it to (or removes it
 from) the selected tiles' candidates instead of setting their Mark. Tiles hold
 still in maybe mode and re-sort when it's turned off.
 
+## NYT Games Dark
+
+### Mode
+**Auto** (default) follows the device's dark-mode setting; **Dark** and **Light** force
+it. Chosen with the ◐ button in the site's top bar and shared by every NYT game page.
+
+### NYT's dark colors
+The dark color set NYT ships with the website but never switches on (the app's dark
+mode). The script only turns it on and fills gaps; it doesn't invent game colors.
+
 ## Wordle Shortlist
 
 ### Likely answers

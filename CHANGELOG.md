@@ -7,6 +7,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/),
 and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Versions below 1.0.0 are pre-release.
 
+## NYT Games Dark
+
+### [Unreleased]
+
+### [0.1.0] - 2026-10-11
+#### Added
+- First version: switches on NYT's own dark colors on the Games website (the ones the app uses) and darkens the site header and page background to match. Follows your device's dark mode, or tap ◐ in the top bar for always dark or always light. Tells Dark Reader and Noir to stand back so the page isn't darkened twice.
+
 ## Wordle Shortlist
 
 ### [Unreleased]
