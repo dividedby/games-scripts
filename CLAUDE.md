@@ -21,8 +21,8 @@ Current scripts:
 - `nyt-dark/nyt-games-dark.user.js` — NYT Games Dark: switches on the dark color set NYT
   already ships (`[data-mode=dark].display-settings-enabled` on `<html>` and `<body>`,
   plus `.dark` on `<body>`) and patches the parts without dark colors (`.pz-nav` header,
-  page background). Adds `<meta name="darkreader-lock">` and `color-scheme: dark` so
-  Dark Reader and Noir stand back.
+  page background). Adds `<meta name="darkreader-lock">` so Dark Reader stands back;
+  Noir ignores it (and `color-scheme`), so Noir users turn it off for nytimes.com.
 
 Each script folder holds the script, its `README.md` (the user guide),
 `greasyfork-description.md` (the Greasy Fork listing, synced from `main`) and

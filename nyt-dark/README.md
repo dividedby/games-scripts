@@ -14,7 +14,7 @@ It turns out the website already ships NYT's full dark color set, the same one t
 2. By default it follows your device: dark when your phone or computer is in dark mode, light otherwise.
 3. Tap **◐ Auto** in the top bar, next to the Games logo, to switch between **Auto**, **Dark** (always) and **Light** (always). Your choice is remembered across the games.
 
-If you use Dark Reader or Noir, the script tells them the page is already dark, so they stand back on NYT Games instead of darkening it twice. If yours doesn't, turn it off for nytimes.com.
+**Using a dark-mode extension?** Dark Reader steps aside on its own: the script tells it the page is already dark. Noir (Safari on iPhone and iPad) doesn't, so turn Noir off for nytimes.com, or the page gets darkened twice and the colors go off again.
 
 ## What's covered
 

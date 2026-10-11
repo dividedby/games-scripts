@@ -13,7 +13,7 @@ Versions below 1.0.0 are pre-release.
 
 ### [0.1.0] - 2026-10-11
 #### Added
-- First version: switches on NYT's own dark colors on the Games website (the ones the app uses) and darkens the site header and page background to match. Follows your device's dark mode, or tap ◐ in the top bar for always dark or always light. Tells Dark Reader and Noir to stand back so the page isn't darkened twice.
+- First version: switches on NYT's own dark colors on the Games website (the ones the app uses) and darkens the site header and page background to match. Follows your device's dark mode, or tap ◐ in the top bar for always dark or always light. Tells Dark Reader to stand back so the page isn't darkened twice (Noir needs turning off for nytimes.com).
 
 ## Wordle Shortlist
 
