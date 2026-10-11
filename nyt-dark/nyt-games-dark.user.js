@@ -12,6 +12,10 @@
 // @match        https://www.nytimes.com/crosswords*
 // @match        https://www.nytimes.com/*/crosswords/*
 // @match        https://www.nytimes.com/interactive/*-bot.html
+// @match        https://www.nytimes.com/spotlight/spelling-bee-forum*
+// @match        https://www.nytimes.com/spotlight/wordle-review*
+// @match        https://www.nytimes.com/spotlight/games-*
+// @match        https://www.nytimes.com/column/wordplay*
 // @grant        none
 // @run-at       document-start
 // @downloadURL  https://raw.githubusercontent.com/dividedby/games-scripts/main/nyt-dark/nyt-games-dark.user.js
