@@ -65,6 +65,11 @@
     html.nytd-dark [data-nytd-panel] :is(h1, h2, h3, h4, p, span, div, a):not([style*=background]) { color: #f8f8f8; }
     html.nytd-dark [data-nytd-panel] button[class*=primary i] { background: #f8f8f8 !important; color: #121212 !important; }
     html.nytd-dark [data-nytd-panel] button:not([class*=primary i]) { color: #f8f8f8 !important; border-color: #f8f8f8 !important; }
+    /* black icons (like a promo card's › arrow) turn light; colored ones are left as they are */
+    html.nytd-dark [data-nytd-panel] svg :is(path, polyline, line):is(:not([fill]), [fill="#000"], [fill="#000000"], [fill=black], [fill="#121212"]),
+    html.nytd-dark [data-nytd-panel] svg[fill=none] :is(path, polyline, line):not([stroke]) { fill: currentColor; }
+    html.nytd-dark [data-nytd-panel] svg [stroke="#000"], html.nytd-dark [data-nytd-panel] svg [stroke=black] { stroke: currentColor; }
+    html.nytd-dark [data-nytd-panel] img:is([src*=arrow i], [src*=chevron i], [src*=caret i]) { filter: invert(1); }
   `;
 
   // A light, colorless background (white or light gray), as opposed to a game's brand color
@@ -79,7 +84,9 @@
   function markPanels() {
     if (!document.documentElement.classList.contains('nytd-dark')) return;
     for (const root of document.querySelectorAll(PANELS)) {
-      for (const el of [root, ...root.querySelectorAll('div, section, aside, a')]) {
+      for (const el of [root, ...root.querySelectorAll('div, section, aside, a, button, span')]) {
+        // the primary button is the one we deliberately make light: leave it
+        if (el.matches('button[class*=primary i], button[class*=primary i] *')) continue;
         if (!('nytdPanel' in el.dataset) && isPlainLight(el)) el.dataset.nytdPanel = '';
       }
     }

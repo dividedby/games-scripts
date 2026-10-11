@@ -81,3 +81,20 @@ test('keeps dark on when the game rewrites <body>, and never removes classes it 
   p.toggle().click(); await sleep(30); // → light
   assert.ok(p.body.classList.contains('dark'), 'Wordle\'s own dark class stays');
 });
+
+test('plain white or gray start and promo panels turn dark; colorful ones keep their color', async () => {
+  const p = await page({ mode: 'dark' });
+  const root = p.d.getElementById('pz-game-root');
+  root.innerHTML = `<div class="Welcome-module_contentWelcome__x" style="background-color: rgb(227, 227, 225)">
+      <div id="promo" style="background-color: rgb(255, 255, 255)">promo</div>
+      <button class="_momentButton_x _primary_x" style="background-color: rgb(255, 255, 255)">Play</button>
+    </div>
+    <div class="Welcome-module_contentWelcome__y" id="purple" style="background-color: rgb(180, 168, 255)"></div>`;
+  await sleep(300);
+  assert.ok('nytdPanel' in root.querySelector('.Welcome-module_contentWelcome__x').dataset, 'Wordle\'s gray start screen');
+  assert.ok('nytdPanel' in p.d.getElementById('promo').dataset, 'a white promo card');
+  assert.ok(!('nytdPanel' in p.d.getElementById('purple').dataset), 'Connections\' purple start screen keeps its color');
+  assert.ok(!('nytdPanel' in root.querySelector('button').dataset), 'the primary button is left for the light-button style');
+  p.toggle().click(); await sleep(30); // → light
+  assert.equal(p.d.querySelectorAll('[data-nytd-panel]').length, 0, 'light mode removes the marks');
+});
