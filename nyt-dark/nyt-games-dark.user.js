@@ -164,16 +164,16 @@
       else el.dataset.nytdPanel = el.childElementCount || el.textContent.trim() ? '' : 'shape';
     }
     // news-style pages: black logos and icons (the masthead, menu, search) on a dark backdrop
+    // only when every shape is drawn in black: icons already in NYT's light colors, and
+    // colorful drawings (game icons), are left alone
     if (ARTICLE) for (const svg of document.body.querySelectorAll('svg')) {
-      if ('nytdFlip' in svg.dataset || svg.getBoundingClientRect().width > 400) continue;
-      const fill = rgb(getComputedStyle(svg).fill);
-      if (!fill || lightness(fill) >= 0.2 || svg.getAttribute('fill') === 'none' || backdropIsLight(svg)) continue;
-      // leave colorful drawings (game icons) alone
-      const colorful = [...svg.querySelectorAll('path, rect, circle, polygon')].some(p => {
-        const c = rgb(getComputedStyle(p).fill);
-        return c && Math.max(...c) - Math.min(...c) > 40;
-      });
-      if (!colorful) svg.dataset.nytdFlip = '';
+      if ('nytdFlip' in svg.dataset || svg.closest('[data-nytd-flip]') || svg.getBoundingClientRect().width > 400) continue;
+      const paints = [];
+      for (const shape of svg.querySelectorAll('path, rect, circle, ellipse, polygon, polyline, line, text')) {
+        const cs = getComputedStyle(shape);
+        for (const c of [cs.fill, cs.stroke]) if (c !== 'none') paints.push(rgb(c));
+      }
+      if (paints.length && paints.every(c => !c || lightness(c) < 0.25) && !backdropIsLight(svg)) svg.dataset.nytdFlip = '';
     }
     for (const el of els) {
       if ('nytdFlip' in el.dataset || el.closest('[data-nytd-flip]')) continue;
