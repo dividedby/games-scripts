@@ -191,28 +191,45 @@
     '.tab__tabNav', '.archive_date-selector-container', '.archive_buttons-right', '.archive_mode-toggle',
   ].join(', ');
   const SCAN = 'div, section, aside, article, header, footer, nav, ul, ol, li, a, button, span, h1, h2, h3, h4, h5, h6, p, label, img, i, em, strong, b, small, td, th, dt, dd, figcaption, blockquote, summary, time';
+  // Elements already looked at, with the class, style and child count they had then. A rescan
+  // (after every change to the page) only looks again at new elements or ones that changed;
+  // the rest would only give the same answer, at a cost on long pages and slow phones.
+  let checked = new WeakMap();
+  const changed = el => {
+    const sig = (el.getAttribute('class') || '') + '|' + (el.getAttribute('style') || '') + '|' + el.childNodes.length;
+    if (checked.get(el) === sig) return false;
+    checked.set(el, sig);
+    return true;
+  };
   function markPanels() {
     if (!document.documentElement.classList.contains('nytd-dark')) return;
     const roots = [...document.querySelectorAll(PANELS)];
-    const els = new Set();
     if (ARTICLE && document.body) roots.push(document.body);
+    const els = new Set();
     for (const root of roots) { els.add(root); for (const el of root.querySelectorAll(SCAN)) els.add(el); }
+    const fresh = [...els].filter(changed);
+    let marked = false;
     // backgrounds first (outside in), so the text pass sees the final backdrops
-    for (const el of els) {
+    for (const el of fresh) {
       if ('nytdPanel' in el.dataset || 'nytdFlip' in el.dataset) continue;
       // the primary button is the one we deliberately make light: leave it
       if (el.matches('button[class*=primary i], button[class*=primary i] *')) continue;
       if (!el.matches('.time-bar')) darkenFade(el);
       if (!isPlainLight(el)) continue;
+      marked = true;
       // a light button drawn with a dark icon image: flip the whole button
       if (DARK_ICON.test(iconUrl(el))) el.dataset.nytdFlip = '';
       // an empty shape (a chart bar, an empty calendar day) stays a visible gray
       else el.dataset.nytdPanel = el.childElementCount || el.textContent.trim() ? '' : 'shape';
     }
+    // a newly darkened area changes the backdrop of everything inside it: look at all text
+    // and icons again then, otherwise only at what changed
+    const look = marked ? els : fresh;
     // news-style pages: black logos and icons (the masthead, menu, search) on a dark backdrop
     // only when every shape is drawn in black: icons already in NYT's light colors, and
     // colorful drawings (game icons), are left alone
     if (ARTICLE) for (const svg of document.body.querySelectorAll('svg')) {
+      if (!changed(svg) && !marked) continue;
       if ('nytdFlip' in svg.dataset || svg.closest('[data-nytd-flip]') || svg.getBoundingClientRect().width > 400) continue;
       const paints = [];
       for (const shape of svg.querySelectorAll('path, rect, circle, ellipse, polygon, polyline, line, text')) {
@@ -221,10 +238,10 @@
       }
       if (paints.length && paints.every(c => !c || lightness(c) < 0.25) && !backdropIsLight(svg)) svg.dataset.nytdFlip = '';
     }
-    for (const el of els) {
-      if ('nytdFlip' in el.dataset || el.closest('[data-nytd-flip]')) continue;
+    for (const el of look) {
+      if ('nytdFlip' in el.dataset || 'nytdInk' in el.dataset || el.closest('[data-nytd-flip]')) continue;
       if (DARK_ICON.test(iconUrl(el))) { if (!backdropIsLight(el)) el.dataset.nytdFlip = ''; continue; }
-      if ('nytdInk' in el.dataset || !hasOwnText(el)) continue;
+      if (!hasOwnText(el)) continue;
       const c = rgb(getComputedStyle(el).color);
       if (!c) continue;
       const lightText = lightness(c) > 0.5, lightBack = backdropIsLight(el);
@@ -237,6 +254,7 @@
     }
     for (const [el, [value, priority]] of fades) el.style.setProperty('background-image', value, priority);
     fades.clear();
+    checked = new WeakMap(); // look at everything afresh next time dark is on
   }
 
   // ---------- switching ----------
@@ -339,6 +357,8 @@
     apply();
   };
   if (document.body) watch(); else document.addEventListener('DOMContentLoaded', watch, { once: true });
+  // stylesheets still loading can make a first look wrong: look at everything again once they're in
+  window.addEventListener('load', () => { checked = new WeakMap(); markPanels(); }, { once: true });
 
-  if (window.__NYTD_TEST__) window.__nytd = { apply, get mode() { return mode; } };
+  if (window.__NYTD_TEST__) window.__nytd = { apply, markPanels, get mode() { return mode; } };
 })();

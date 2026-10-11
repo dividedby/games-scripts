@@ -148,3 +148,16 @@ test('hint, forum and bot pages: NYT\'s own dark colors for news pages, and blac
   assert.ok('nytdFlip' in d.getElementById('logo').dataset, 'the black logo is flipped');
   assert.ok(!('nytdFlip' in d.getElementById('game').dataset), 'a colorful icon is left alone');
 });
+
+test('rescans look again at what changed: a card turned white later, and text that arrives late', async () => {
+  const p = await page({ mode: 'dark' });
+  p.body.insertAdjacentHTML('beforeend', '<div id="hub-root"><div id="card"><span id="late" style="color: rgb(0, 0, 0)"></span></div></div>');
+  await sleep(300);
+  const card = p.d.getElementById('card'), late = p.d.getElementById('late');
+  assert.ok(!('nytdPanel' in card.dataset), 'not white yet');
+  card.setAttribute('style', 'background-color: rgb(255, 255, 255)');
+  late.textContent = 'Play';
+  p.w.__nytd.markPanels();
+  assert.ok('nytdPanel' in card.dataset, 'the card is darkened once it turns white');
+  assert.equal(late.dataset.nytdInk, 'light', 'its late text is fixed too');
+});
