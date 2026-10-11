@@ -14,17 +14,15 @@ It turns out the website already ships NYT's dark colors for the games themselve
 2. By default it follows your device: dark when your phone or computer is in dark mode, light otherwise.
 3. Tap **◐ Auto** in the top bar, next to the Games logo, to switch between **Auto**, **Dark** (always) and **Light** (always). Your choice is remembered across the games.
 
-**Using a dark-mode extension?** Dark Reader steps aside on its own: the script tells it the page is already dark. Noir (Safari on iPhone and iPad) doesn't, so turn Noir off for nytimes.com, or the page gets darkened twice and the colors go off again.
+**Using a dark-mode extension?** Dark Reader steps aside on its own: the script tells it the page is already dark. Noir (Safari on iPhone and iPad) doesn't, so turn Noir off for nytimes.com (and help.nytimes.com), or the page gets darkened twice and the colors go off again.
 
 ## What's covered
 
-- **Connections**: the board, selected tiles, solved groups in their real colors, and the results screen.
-- **Wordle**: the board and keyboard. (Wordle also has its own Dark Theme in its settings; either works.)
-- **The ☰ menu, the top bar, start screens and results screens.** Colorful start screens (Connections' purple, for example) keep their color; plain white or gray ones turn dark.
+- **Every game**: Connections, Wordle, Strands, Spelling Bee, the Crossword, Midi and Mini, Letter Boxed, Tiles, Sudoku, Pips and the bonus puzzles, with their menus, pop-ups (How to Play, settings, stats, hints) and results screens. Game colors stay NYT's own. (Wordle also has its own Dark Theme in its settings; either works.)
+- **The ☰ menu, the top bar and start screens.** Colorful start screens (Connections' purple, for example) keep their color; plain white or gray ones turn dark.
 - **The Games home page, archives, stats and the footer**: white cards and panels turn dark; colorful game cards keep their color.
-- **The crossword**: the clues, toolbar and pages around it. The grid itself stays white, like paper.
-
-Other games use the same color set, so they should look right too, but they haven't all been checked yet.
+- **Hints and bots**: the Connections Companion, Spelling Bee Forum, Wordle Review and Wordplay pages (comments included), Wordle Bot and Connections Bot, and the NYT Help Center.
+- **The crossword grid** stays white, like paper.
 
 Wordle's own page has no top bar, so set the mode from another game or the Games home page; it carries over.
 

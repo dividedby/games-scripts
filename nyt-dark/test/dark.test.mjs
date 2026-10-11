@@ -129,3 +129,22 @@ test('pages around the games: white cards turn dark, and text is fixed by what i
   assert.equal(p.d.querySelectorAll('[data-nytd-panel], [data-nytd-ink], [data-nytd-flip]').length, 0, 'light mode removes every mark');
   assert.match(fade.style.backgroundImage, /^linear-gradient\(rgb\(255, 255, 255\)/, 'and puts the white fade back');
 });
+
+test('hint, forum and bot pages: NYT\'s own dark colors for news pages, and black icons flipped', async () => {
+  const dom = new JSDOM(`<!doctype html><html class="story tpl-always-light"><head></head><body>
+    <header style="background-color: rgb(255, 255, 255)"><span id="acct" style="color: rgb(0, 0, 0)">Account</span>
+      <svg id="logo"><path d="M0 0" style="fill: rgb(0, 0, 0)"></path></svg>
+      <svg id="game"><path d="M0 0" style="fill: rgb(106, 170, 100)"></path></svg></header></body></html>`,
+  { url: 'https://www.nytimes.com/2026/10/10/crosswords/connections-companion-1218.html', runScripts: 'outside-only', pretendToBeVisual: true });
+  const w = dom.window;
+  w.matchMedia = () => ({ matches: false, addEventListener() {} });
+  w.localStorage.setItem('nytd:mode', '"dark"');
+  w.eval(SRC);
+  await sleep(400);
+  const d = w.document, html = d.documentElement;
+  assert.ok(html.classList.contains('tpl-always-dark') && !html.classList.contains('tpl-always-light'), 'swaps NYT\'s light class for its dark one');
+  assert.ok('nytdPanel' in d.querySelector('header').dataset, 'the white masthead turns dark');
+  assert.equal(d.getElementById('acct').dataset.nytdInk, 'light');
+  assert.ok('nytdFlip' in d.getElementById('logo').dataset, 'the black logo is flipped');
+  assert.ok(!('nytdFlip' in d.getElementById('game').dataset), 'a colorful icon is left alone');
+});
