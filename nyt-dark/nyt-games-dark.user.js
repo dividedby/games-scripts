@@ -114,7 +114,8 @@
     html.nytd-dark .xwd__cell--penciled:has(.xwd__cell--selected) text:last-of-type { fill: #5a5a5e; }
     /* the clue for the current word (in the list, above the grid, and over the phone keyboard) */
     html.nytd-dark .xwd__clue--selected, html.nytd-dark [class*=xwd__clue-bar][class*=--bar] { background-color: #24476a !important; }
-    html.nytd-dark :is(.xwd__clue--selected, [class*=xwd__clue-bar][class*=--bar]) :is(*, *::before) { color: #f8f8f8 !important; }
+    html.nytd-dark :is(.xwd__clue--selected, [class*=xwd__clue-bar][class*=--bar]),
+    html.nytd-dark :is(.xwd__clue--selected, [class*=xwd__clue-bar][class*=--bar]) * { color: #f8f8f8 !important; }
     html.nytd-dark .xwd__clue--highlighted { border-color: #24476a !important; }
     html.nytd-dark [class*=xwd__toolbar_icon] { filter: invert(1); }
     /* the crossword on phones: its sticky toolbar, dropdown menus and the special keyboard keys */
