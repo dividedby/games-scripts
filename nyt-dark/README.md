@@ -10,7 +10,7 @@ It turns out the website already ships NYT's dark colors for the games themselve
   <img src="../docs/images/nyt-dark/desktop-and-iphone.png" alt="Desktop: a solved Connections puzzle on a dark page, its green, yellow, blue and purple groups in NYT's own colors. iPhone: the Games home page in dark, with the Crossword, Midi and Mini cards" width="660">
 </p>
 
-**Install:** [GitHub](https://raw.githubusercontent.com/dividedby/games-scripts/main/nyt-dark/nyt-games-dark.user.js) · [Changelog](../CHANGELOG.md#nyt-games-dark)
+**Install:** [Greasy Fork](https://greasyfork.org/en/scripts/599796-nyt-games-dark) · [GitHub](https://raw.githubusercontent.com/dividedby/games-scripts/main/nyt-dark/nyt-games-dark.user.js) · [Changelog](../CHANGELOG.md#nyt-games-dark)
 
 ## How it works
 

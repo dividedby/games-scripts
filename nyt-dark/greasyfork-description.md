@@ -1,5 +1,6 @@
 <!--
-GreasyFork listing description for NYT Games Dark. Greasy Fork syncs this file from main
+GreasyFork listing description for NYT Games Dark
+(https://greasyfork.org/en/scripts/599796-nyt-games-dark). Greasy Fork syncs this file from main
 automatically (along with the script), so edit it here, not on the site. GreasyFork
 renders Markdown. Keep links and image URLs absolute — relative ones won't resolve there.
 Images use <img width> to stay small; GreasyFork allows img width/height, <center> and
