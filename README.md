@@ -14,6 +14,8 @@ Userscripts for browser word and puzzle games. Each one adds features to the gam
   <a href="connections/README.md"><img src="docs/images/connections/desktop-board.png" alt="Connections Palette on desktop: tiles outlined in purple, blue, green and yellow, sorted into rows" width="440"></a>
   &nbsp;
   <a href="wordle/README.md"><img src="docs/images/wordle/desktop-board.png" alt="Wordle Shortlist on desktop: a shortlist of five possible answers above the keyboard" width="286"></a>
+  &nbsp;
+  <a href="nyt-dark/README.md"><img src="docs/images/nyt-dark/iphone-home.jpg" alt="NYT Games Dark on iPhone: the Games home page in dark" width="186"></a>
 </p>
 
 ## Installing

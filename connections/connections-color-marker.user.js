@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Color-code NYT Connections tiles as you work out the groups, then submit them in the order you choose, like purple first for a reverse rainbow
-// @version      1.0.1
+// @version      1.0.2
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -389,7 +389,7 @@
   const sheet = document.createElement('div');
   sheet.id = 'ccm-settings';
   sheet.hidden = true;
-  sheet.innerHTML = '<h4>Color Marker settings</h4>' +
+  sheet.innerHTML = '<h4>Palette settings</h4>' +
     SETTINGS.map(o => `<label${o.key === 'keys' ? ' class="desk"' : ''} title="${attr(o.tip || o.help)}"><input type="checkbox" data-k="${o.key}"><span>${o.label}<small>${o.help}</small></span></label>`).join('') +
     '<div class="row"><button type="button" data-act="clear">Clear this puzzle</button><button type="button" data-act="reset">Reset settings</button></div>';
   sheet.addEventListener('click', e => e.stopPropagation());

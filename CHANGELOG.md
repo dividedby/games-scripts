@@ -11,7 +11,7 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
-### [0.1.0] - 2026-10-11
+### [1.0.0] - 2026-10-11
 #### Added
 - First version: switches on NYT's own dark colors on the Games website (the ones the app uses) and darkens the parts of the site NYT never gave dark colors: the top bar, the ☰ menu, the page background, Wordle's start screen, white promo cards, the Games home page, the puzzle archives, the stats page and the footer. The crossword grid gets dark squares too, like the NYT app. Also darkens the hint and forum pages, Wordle Bot and Connections Bot, and the Help Center. Follows your device's dark mode, or tap ◐ in the top bar for always dark or always light. Tells Dark Reader to stand back so the page isn't darkened twice (Noir needs turning off for nytimes.com).
 
@@ -39,6 +39,10 @@ Versions below 1.0.0 are pre-release.
 ## Connections Palette
 
 ### [Unreleased]
+
+### [1.0.2] - 2026-10-11
+#### Fixed
+- The settings panel still had the old name at the top; it now says Palette settings.
 
 ### [1.0.1] - 2026-10-10
 #### Fixed
