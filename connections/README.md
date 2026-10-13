@@ -67,7 +67,7 @@ Definitions come from [Wiktionary](https://en.wiktionary.org) (CC BY-SA) and nam
 
 ## Color guide
 
-Not sure which color a group you've found is likely to be? Tap **Guide**, next to the game's Submit button (**ⓘ** when a narrow phone is short on room), for what each color tends to be. It opens over the board like a definition:
+Not sure which color a group you've found is likely to be? Tap **Guide**, next to the game's Submit button (**ⓘ** when a narrow phone is short on room), for what each color tends to be. It opens over the board like a definition. To make room, the game's **Deselect All** button reads **Deselect** while Guide is on.
 
 - **Yellow**: the most straightforward. Plain synonyms or an obvious set, each word in its everyday sense.
 - **Green**: still about meaning, but a narrower set, or a less obvious sense of the words.

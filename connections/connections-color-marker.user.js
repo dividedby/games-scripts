@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Color-code NYT Connections tiles as you work out the groups, then submit them in the order you choose, like purple first for a reverse rainbow
-// @version      1.2.1
+// @version      1.2.2
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -830,6 +830,12 @@
       submit.after(guideBtn);
       guideBtn.className = (shuffle || submit).className;
     }
+    // with Guide in the row, the game's "Deselect All" becomes "Deselect" to make room (its one
+    // text node is changed in place, which React leaves alone since it never changes that text)
+    const deselect = document.querySelector('[data-testid="deselect-btn"]') || gameButton(/^deselect( all)?$/i);
+    const label = deselect && [...deselect.childNodes].find(n => n.nodeType === 3 && /^Deselect( All)?$/.test(n.nodeValue));
+    const want = guideOn ? 'Deselect' : 'Deselect All';
+    if (label && label.nodeValue !== want) label.nodeValue = want;
     // (style, not the hidden attribute: the game's button class sets display itself)
     const display = on ? '' : 'none', guideDisplay = guideOn ? '' : 'none';
     if (defineBtn.style.display !== display) defineBtn.style.display = display;

@@ -902,6 +902,8 @@ test('color guide: a Guide button after Submit opens what each color tends to be
   const submit = b.d.querySelector('[data-testid=submit-btn]');
   assert.equal(submit.nextElementSibling, btn, 'right after Submit');
   assert.equal(btn.style.display, '', 'shown without selecting anything');
+  const deselect = b.d.querySelector('[data-testid=deselect-btn]');
+  assert.equal(deselect.textContent, 'Deselect', 'the game\'s Deselect All is shortened to make room');
   assert.equal(btn.className, b.d.querySelector('[data-testid=shuffle-btn]').className, 'styled like the game\'s buttons');
   const sheet = b.root.getElementById('ccm-define');
   btn.click(); await sleep(20);
@@ -918,5 +920,6 @@ test('color guide: a Guide button after Submit opens what each color tends to be
   await b.setOpt('guide', false);
   assert.ok(sheet.hidden, 'turning it off closes it');
   assert.equal(btn.style.display, 'none', 'and hides the button');
+  assert.equal(deselect.textContent, 'Deselect All', 'and puts Deselect All back');
   b.close();
 });

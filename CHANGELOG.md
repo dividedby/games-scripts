@@ -40,6 +40,10 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [1.2.2] - 2026-10-13
+#### Changed
+- With the Guide button on, the game's **Deselect All** button reads **Deselect**, so the row has room for Guide (and Definition) on a phone. Turning the Guide button off puts the full label back.
+
 ### [1.2.1] - 2026-10-13
 #### Changed
 - The color guide moved from the palette's **ⓘ** to a **Guide** button next to the game's Submit button, and opens over the board like a definition. On a narrow phone the row tightens up to fit, and it shortens to **ⓘ** when Define is showing too. Turn it off with "Color guide button" in settings.
