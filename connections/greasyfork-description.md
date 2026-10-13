@@ -20,8 +20,9 @@ Works on desktop, iPhone and Android.
 **New in 1.1**
 
 - **Definition**: select one tile and a Definition button appears next to Shuffle.
-  Tap it for the word's common meanings (from Wiktionary), handy for words with a
-  double meaning. Rare senses wait behind **Show all**. Can be turned off in ⚙.
+  Tap it for the word's common meanings (from Wiktionary) and the people, places and
+  titles that share the name (from Wikidata), handy for words with a double meaning.
+  Rare senses wait behind **Show all**. Can be turned off in ⚙.
 
 **What it does**
 

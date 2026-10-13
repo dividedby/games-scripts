@@ -131,7 +131,7 @@
       tip: '1–4 colors, 0 clear, Z undo, G go, Esc lets go of a tapped color; with maybe colors on, M maybe mode and Shift+1–4 add or remove an option' },
     { key: 'left',      def: false, label: 'Palette on the left', help: 'Move the palette to the bottom-left' },
     { key: 'define',    def: true,  label: 'Definition button', help: 'Look up the meanings of one selected word',
-      tip: 'With one tile selected, a Definition button appears next to Shuffle. Definitions come from Wiktionary: the selected word is looked up there as soon as it is the only one selected' },
+      tip: 'With one tile selected, a Definition button appears next to Shuffle. Tapping it looks the word up on Wiktionary and Wikidata (only the word is sent) and keeps the answer on this device for 60 days' },
   ];
   const DEFAULTS = Object.fromEntries(SETTINGS.map(o => [o.key, o.def]));
   let settings = { ...DEFAULTS, ...ls.get(SETTINGS_KEY, {}) };
@@ -316,6 +316,11 @@
     #ccm-define .foot { display: flex; justify-content: space-between; gap: 8px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--sep); font-size: 12px; }
     #ccm-define .foot a, #ccm-define .foot button { all: unset; color: var(--link); cursor: pointer; }
     #ccm-define .foot button[hidden] { display: none; }
+    #ccm-define ul.names { margin: 0; padding-left: 20px; }
+    #ccm-define ul.names a { color: inherit; text-decoration: underline dotted var(--muted); text-underline-offset: 3px; }
+    #ccm-define ul.names span { color: var(--muted); }
+    #ccm-define .foot .src { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    #ccm-define .foot .lic { color: var(--muted); }
     @keyframes ccm-shake { 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
     @media (max-width: 480px) {
       #ccm-panel { right: 6px; bottom: calc(6px + env(safe-area-inset-bottom, 0px)); gap: 3px; padding: 4px 5px; max-width: calc(100vw - 12px); }
@@ -501,8 +506,8 @@
 
   // ---------- definitions ----------
   // With exactly one tile selected, a Definition button sits before the game's Shuffle button.
-  // It looks the word up on Wiktionary (the word is the only thing sent) and lists its
-  // meanings by part of speech: the usual ones first, rare and old ones behind "Show all".
+  // Tapping it looks the word up on Wiktionary and Wikidata and lists its meanings by part of
+  // speech (the usual ones first, rare and old ones behind "Show all"), then names and titles.
   const defineBtn = document.createElement('button');
   defineBtn.id = 'ccm-define-btn';
   defineBtn.type = 'button';
@@ -531,93 +536,173 @@
     if (!defSheet.hidden && !e.composedPath().includes(host) && e.target !== defineBtn) closeDefine();
   });
 
-  // Wiktionary's REST API: { en: [{ partOfSpeech, definitions: [{ definition: html }] }] }
-  // Wiktionary can take a few seconds for a word it hasn't served lately, so the lookup starts
-  // as soon as one tile is selected (when the button appears), and each word is fetched once.
-  const defCache = new Map(); // word -> promise of an entry (or null)
-  async function fetchEntry(t) {
+  // Sources (only the word is sent):
+  // - Wiktionary's REST API: { en: [{ partOfSpeech, definitions: [{ definition: html }] }] }.
+  //   A word's pages differ by case (lash / Lash / LASH; mars / Mars), so all three are fetched
+  //   and merged. Wiktionary can take a few seconds for a word it hasn't served lately.
+  // - Wikidata's entity search, for names and titles (people, places, films) a dictionary lacks.
+  //   It starts once the first Wiktionary page is back, to keep at most three requests open
+  //   (Wikimedia's guidance for API clients).
+  // Nothing is fetched until the button is tapped, and a complete answer is kept on this device
+  // (DEF_KEY) for KEEP_DAYS since it was last looked at, so a word costs its requests once.
+  //
+  // An entry: { title: Wiktionary page to link, or null, parts: [{ p: part of speech, d: [def] }],
+  //   names: [{ id, l: label, d: description }] }. A def is a list of text pieces and, for the
+  //   word a "plural of …"-style definition points to, [text, target] pairs.
+  const DEF_KEY = 'ccm:defs';
+  const DEF_MAX = 300, DEF_BYTES = 400e3; // localStorage is ~5 MB per site, shared with NYT
+  const defCache = new Map(); // WORD -> promise of { entry, failed: [source names] }
+  function storedDefs() {
+    const all = ls.get(DEF_KEY, {});
+    const cutoff = Date.now() - KEEP_DAYS * 864e5;
+    for (const k of Object.keys(all)) if (!(all[k]?.u >= cutoff)) delete all[k];
+    return all;
+  }
+  function storeDef(word, entry) {
+    const all = storedDefs();
+    if (entry) all[word] = { u: Date.now(), e: entry };
+    // newest first; drop the oldest past the word or size limit
+    let keys = Object.keys(all).sort((a, b) => all[b].u - all[a].u).slice(0, DEF_MAX);
+    const pick = () => Object.fromEntries(keys.map(k => [k, all[k]]));
+    while (keys.length > 1 && JSON.stringify(pick()).length > DEF_BYTES) keys = keys.slice(0, Math.ceil(keys.length * 0.9));
+    for (let tries = 0; tries < 3; tries++) {
+      try { localStorage.setItem(DEF_KEY, JSON.stringify(pick())); return; }
+      catch { keys = keys.slice(0, Math.floor(keys.length / 2)); } // full: make room
+    }
+  }
+  const defText = d => d.map(s => typeof s === 'string' ? s : s[0]).join('');
+  // a definition's HTML as text pieces (never inserted as HTML): footnotes, styles and
+  // Wiktionary's editor notes ("Can we add an example for this sense?") are dropped
+  function defPieces(html) {
+    const out = [];
+    const add = s => { if (typeof out[out.length - 1] === 'string') out[out.length - 1] += s; else out.push(s); };
+    const walk = node => {
+      for (const n of node.childNodes) {
+        if (n.nodeType === 3) add(n.textContent);
+        else if (n.nodeType !== 1 || /^(sup|style|script)$/i.test(n.localName) || n.classList.contains('maintenance-line')) continue;
+        else if (n.localName === 'a' && n.closest('.form-of-definition-link') && /^\/wiki\/[^:#]+(#English)?$/.test(n.getAttribute('href') || ''))
+          out.push([n.textContent, decodeURIComponent(n.getAttribute('href').slice(6).replace(/#.*/, '')).replace(/_/g, ' ')]);
+        else walk(n);
+      }
+    };
+    walk(new DOMParser().parseFromString(html, 'text/html').body);
+    if (typeof out[0] === 'string') out[0] = out[0].trimStart();
+    if (typeof out[out.length - 1] === 'string') out[out.length - 1] = out[out.length - 1].trimEnd();
+    return out.filter(s => s !== '');
+  }
+  // one Wiktionary page: [{ p, d }], or [] when there's no page
+  async function fetchPage(t) {
     const r = await fetch('https://en.wiktionary.org/api/rest_v1/page/definition/' + encodeURIComponent(t.replace(/ /g, '_')));
-    if (r.status === 404) return null;
+    if (r.status === 404) return [];
     if (!r.ok) throw new Error('lookup failed');
     // (codes like ISO language codes are listed as "Symbol": no help in a word puzzle)
-    const en = ((await r.json()).en || []).filter(p => p.partOfSpeech !== 'Symbol' && p.definitions?.some(d => d.definition?.trim()));
-    return en.length ? { title: t, parts: en } : null;
+    return ((await r.json()).en || []).filter(p => p.partOfSpeech !== 'Symbol')
+      .map(p => ({ p: p.partOfSpeech, d: (p.definitions || []).map(d => defPieces(d.definition || '')).filter(d => defText(d).trim()) }))
+      .filter(p => p.d.length);
+  }
+  const plain = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  // Wikidata's top names for the word: exact matches only (the search also matches prefixes),
+  // no disambiguation or list pages, and "family name"/"given name" entries only to fill up
+  async function fetchNames(word) {
+    const r = await fetch('https://www.wikidata.org/w/api.php?action=wbsearchentities&format=json&origin=*&language=en&uselang=en&type=item&limit=10&search=' + encodeURIComponent(word));
+    if (!r.ok) throw new Error('lookup failed');
+    const want = plain(word);
+    const hits = ((await r.json()).search || []).filter(s => s?.id && (plain(s.label) === want || plain(s.match?.text) === want)
+      && !/disambiguation|^Wikimedia /i.test(s.description || ''));
+    const nameOnly = s => /\b(family name|given name|surname|first name)\b/i.test(s.description || '');
+    return [...hits.filter(s => !nameOnly(s)), ...hits.filter(nameOnly)].slice(0, 3)
+      .map(s => ({ id: s.id, l: s.label || word, d: s.description || '' }));
+  }
+  async function fetchDef(word) {
+    const lower = word.toLowerCase();
+    const forms = [...new Set([lower, lower[0].toUpperCase() + lower.slice(1), word.toUpperCase()])];
+    const pages = forms.map(fetchPage);
+    const names = Promise.race(pages.map(p => p.catch(() => {}))).then(() => fetchNames(word));
+    const [got, n] = await Promise.all([Promise.allSettled(pages), names.then(v => ({ v }), () => ({ v: null }))]);
+    const failed = [];
+    if (got.some(g => g.status === 'rejected')) failed.push('Wiktionary');
+    if (!n.v) failed.push('Wikidata');
+    // merge the pages, lowercase first: one list per part of speech (Wiktionary also splits
+    // them by word origin, e.g. two "Verb"s for LASH), each definition once
+    const parts = [];
+    let title = null;
+    got.forEach((g, i) => {
+      if (g.status !== 'fulfilled') return;
+      if (g.value.length && !title) title = forms[i];
+      for (const p of g.value) {
+        let into = parts.find(q => q.p === p.p);
+        if (!into) parts.push(into = { p: p.p, d: [] });
+        for (const d of p.d) if (!into.d.some(e => defText(e) === defText(d))) into.d.push(d);
+      }
+    });
+    return { entry: { title, parts, names: n.v || [] }, failed };
   }
   function lookup(word) {
-    if (!defCache.has(word)) {
-      const p = (async () => {
-        for (const t of [...new Set([word.toLowerCase(), word[0] + word.slice(1).toLowerCase(), word])]) {
-          const entry = await fetchEntry(t);
-          if (entry) return entry;
-        }
-        return null;
-      })();
-      defCache.set(word, p);
-      p.catch(() => defCache.delete(word)); // a failed lookup can be tried again
+    const key = up(word);
+    if (!defCache.has(key)) {
+      const kept = storedDefs()[key];
+      let p;
+      if (kept) { p = Promise.resolve({ entry: kept.e, failed: [] }); storeDef(key, kept.e); } // (refreshes its date)
+      else {
+        p = fetchDef(word.trim()).then(r => {
+          if (r.failed.length) defCache.delete(key); // incomplete: kept for nothing, tried again next time
+          else storeDef(key, r.entry); // (a word with no entry anywhere is complete too)
+          return r;
+        });
+      }
+      defCache.set(key, p);
     }
-    return defCache.get(word);
+    return defCache.get(key);
   }
   // rare, old or regional senses go behind "Show all"
   const RARE = /^\s*\([^)]*\b(obsolete|archaic|dated|rare|historical|dialect(al)?|nonstandard|uncommon|obscure)\b/i;
   const PER_PART = 5; // Wiktionary lists senses by history, not by how common they are
-  // a definition's HTML, rebuilt as plain text, never inserted as HTML. The one link kept is
-  // the word a "plural of …"-style definition points to, which can be tapped to look it up.
-  function defNode(html) {
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    const li = el('li');
-    const walk = (node, into) => {
-      for (const n of node.childNodes) {
-        if (n.nodeType === 3) into.append(n.textContent);
-        // (skip footnotes and Wiktionary's editor notes, like "Can we add an example for this sense?")
-        else if (n.nodeType !== 1 || /^(sup|style|script)$/i.test(n.localName) || n.classList.contains('maintenance-line')) continue;
-        else if (n.localName === 'a' && n.closest('.form-of-definition-link') && /^\/wiki\/[^:#]+(#English)?$/.test(n.getAttribute('href') || '')) {
-          const target = decodeURIComponent(n.getAttribute('href').slice(6).replace(/#.*/, '')).replace(/_/g, ' ');
-          into.append(el('button', { className: 'w', type: 'button', textContent: n.textContent, onclick: () => define(target) }));
-        }
-        else walk(n, into);
-      }
-    };
-    walk(doc.body, li);
-    return li;
-  }
+  // the one link kept in a definition is the word a "plural of …" points to: tap to look it up
+  const defNode = d => el('li', {}, d.map(s => typeof s === 'string' ? s
+    : el('button', { className: 'w', type: 'button', textContent: s[0], onclick: () => define(s[1]) })));
   let defineToken = 0;
   async function define(word) {
     const token = ++defineToken;
     const title = el('h4', { textContent: up(word) });
     const x = el('button', { className: 'x', type: 'button', textContent: '✕', title: 'Close', onclick: closeDefine });
     x.setAttribute('aria-label', 'Close');
-    defSheet.replaceChildren(el('header', {}, [title, x]), el('p', { className: 'status', textContent: 'Looking it up…' }));
+    const status = text => el('p', { className: 'status', textContent: text });
+    defSheet.replaceChildren(el('header', {}, [title, x]), status('Looking it up…'));
     defSheet.hidden = false;
-    let entry;
-    try { entry = await lookup(word.trim()); }
-    catch { if (token === defineToken) defSheet.lastChild.textContent = 'Couldn\'t reach Wiktionary. Check your connection and try again.'; return; }
+    const { entry, failed } = await lookup(word.trim());
     if (token !== defineToken) return; // another lookup started meanwhile
-    if (!entry) { defSheet.lastChild.textContent = 'No dictionary entry for this one. It may be a name, a phrase or part of a longer word.'; return; }
     const body = [];
     let hidden = 0;
-    // one list per part of speech (Wiktionary splits them by word origin, e.g. two "Verb"s for LASH)
-    const parts = [];
-    for (const p of entry.parts) {
-      const same = parts.find(q => q.partOfSpeech === p.partOfSpeech);
-      if (same) same.definitions = [...same.definitions, ...p.definitions];
-      else parts.push({ partOfSpeech: p.partOfSpeech, definitions: [...p.definitions] });
-    }
-    for (const part of parts) {
-      const defs = part.definitions.filter(d => d.definition?.trim());
-      const common = defs.filter(d => !RARE.test(defNode(d.definition).textContent));
-      const shown = (common.length ? common : defs).slice(0, PER_PART);
+    for (const part of entry.parts) {
+      const common = part.d.filter(d => !RARE.test(defText(d)));
+      const shown = (common.length ? common : part.d).slice(0, PER_PART);
       const ol = el('ol');
-      for (const d of defs) {
-        const li = defNode(d.definition);
+      for (const d of part.d) {
+        const li = defNode(d);
         if (!shown.includes(d)) { li.classList.add('rare'); li.hidden = true; hidden++; }
         ol.append(li);
       }
-      body.push(el('h5', { textContent: part.partOfSpeech }), ol);
+      body.push(el('h5', { textContent: part.p }), ol);
     }
+    if (entry.names.length) {
+      body.push(el('h5', { textContent: 'Names and titles' }), el('ul', { className: 'names' }, entry.names.map(n => el('li', {}, [
+        el('a', { textContent: n.l, target: '_blank', rel: 'noopener', href: 'https://www.wikidata.org/wiki/' + encodeURIComponent(n.id) }),
+        ...(n.d ? [el('span', { textContent: ' — ' + n.d })] : []),
+      ]))));
+    }
+    const missing = failed.length ? `Couldn't reach ${failed.join(' or ')}. Check your connection and try again.` : '';
+    if (!body.length) {
+      defSheet.lastChild.textContent = missing || 'No dictionary entry for this one. It may be a phrase or part of a longer word.';
+      return;
+    }
+    if (missing) body.push(status(missing.replace('. Check', ', so this may be missing some. Check')));
     const all = el('button', { type: 'button', textContent: `Show all (${hidden} more)`, hidden: !hidden });
     all.onclick = () => { defSheet.querySelectorAll('li[hidden]').forEach(li => { li.hidden = false; }); all.hidden = true; };
-    const src = el('a', { textContent: 'Wiktionary ↗', target: '_blank', rel: 'noopener',
-      href: 'https://en.wiktionary.org/wiki/' + encodeURIComponent(entry.title.replace(/ /g, '_')) + '#English' });
+    const src = el('span', { className: 'src' }, entry.title ? [
+      el('a', { textContent: 'Wiktionary ↗', target: '_blank', rel: 'noopener',
+        href: 'https://en.wiktionary.org/wiki/' + encodeURIComponent(entry.title.replace(/ /g, '_')) + '#English' }),
+      el('a', { className: 'lic', textContent: 'CC BY-SA', target: '_blank', rel: 'noopener', href: 'https://creativecommons.org/licenses/by-sa/4.0/' }),
+    ] : []);
     defSheet.replaceChildren(el('header', {}, [title, x]), ...body, el('div', { className: 'foot' }, [all, src]));
     defSheet.scrollTop = 0;
   }
@@ -633,12 +718,11 @@
     const display = on ? '' : 'none';
     if (defineBtn.style.display !== display) defineBtn.style.display = display;
     if (on !== defineShown) { defineShown = on; fitDefine(); }
-    if (on) { const w = wordOf(selectedTiles()[0]); if (w !== prefetched) { prefetched = w; lookup(w.trim()).catch(() => {}); } }
     if (!opt('define')) closeDefine();
   }
   // Four buttons are a squeeze on a phone: if they'd wrap, the button shortens to "Define" and
   // the gaps shrink; only if that still doesn't fit do they wrap onto a second line.
-  let defineShown = false, prefetched = null;
+  let defineShown = false;
   function fitDefine() {
     const row = defineBtn.parentElement;
     if (!row) return;

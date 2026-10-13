@@ -42,7 +42,7 @@ Versions below 1.0.0 are pre-release.
 
 ### [1.1.0] - 2026-10-13
 #### Added
-- Definition button: with one tile selected, a **Definition** button appears before the game's Shuffle button and shows the word's common meanings from Wiktionary, grouped by part of speech, with rarer ones behind **Show all**. In a definition like "plural of *end*", the word can be tapped to look it up. On narrow phones it's labeled **Define** so all four buttons fit on one line. Can be turned off in settings.
+- Definition button: with one tile selected, a **Definition** button appears before the game's Shuffle button and shows the word's common meanings from Wiktionary, grouped by part of speech, with rarer ones behind **Show all**, then up to three people, places or titles with that name from Wikidata. Its lowercase, Capitalized and ALL-CAPS Wiktionary entries are combined, so MARS shows the verb and the planet. Nothing is looked up until you tap, and answers are kept on your device for 60 days. In a definition like "plural of *end*", the word can be tapped to look it up. On narrow phones it's labeled **Define** so all four buttons fit on one line. Can be turned off in settings.
 
 ### [1.0.2] - 2026-10-11
 #### Fixed

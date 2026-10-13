@@ -12,11 +12,21 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 const BTN = { yellow: 0, green: 1, blue: 2, purple: 3, erase: 4, undo: 5, sort: 6, go: 7, maybe: 8, hist: 9, gear: 10, toggle: 11, more: 12 };
 const RGB = { yellow: 'rgb(249, 223, 109)', blue: 'rgb(176, 196, 239)', purple: 'rgb(186, 129, 197)' };
 
-// Wiktionary's answers for the Definition tests: { title: json | 404 | 'error' }
+// Answers for the Definition tests. Wiktionary: { title: json | 404 | 'error' };
+// Wikidata: { search word: [results] | 'error' } (no key: no results)
 let dictionary = {};
-const lookedUp = [];
+let wikidata = {};
+const lookedUp = []; // Wiktionary titles, and 'wikidata:WORD'
 async function fetchStub(url) {
-  const title = decodeURIComponent(String(url).split('/definition/')[1] || '');
+  url = String(url);
+  if (url.startsWith('https://www.wikidata.org/')) {
+    const word = new URL(url).searchParams.get('search');
+    lookedUp.push('wikidata:' + word);
+    const v = wikidata[word];
+    if (v === 'error') throw new TypeError('Failed to fetch');
+    return { ok: true, status: 200, json: async () => ({ search: v || [] }) };
+  }
+  const title = decodeURIComponent(url.split('/definition/')[1] || '');
   lookedUp.push(title);
   const v = dictionary[title];
   if (v === 'error') throw new TypeError('Failed to fetch');
@@ -721,19 +731,97 @@ test('Definition: shows before Shuffle with one tile selected, looks the word up
   assert.ok(sheet.hidden, 'Escape closes it');
 });
 
-test('Definition: tries the word capitalized, says so when there is no entry or no connection, and can be turned off', async () => {
-  dictionary = { Saturn: { en: [{ partOfSpeech: 'Proper noun', definitions: [{ definition: 'The sixth planet.' }] }] }, cannon: 'error' };
-  const b = await board({ words: ['SATURN', 'QZXW', 'CANNON', 'RING'] });
+test('Definition: merges the word\'s lowercase, Capitalized and ALL-CAPS pages, and adds names from Wikidata', async () => {
+  dictionary = {
+    mars: { en: [{ partOfSpeech: 'Verb', definitions: [{ definition: 'third-person singular of mar' }] }] },
+    Mars: { en: [{ partOfSpeech: 'Proper noun', definitions: [{ definition: 'The fourth planet.' }] },
+      { partOfSpeech: 'Verb', definitions: [{ definition: 'third-person singular of mar' }] }] },
+    MARS: { en: [{ partOfSpeech: 'Proper noun', definitions: [{ definition: 'Initialism of something.' }] }] },
+  };
+  wikidata = { MARS: [
+    { id: 'Q2', label: 'Mars', description: 'fourth planet from the Sun' },
+    { id: 'Q3', label: 'Mars', description: 'Wikimedia disambiguation page' },
+    { id: 'Q4', label: 'Mars', description: 'family name' },
+    { id: 'Q5', label: 'Marseille', description: 'city in France' },
+    { id: 'Q6', label: 'Mars', description: 'American candy company' },
+    { id: 'Q7', label: 'Bruno Mars', description: 'American singer', match: { text: 'Mars' } },
+    { id: 'Q8', label: 'Mars', description: 'Roman god of war' },
+  ] };
+  const b = await board({ words: ['MARS', 'B', 'C', 'D'] });
+  lookedUp.length = 0;
+  b.select(['MARS']); await sleep(40);
+  assert.deepEqual(lookedUp, [], 'nothing is looked up until the button is tapped');
+  b.d.getElementById('ccm-define-btn').click(); await sleep(40);
+  assert.deepEqual(lookedUp, ['mars', 'Mars', 'MARS', 'wikidata:MARS']);
+  const sheet = b.root.getElementById('ccm-define');
+  assert.deepEqual([...sheet.querySelectorAll('h5')].map(h => h.textContent), ['Verb', 'Proper noun', 'Names and titles']);
+  assert.equal(sheet.querySelectorAll('ol')[0].children.length, 1, 'the same definition on two pages is listed once');
+  assert.equal(sheet.querySelectorAll('ol')[1].children.length, 2);
+  const names = [...sheet.querySelectorAll('ul.names li')].map(li => li.textContent);
+  assert.deepEqual(names, ['Mars — fourth planet from the Sun', 'Mars — American candy company', 'Bruno Mars — American singer'],
+    'exact matches only, no disambiguation pages, a bare family name only to fill up, top three');
+  assert.equal(sheet.querySelector('ul.names a').href, 'https://www.wikidata.org/wiki/Q2');
+  assert.match(sheet.querySelector('.foot a').href, /wiktionary\.org\/wiki\/mars#English$/);
+  assert.match(sheet.querySelector('.foot').textContent, /CC BY-SA/);
+  b.close();
+});
+
+test('Definition: keeps answers on the device for 60 days, and never keeps an incomplete one', async () => {
+  dictionary = { lash: LASH, cannon: 'error' };
+  wikidata = {};
+  const old = Date.now() - 61 * 864e5;
+  const stored = { 'ccm:defs': { STALE: { u: old, e: { title: 'stale', parts: [], names: [] } } } };
+  let b = await board({ words: ['LASH', 'CANNON', 'C', 'D'], stored });
+  const lookUp = async w => { b.select([w]); await sleep(40); b.d.getElementById('ccm-define-btn').click(); await sleep(40); };
+  await lookUp('LASH');
+  await lookUp('CANNON');
+  const kept = JSON.parse(b.w.localStorage.getItem('ccm:defs'));
+  assert.deepEqual(Object.keys(kept), ['LASH'], 'kept: the complete one; gone: the 61-day-old one and the failed one');
+  assert.equal(kept.LASH.e.parts[0].p, 'Noun');
+  b.close();
+  // a new page load reads it back without asking Wiktionary again
+  lookedUp.length = 0;
+  b = await board({ words: ['LASH', 'CANNON', 'C', 'D'], stored: { 'ccm:defs': kept } });
+  await lookUp('LASH');
+  assert.deepEqual(lookedUp, []);
+  const sheet = b.root.getElementById('ccm-define');
+  assert.equal(sheet.querySelector('h5').textContent, 'Noun');
+  assert.equal(sheet.querySelectorAll('button.w').length, 1, 'the "plural of" link survives storage');
+  await lookUp('CANNON');
+  assert.ok(lookedUp.includes('cannon'), 'a failed word is tried again');
+  b.close();
+});
+
+test('Definition: the stored answers stay under their size limit, dropping the oldest', async () => {
+  const big = { title: 'x', parts: [{ p: 'Noun', d: [['y'.repeat(5000)]] }], names: [] };
+  const many = {};
+  for (let i = 0; i < 120; i++) many['W' + i] = { u: Date.now() - (120 - i) * 1000, e: big }; // W0 is the oldest
+  dictionary = { lash: LASH }; wikidata = {};
+  const b = await board({ words: ['LASH', 'B', 'C', 'D'], stored: { 'ccm:defs': many } });
+  b.select(['LASH']); await sleep(40); b.d.getElementById('ccm-define-btn').click(); await sleep(40);
+  const raw = b.w.localStorage.getItem('ccm:defs');
+  assert.ok(raw.length <= 400e3, 'under the cap');
+  const kept = JSON.parse(raw);
+  assert.ok(kept.LASH && kept.W119, 'the newest stay');
+  assert.ok(!kept.W0, 'the oldest go');
+  b.close();
+});
+
+test('Definition: says so when there is no entry or no connection, shows what one source has, and can be turned off', async () => {
+  dictionary = { Saturn: { en: [{ partOfSpeech: 'Proper noun', definitions: [{ definition: 'The sixth planet.' }] }] }, cannon: 'error', beyonce: 'error', Beyonce: 'error', BEYONCE: 'error' };
+  wikidata = { CANNON: 'error', BEYONCE: [{ id: 'Q36153', label: 'Beyoncé', description: 'American singer' }] };
+  const b = await board({ words: ['SATURN', 'QZXW', 'CANNON', 'BEYONCE'] });
   const sheet = b.root.getElementById('ccm-define');
   const lookUp = async w => { b.select([w]); await sleep(40); b.d.getElementById('ccm-define-btn').click(); await sleep(40); };
-  lookedUp.length = 0;
   await lookUp('SATURN');
-  assert.deepEqual(lookedUp, ['saturn', 'Saturn']);
   assert.equal(sheet.querySelector('h5').textContent, 'Proper noun');
   await lookUp('QZXW');
   assert.match(sheet.textContent, /No dictionary entry/);
   await lookUp('CANNON');
-  assert.match(sheet.textContent, /Couldn't reach Wiktionary/);
+  assert.match(sheet.textContent, /Couldn't reach Wiktionary or Wikidata/);
+  await lookUp('BEYONCE');
+  assert.match(sheet.querySelector('ul.names').textContent, /Beyoncé — American singer/, 'accents don\'t stop a match');
+  assert.match(sheet.textContent, /Couldn't reach Wiktionary, so this may be missing some/);
   await b.setOpt('define', false);
   assert.ok(sheet.hidden, 'turning it off closes the sheet');
   assert.equal(b.d.getElementById('ccm-define-btn').style.display, 'none');
