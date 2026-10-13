@@ -62,3 +62,5 @@ The full guide and changelog are on
 can also report issues. Word lists from NYT WordleBot via
 [WordGamesBot](https://github.com/WordGamesBot/wordgamesbot.github.io). Licensed GPL v3
 or later.
+
+Find it useful? You can [send a tip via PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=dividedbygit@gmail.com&item_name=Wordle+Shortlist+Donation). Thank you!

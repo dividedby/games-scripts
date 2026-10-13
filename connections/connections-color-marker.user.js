@@ -7,6 +7,8 @@
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
+// @contributionURL     https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=dividedbygit@gmail.com&item_name=Connections+Palette+Donation
+// @contributionAmount  $1
 // @match        https://www.nytimes.com/games/connections*
 // (no @noframes on purpose: phone-width testing runs the game in a same-origin 390px iframe)
 // @grant        none

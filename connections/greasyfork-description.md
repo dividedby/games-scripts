@@ -88,3 +88,5 @@ browser, so you can close the tab and come back. Archive puzzles work too.
 A full guide with every setting, more screenshots and the changelog is on
 [GitHub](https://github.com/dividedby/games-scripts/tree/main/connections#readme),
 where you can also report issues. Licensed GPL v3 or later.
+
+Find it useful? You can [send a tip via PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=dividedbygit@gmail.com&item_name=Connections+Palette+Donation). Thank you!

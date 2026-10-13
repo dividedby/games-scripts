@@ -56,3 +56,5 @@ iPhone, iPad or Mac, then click **Install** above.
 The full guide and changelog are on
 [GitHub](https://github.com/dividedby/games-scripts/tree/main/nyt-dark#readme), where you
 can also report issues. Licensed GPL v3 or later.
+
+Find it useful? You can [send a tip via PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=dividedbygit@gmail.com&item_name=NYT+Games+Dark+Donation). Thank you!
