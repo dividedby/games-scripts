@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Color-code NYT Connections tiles as you work out the groups, then submit them in the order you choose, like purple first for a reverse rainbow
-// @version      1.1.1
+// @version      1.1.2
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -629,11 +629,16 @@
     if (typeof out[out.length - 1] === 'string') out[out.length - 1] = out[out.length - 1].trimEnd();
     return out.filter(s => s !== '');
   }
-  // a request still hanging after 15 s counts as failed (and is tried again next time)
-  const giveUp = () => AbortSignal.timeout?.(15e3);
+  // Wikimedia asks scripts in a browser, which can't set User-Agent, to name themselves in
+  // Api-User-Agent (it costs one CORS preflight per request). A request still hanging after
+  // 15 s counts as failed (and is tried again next time).
+  let version = '';
+  try { version = GM_info.script.version; } catch {} // eslint-disable-line no-undef
+  const WM_AGENT = `ConnectionsPalette/${version || '1'} (https://github.com/dividedby/games-scripts)`;
+  const wmFetch = url => fetch(url, { headers: { 'Api-User-Agent': WM_AGENT }, signal: AbortSignal.timeout?.(15e3) });
   // one Wiktionary page: [{ p, d }], or [] when there's no page
   async function fetchPage(t) {
-    const r = await fetch('https://en.wiktionary.org/api/rest_v1/page/definition/' + encodeURIComponent(t.replace(/ /g, '_')), { signal: giveUp() });
+    const r = await wmFetch('https://en.wiktionary.org/api/rest_v1/page/definition/' + encodeURIComponent(t.replace(/ /g, '_')));
     if (r.status === 404) return [];
     if (!r.ok) throw new Error('lookup failed');
     // (codes like ISO language codes are listed as "Symbol": no help in a word puzzle)
@@ -647,7 +652,7 @@
   // counts only when the word is in its label (MARS: Bruno Mars, but not SLIGHT: "snub"), and
   // those and bare "family name"/"given name" entries come after the rest.
   async function fetchNames(word) {
-    const r = await fetch('https://www.wikidata.org/w/api.php?action=wbsearchentities&format=json&origin=*&language=en&uselang=en&type=item&limit=10&search=' + encodeURIComponent(word), { signal: giveUp() });
+    const r = await wmFetch('https://www.wikidata.org/w/api.php?action=wbsearchentities&format=json&origin=*&language=en&uselang=en&type=item&limit=10&search=' + encodeURIComponent(word));
     if (!r.ok) throw new Error('lookup failed');
     const want = plain(word);
     const inLabel = s => plain(s.label) === want || String(s.label || '').split(/[\s,()-]+/).some(p => plain(p) === want);

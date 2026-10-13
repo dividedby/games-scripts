@@ -40,6 +40,10 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [1.1.2] - 2026-10-13
+#### Changed
+- Definition lookups now tell Wikimedia which script is asking (its name and this repo's link, nothing about you), as Wikimedia asks of browser scripts. A word's first lookup may take a fraction of a second longer.
+
 ### [1.1.1] - 2026-10-13
 #### Changed
 - The definition panel now covers the whole board, from its top row down to just above the game's buttons, and follows it as you scroll.

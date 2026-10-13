@@ -17,8 +17,10 @@ const RGB = { yellow: 'rgb(249, 223, 109)', blue: 'rgb(176, 196, 239)', purple: 
 let dictionary = {};
 let wikidata = {};
 const lookedUp = []; // Wiktionary titles, and 'wikidata:WORD'
-async function fetchStub(url) {
+const agents = new Set(); // the Api-User-Agent each request named
+async function fetchStub(url, opts = {}) {
   url = String(url);
+  agents.add(opts.headers?.['Api-User-Agent']);
   if (url.startsWith('https://www.wikidata.org/')) {
     const word = new URL(url).searchParams.get('search');
     lookedUp.push('wikidata:' + word);
@@ -756,6 +758,7 @@ test('Definition: merges the word\'s lowercase, Capitalized and ALL-CAPS pages, 
   assert.deepEqual(lookedUp, [], 'nothing is looked up until the button is tapped');
   b.d.getElementById('ccm-define-btn').click(); await sleep(40);
   assert.deepEqual(lookedUp, ['mars', 'Mars', 'MARS', 'wikidata:MARS']);
+  assert.deepEqual([...agents], ['ConnectionsPalette/1 (https://github.com/dividedby/games-scripts)'], 'every request names the script to Wikimedia');
   const sheet = b.root.getElementById('ccm-define');
   assert.deepEqual([...sheet.querySelectorAll('h5')].map(h => h.textContent), ['Verb', 'Proper noun', 'Names and titles']);
   assert.equal(sheet.querySelectorAll('ol')[0].children.length, 1, 'the same definition on two pages is listed once');
