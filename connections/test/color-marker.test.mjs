@@ -746,8 +746,11 @@ test('Definition: merges the word\'s lowercase, Capitalized and ALL-CAPS pages, 
     { id: 'Q6', label: 'Mars', description: 'American candy company' },
     { id: 'Q7', label: 'Bruno Mars', description: 'American singer', match: { text: 'Mars' } },
     { id: 'Q8', label: 'Mars', description: 'Roman god of war' },
+  ], SLIGHT: [
+    { id: 'Q9', label: 'snub', description: 'a refusal to socially recognise', match: { text: 'slight' } },
+    { id: 'Q10', label: 'slight', description: '' },
   ] };
-  const b = await board({ words: ['MARS', 'B', 'C', 'D'] });
+  const b = await board({ words: ['MARS', 'SLIGHT', 'C', 'D'] });
   lookedUp.length = 0;
   b.select(['MARS']); await sleep(40);
   assert.deepEqual(lookedUp, [], 'nothing is looked up until the button is tapped');
@@ -763,6 +766,8 @@ test('Definition: merges the word\'s lowercase, Capitalized and ALL-CAPS pages, 
   assert.equal(sheet.querySelector('ul.names a').href, 'https://www.wikidata.org/wiki/Q2');
   assert.match(sheet.querySelector('.foot a').href, /wiktionary\.org\/wiki\/mars#English$/);
   assert.match(sheet.querySelector('.foot').textContent, /CC BY-SA/);
+  b.select(['SLIGHT']); await sleep(40); b.d.getElementById('ccm-define-btn').click(); await sleep(40);
+  assert.match(sheet.textContent, /No dictionary entry/, 'no names matched only by another name, none without a description');
   b.close();
 });
 
