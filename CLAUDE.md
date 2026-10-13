@@ -15,7 +15,9 @@ Current scripts:
 - `connections/connections-color-marker.user.js` — Connections Palette (renamed from
   Connections Color Marker at 1.0; the file keeps its old name) — NYT Connections: mark tiles with
   colors (or split them between candidate colors), submit groups in order, reconcile
-  marks with solved groups.
+  marks with solved groups. Adds buttons to the game's own row: **Definition** (one tile
+  selected: Wiktionary senses + Wikidata names, fetched only on tap, cached 60 days in
+  `ccm:defs`) and **Guide** (what each color tends to be); both open a panel over the board.
 - `wordle/wordle-shortlist.user.js` — NYT Wordle: a random starting word, then a
   shortlist of 5 possible answers each turn; tap one to play it.
 - `nyt-dark/nyt-games-dark.user.js` — NYT Games Dark: switches on the dark color set NYT
@@ -43,8 +45,7 @@ into jsdom against a simulated board (`<script folder>/test/`). Use pnpm, never 
 - **Never move or rename a published `.user.js` file.** Its path is the install and
   update URL.
 - **Bump `@version` on every user-facing change**, or installed copies never update.
-  Pre-release: stay below 1.0.0 (new capability → minor, fix → patch). 1.0.0 happens
-  only when the owner says to release.
+  All three are past 1.0: new capability → minor, fix → patch.
 - **Public identity is `dividedby` only.** No real name or personal email in code,
   headers, docs or commits. Commit as `dividedby <64715420+dividedby@users.noreply.github.com>`.
 - **Pushing to `main` releases**, everywhere: GitHub installs pick it up directly, and
@@ -128,7 +129,13 @@ width), not only in jsdom.
   by tapping (or ask the owner to open a URL). Zooming the full window gives a 2×
   screenshot good enough for the README.
 - Installed copies update only after the owner updates them in Tampermonkey and the
-  Userscripts app, so ask before testing a new version.
+  Userscripts app, so ask before testing a new version. To test an unreleased build, inject the
+  raw file at its commit with `(0,eval)(src)` after renaming the installed copy's root
+  (`#ccm-root`, `#wsl-root`, `#nytd-style`): each script exits if it finds its own root, so a
+  second copy otherwise won't start. Two copies of NYT Games Dark interfere with each other;
+  compare builds on a script-free `srcdoc` snapshot of the page instead.
+- Greasy Fork can lag `main` by a day or more: check the version it serves at
+  `greasyfork.org/en/scripts/<id>.json` (Connections 599362, Wordle 599505, Dark 599796).
 
 ## Wordle word lists
 
