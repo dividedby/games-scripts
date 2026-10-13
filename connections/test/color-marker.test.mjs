@@ -678,7 +678,7 @@ const LASH = { en: [
   { partOfSpeech: 'Noun', definitions: [
     { definition: 'The thong or braided cord of a <a rel="mw:WikiLink" href="/wiki/whip#English">whip</a>.' },
     { definition: '(<span>obsolete</span>) A leash in which an animal is held.' },
-    { definition: 'A stroke with a whip.' },
+    { definition: 'A stroke with a whip. <span class="maintenance-line">(Can we add an example for this sense?)</span>' },
     { definition: 'A hair growing from the edge of the eyelid; an <a rel="mw:WikiLink" href="/wiki/eyelash">eyelash</a>.<sup>[1]</sup>' },
   ] },
   { partOfSpeech: 'Verb', definitions: [{ definition: 'To strike with a lash.' }] },
@@ -708,6 +708,7 @@ test('Definition: shows before Shuffle with one tile selected, looks the word up
   assert.equal(shown.length, 6, 'the common meanings: four nouns, two verbs');
   assert.equal(sheet.querySelectorAll('button.w').length, 1, 'only a "plural of" target is a link');
   assert.ok(shown.some(t => /eyelash\.$/.test(t)), 'footnote markers dropped');
+  assert.ok(!shown.some(t => /Can we add/.test(t)), 'Wiktionary\'s editor notes dropped');
   assert.ok(!shown.some(t => /obsolete/.test(t)), 'the obsolete one waits behind Show all');
   const all = [...sheet.querySelectorAll('.foot button')].find(x => /Show all/.test(x.textContent));
   assert.match(all.textContent, /1 more/);

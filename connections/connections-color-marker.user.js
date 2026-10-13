@@ -568,7 +568,8 @@
     const walk = (node, into) => {
       for (const n of node.childNodes) {
         if (n.nodeType === 3) into.append(n.textContent);
-        else if (n.nodeType !== 1 || /^(sup|style|script)$/i.test(n.localName)) continue;
+        // (skip footnotes and Wiktionary's editor notes, like "Can we add an example for this sense?")
+        else if (n.nodeType !== 1 || /^(sup|style|script)$/i.test(n.localName) || n.classList.contains('maintenance-line')) continue;
         else if (n.localName === 'a' && n.closest('.form-of-definition-link') && /^\/wiki\/[^:#]+(#English)?$/.test(n.getAttribute('href') || '')) {
           const target = decodeURIComponent(n.getAttribute('href').slice(6).replace(/#.*/, '')).replace(/_/g, ' ');
           into.append(el('button', { className: 'w', type: 'button', textContent: n.textContent, onclick: () => define(target) }));
