@@ -131,7 +131,7 @@
       tip: '1–4 colors, 0 clear, Z undo, G go, Esc lets go of a tapped color; with maybe colors on, M maybe mode and Shift+1–4 add or remove an option' },
     { key: 'left',      def: false, label: 'Palette on the left', help: 'Move the palette to the bottom-left' },
     { key: 'define',    def: true,  label: 'Definition button', help: 'Look up the meanings of one selected word',
-      tip: 'With one tile selected, a Definition button appears next to Shuffle. Tapping it looks the word up on Wiktionary and Wikidata (only the word and the script's name are sent) and keeps the answer on this device for 60 days' },
+      tip: 'With one tile selected, a Definition button appears next to Shuffle. Tapping it looks the word up on Wiktionary and Wikidata (only the word and the script name are sent) and keeps the answer on this device for 60 days' },
   ];
   const DEFAULTS = Object.fromEntries(SETTINGS.map(o => [o.key, o.def]));
   let settings = { ...DEFAULTS, ...ls.get(SETTINGS_KEY, {}) };
@@ -564,7 +564,7 @@
     if (!defSheet.hidden && !e.composedPath().includes(host) && e.target !== defineBtn) closeDefine();
   });
 
-  // Sources (only the word and the script's name are sent):
+  // Sources (only the word and the script name are sent):
   // - Wiktionary's REST API: { en: [{ partOfSpeech, definitions: [{ definition: html }] }] }.
   //   A word's pages differ by case (lash / Lash / LASH; mars / Mars), so all three are fetched
   //   and merged. Wiktionary can take a few seconds for a word it hasn't served lately.
