@@ -311,7 +311,7 @@
     #ccm-define ol { margin: 0; padding-left: 20px; }
     #ccm-define li { padding: 2px 0; }
     #ccm-define li.rare { color: var(--muted); }
-    #ccm-define .w { all: unset; color: var(--link); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+    #ccm-define .w { all: unset; cursor: pointer; text-decoration: underline dotted var(--muted); text-underline-offset: 3px; }
     #ccm-define .status { margin: 6px 0 0; color: var(--muted); }
     #ccm-define .foot { display: flex; justify-content: space-between; gap: 8px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--sep); font-size: 12px; }
     #ccm-define .foot a, #ccm-define .foot button { all: unset; color: var(--link); cursor: pointer; }
@@ -540,7 +540,8 @@
       const r = await fetch('https://en.wiktionary.org/api/rest_v1/page/definition/' + encodeURIComponent(t.replace(/ /g, '_')));
       if (r.status === 404) { defCache.set(t, null); continue; }
       if (!r.ok) throw new Error('lookup failed');
-      const en = ((await r.json()).en || []).filter(p => p.definitions?.some(d => d.definition?.trim()));
+      // (codes like ISO language codes are listed as "Symbol": no help in a word puzzle)
+      const en = ((await r.json()).en || []).filter(p => p.partOfSpeech !== 'Symbol' && p.definitions?.some(d => d.definition?.trim()));
       defCache.set(t, en.length ? { title: t, parts: en } : null);
       if (en.length) return defCache.get(t);
     }
