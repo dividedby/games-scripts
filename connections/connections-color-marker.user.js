@@ -540,7 +540,8 @@
     const rowTop = row && defineBtn.style.display !== 'none' ? row.getBoundingClientRect().top : h - 82;
     const at = Math.min(Math.max(rowTop, 180), h - 82); // never off the top, never under the palette
     defSheet.style.bottom = (h - at + 8) + 'px';
-    defSheet.style.maxHeight = Math.min(h * 0.6, at - 20) + 'px';
+    const bar = Math.max(0, document.querySelector('.pz-nav')?.getBoundingClientRect().bottom || 0); // NYT's top bar
+    defSheet.style.maxHeight = Math.max(120, Math.min(h * 0.6, at - bar - 16)) + 'px';
   }
   window.addEventListener('scroll', placeDefine, { passive: true });
   window.addEventListener('resize', placeDefine, { passive: true });

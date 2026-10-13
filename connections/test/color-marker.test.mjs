@@ -844,7 +844,7 @@ test('Definition: the sheet sits just above the game\'s buttons, and a sense isn
   assert.equal(sheet.style.bottom, `${h - 500 + 8}px`, 'its bottom edge is 8px above the button row');
   top = 300; b.w.dispatchEvent(new b.w.Event('scroll')); // scrolled: the row moved up
   assert.equal(sheet.style.bottom, `${h - 300 + 8}px`, 'and it follows the row');
-  assert.equal(sheet.style.maxHeight, '280px', 'never taller than the room above the row');
+  assert.equal(sheet.style.maxHeight, '284px', 'never taller than the room above the row');
   assert.deepEqual([...sheet.querySelectorAll('li')].map(li => li.textContent),
     ['To connect to something else.', 'To connect (a smartphone) to a computer.']);
   b.close();
