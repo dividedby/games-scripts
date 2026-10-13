@@ -53,6 +53,18 @@ For tiles you're unsure about. Turn this on in ⚙, and a **?** button appears o
 <img src="../docs/images/connections/desktop-maybe.png" alt="Maybe mode on: the color buttons have dashed borders, the ? button is filled, JUNK is split three ways and the selected CUBAN keeps its green and yellow split" width="560">
 </details>
 
+## Definitions
+
+Not sure what a word means, or which meaning the puzzle is after? Select just that one tile and a **Definition** button appears next to the game's Shuffle button (on a narrow phone it's labeled **Define**). Tap it for the word's common meanings, grouped by part of speech. **Show all** adds the rare and old-fashioned ones, and dotted words inside a definition are tappable, so "plural of *end*" takes you to END. Tap ✕, tap outside, or press Esc to close it.
+
+Definitions come from [Wiktionary](https://en.wiktionary.org); the selected word is the only thing sent there. Names and phrases sometimes have no entry. Turn the button off in ⚙ if you'd rather not have it.
+
+<details>
+<summary>Screenshot: a definition on iPhone</summary>
+<br>
+<img src="../docs/images/connections/phone-definition.jpg" alt="iPhone: LANTERN selected and its definitions open over the board, noun, verb and adjective, with Show all (6 more) and a Wiktionary link" width="260">
+</details>
+
 ## Submitting
 
 - **Go ▶** submits the next color in your sort order. It takes on that color, and it's dimmed until that color has exactly 4 tiles.
@@ -111,6 +123,7 @@ Tap ⚙ on the palette. Your choices are saved in your browser.
 | Show color letters (Y/G/B/P on each mark and on the palette, for colorblind players) | Off |
 | Keyboard shortcuts (desktop only) | On |
 | Palette on the left | Off |
+| Definition button (with one tile selected) | On |
 
 The panel also has **Clear this puzzle** (removes all your colors on this puzzle; ↶ brings them back) and **Reset settings**.
 

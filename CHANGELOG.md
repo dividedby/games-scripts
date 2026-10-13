@@ -40,6 +40,10 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [1.1.0] - 2026-10-13
+#### Added
+- Definition button: with one tile selected, a **Definition** button appears before the game's Shuffle button and shows the word's common meanings from Wiktionary, grouped by part of speech, with rarer ones behind **Show all**. Words linked inside a definition can be tapped to look them up. On narrow phones it's labeled **Define** so all four buttons fit on one line. Can be turned off in settings.
+
 ### [1.0.2] - 2026-10-11
 #### Fixed
 - The settings panel still had the old name at the top; it now says Palette settings.

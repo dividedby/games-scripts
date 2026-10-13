@@ -17,14 +17,11 @@ Works on desktop, iPhone and Android.
 <img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/connections/iphone-board.jpg" alt="iPhone: the same kind of board in Safari, with the one-row phone palette" width="160">
 </center>
 
-**New in 1.0**
+**New in 1.1**
 
-- **New name**: Connections Color Marker is now Connections Palette. Your colors
-  and settings carry over. If your userscript manager lists both, delete the old one.
-- **Maybe colors**: torn between two colors? The tile's outline splits between
-  them (half yellow, half green, or thirds for three).
-- Keyboard shortcuts stay out of the way while you type in other fields, and the
-  buttons have names for screen readers.
+- **Definition**: select one tile and a Definition button appears next to Shuffle.
+  Tap it for the word's common meanings (from Wiktionary), handy for words with a
+  double meaning. Rare senses wait behind **Show all**. Can be turned off in ⚙.
 
 **What it does**
 
