@@ -293,7 +293,7 @@
     #ccm-panel { flex-wrap: wrap; max-width: calc(100vw - 24px); box-sizing: border-box; }
     #ccm-panel:not(.collapsed) { width: 290px; row-gap: 0; }
     #ccm-panel:not(.collapsed)::after { content: ''; order: 3; flex-basis: 100%; height: 0; margin-top: 6px; }
-    #ccm-panel:not(.collapsed) > button { order: 4; flex: 1 1 auto; }
+    #ccm-panel:not(.collapsed) > button { order: 4; flex: 1 1 auto; min-width: 26px; padding: 0 4px; } /* 8 tools fit one row */
     #ccm-panel:not(.collapsed) > button.swatch { order: 1; flex: 1 1 0; height: 36px; }
     #ccm-panel:not(.collapsed) > .ccm-go { order: 2; flex: 1.6 1 0; height: 36px; }
     .ccm-more { display: none; font-size: 18px; }
