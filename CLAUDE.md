@@ -63,6 +63,35 @@ into jsdom against a simulated board (`<script folder>/test/`). Use pnpm, never 
 - Wordle only colors a row once its flip animation ends, and Chrome doesn't run
   animations in a hidden tab: test with the window in front.
 
+## Userscript engineering
+
+Before changing a `.user.js`, read [`docs/agents/userscript-guidelines.md`](docs/agents/userscript-guidelines.md),
+the full checklist (shared by all the dividedby userscript repos). The rules that matter most:
+
+- **Smallest reliable change.** Preserve existing behavior, fix the problem at hand without
+  unrelated rewrites, and add no dependency, build step or abstraction without a reason.
+- **Metadata.** Narrow `@match`; only the `@grant`s actually used (`@grant none` stated
+  explicitly); no wildcard `@connect`; `@run-at` chosen by need. Never change `@namespace` or
+  the update URLs.
+- **Untrusted input** (page text, network responses, anything read back from storage) never
+  goes into `innerHTML`: build DOM with `textContent`. No `eval`, `new Function` or remote code.
+- **Validate stored values** (type and shape) before using them; keep storage keys namespaced.
+- **Safe to run twice** (a second install, re-initialization): no duplicate UI, listeners,
+  styles or observers.
+- **Observers and timers.** Observe the smallest stable root with filters, ignore the script's
+  own mutations, never poll without a bound, and read layout before writing it.
+- **Network and errors.** Time out, check status and response shape, ignore stale results; no
+  silent `catch {}` for unexpected errors (log with the script's prefix; leave a comment where
+  swallowing is intended, e.g. storage in private mode).
+- **Navigation.** `popstate` doesn't see `pushState`; redirects use `location.replace` so Back
+  still works; a patched page API keeps its arguments, `this` and return value.
+- **Validation.** Node/jsdom tests don't prove the script works in a manager: check it on the
+  real site and say exactly what was and wasn't tested.
+
+Deliberate exceptions here: no `@noframes` (phone-width testing runs the installed script in a
+same-origin 390px iframe of the game); NYT Games Dark runs at `document-start` so its colors
+are on before first paint (no white flash).
+
 ## Definition of done
 
 Every **user-facing change** moves these together in the same PR:
