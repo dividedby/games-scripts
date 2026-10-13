@@ -602,15 +602,16 @@
   }
   const plain = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
   // Wikidata's top names for the word: exact matches only (the search also matches prefixes),
-  // no disambiguation or list pages, and "family name"/"given name" entries only to fill up
+  // no disambiguation or list pages; matches by an alias and bare "family name"/"given name"
+  // entries come after the rest
   async function fetchNames(word) {
     const r = await fetch('https://www.wikidata.org/w/api.php?action=wbsearchentities&format=json&origin=*&language=en&uselang=en&type=item&limit=10&search=' + encodeURIComponent(word));
     if (!r.ok) throw new Error('lookup failed');
     const want = plain(word);
     const hits = ((await r.json()).search || []).filter(s => s?.id && (plain(s.label) === want || plain(s.match?.text) === want)
       && !/disambiguation|^Wikimedia /i.test(s.description || ''));
-    const nameOnly = s => /\b(family name|given name|surname|first name)\b/i.test(s.description || '');
-    return [...hits.filter(s => !nameOnly(s)), ...hits.filter(nameOnly)].slice(0, 3)
+    const rank = s => (/\b(family name|given name|surname|first name)\b/i.test(s.description || '') ? 2 : 0) + (plain(s.label) === want ? 0 : 1);
+    return hits.map((s, i) => [rank(s), i, s]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map(x => x[2]).slice(0, 3)
       .map(s => ({ id: s.id, l: s.label || word, d: s.description || '' }));
   }
   async function fetchDef(word) {

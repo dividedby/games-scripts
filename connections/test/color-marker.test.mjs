@@ -758,8 +758,8 @@ test('Definition: merges the word\'s lowercase, Capitalized and ALL-CAPS pages, 
   assert.equal(sheet.querySelectorAll('ol')[0].children.length, 1, 'the same definition on two pages is listed once');
   assert.equal(sheet.querySelectorAll('ol')[1].children.length, 2);
   const names = [...sheet.querySelectorAll('ul.names li')].map(li => li.textContent);
-  assert.deepEqual(names, ['Mars — fourth planet from the Sun', 'Mars — American candy company', 'Bruno Mars — American singer'],
-    'exact matches only, no disambiguation pages, a bare family name only to fill up, top three');
+  assert.deepEqual(names, ['Mars — fourth planet from the Sun', 'Mars — American candy company', 'Mars — Roman god of war'],
+    'exact matches only, no disambiguation pages, alias matches and a bare family name only to fill up, top three');
   assert.equal(sheet.querySelector('ul.names a').href, 'https://www.wikidata.org/wiki/Q2');
   assert.match(sheet.querySelector('.foot a').href, /wiktionary\.org\/wiki\/mars#English$/);
   assert.match(sheet.querySelector('.foot').textContent, /CC BY-SA/);
