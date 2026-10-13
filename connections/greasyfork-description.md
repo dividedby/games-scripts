@@ -17,6 +17,11 @@ Works on desktop, iPhone and Android.
 <img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/connections/iphone-board.jpg" alt="iPhone: the same kind of board in Safari, with the one-row phone palette" width="160">
 </center>
 
+**New in 1.2**
+
+- **Color guide**: tap ⓘ for what kinds of groups each color tends to be, from
+  yellow's plain synonyms to purple's wordplay. General tendencies only, no spoilers.
+
 **New in 1.1**
 
 - **Definition**: select one tile and a Definition button appears next to Shuffle.

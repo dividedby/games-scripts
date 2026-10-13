@@ -40,6 +40,10 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [1.2.0] - 2026-10-13
+#### Added
+- Color guide: the **ⓘ** button (behind **⋯** on a phone) shows what kinds of groups each color tends to be, from yellow's plain synonyms and obvious sets to purple's wordplay. General tendencies, nothing about the day's puzzle. Can be turned off in settings.
+
 ### [1.1.3] - 2026-10-13
 #### Fixed
 - A word Wiktionary lists as two separate words of different origin now shows the main meaning of each, not just the first five of the first. LASH shows "to bind with a rope… so as to fasten" next to the whip meanings instead of hiding it behind Show all. Words saved by earlier versions are looked up again to pick this up.

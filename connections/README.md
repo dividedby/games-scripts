@@ -65,6 +65,17 @@ Definitions come from [Wiktionary](https://en.wiktionary.org) (CC BY-SA) and nam
 <img src="../docs/images/connections/phone-definition.jpg" alt="Phone: LANTERN selected and its definitions covering the board just above the Define, Shuffle, Deselect All and Submit buttons: five noun senses, a verb and an adjective" width="260">
 </details>
 
+## Color guide
+
+Not sure which color a group you've found is likely to be? Tap **ⓘ** on the palette (behind **⋯** on a phone) for what each color tends to be:
+
+- **Yellow**: the most straightforward. Plain synonyms or an obvious set, each word in its everyday sense.
+- **Green**: still about meaning, but a narrower set, or a less obvious sense of the words.
+- **Blue**: trivia or specialist knowledge (sports, pop culture, jargon), or words that each go with the same word.
+- **Purple**: the trickiest, usually wordplay. Words that complete a phrase ("___ OFFICE"), a word hidden in each, a letter added or dropped, sound-alikes. Sometimes just a very narrow set.
+
+These are tendencies, not rules. NYT only says the colors run from easiest to trickiest; the rest is what people who track the puzzles see. It says nothing about today's puzzle, so it can't spoil it.
+
 ## Submitting
 
 - **Go ▶** submits the next color in your sort order. It takes on that color, and it's dimmed until that color has exactly 4 tiles.
@@ -97,7 +108,7 @@ Definitions come from [Wiktionary](https://en.wiktionary.org) (CC BY-SA) and nam
 
 ## On your phone
 
-On a phone the palette is a single row along the bottom of the screen: the colors, ⌫, ↶, **?**, Go and **⋯**. Tap **⋯** to switch the row to the other buttons (sort, 📜, ⚙ and hide), and **‹** to switch back. Before you press Play, and on the results screen, the palette shrinks to a small 🎨 button. The same happens on desktop.
+On a phone the palette is a single row along the bottom of the screen: the colors, ⌫, ↶, **?**, Go and **⋯**. Tap **⋯** to switch the row to the other buttons (sort, 📜, ⓘ, ⚙ and hide), and **‹** to switch back. Before you press Play, and on the results screen, the palette shrinks to a small 🎨 button. The same happens on desktop.
 
 <details>
 <summary>Screenshots: the ⋯ row and settings on iPhone</summary>
@@ -123,6 +134,7 @@ Tap ⚙ on the palette. Your choices are saved in your browser.
 | Show color letters (Y/G/B/P on each mark and on the palette, for colorblind players) | Off |
 | Keyboard shortcuts (desktop only) | On |
 | Palette on the left | Off |
+| Color guide (ⓘ) | On |
 | Definition button (with one tile selected) | On |
 
 The panel also has **Clear this puzzle** (removes all your colors on this puzzle; ↶ brings them back) and **Reset settings**.

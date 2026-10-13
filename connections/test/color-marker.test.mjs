@@ -9,7 +9,7 @@ import { JSDOM } from 'jsdom';
 
 const SRC = readFileSync(new URL('../connections-color-marker.user.js', import.meta.url), 'utf8');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const BTN = { yellow: 0, green: 1, blue: 2, purple: 3, erase: 4, undo: 5, sort: 6, go: 7, maybe: 8, hist: 9, gear: 10, toggle: 11, more: 12 };
+const BTN = { yellow: 0, green: 1, blue: 2, purple: 3, erase: 4, undo: 5, sort: 6, go: 7, maybe: 8, hist: 9, guide: 10, gear: 11, toggle: 12, more: 13 };
 const RGB = { yellow: 'rgb(249, 223, 109)', blue: 'rgb(176, 196, 239)', purple: 'rgb(186, 129, 197)' };
 
 // Answers for the Definition tests. Wiktionary: { title: json | 404 | 'error' };
@@ -893,5 +893,26 @@ test('Definition: the first sense of each origin is shown, even past the first f
   const shown = [...sheet.querySelectorAll('li:not([hidden])')].map(li => li.textContent);
   assert.deepEqual(shown, [...whip.slice(0, 4), 'To bind with a rope, so as to fasten.'], 'four whip senses, then the second origin\'s first');
   assert.match(sheet.querySelector('.foot').textContent, /Show all \(2 more\)/);
+  b.close();
+});
+
+test('color guide: ⓘ opens what each color tends to be, closes like the other popovers, and can be turned off', async () => {
+  const b = await board({ words: ['A', 'B', 'C', 'D'] });
+  const guide = b.root.getElementById('ccm-guide');
+  assert.ok(guide.hidden);
+  await b.tap('guide');
+  assert.ok(!guide.hidden);
+  assert.ok(b.btn('guide').classList.contains('active'));
+  assert.deepEqual([...guide.querySelectorAll('b')].map(x => x.textContent), ['Yellow', 'Green', 'Blue', 'Purple']);
+  assert.match(guide.textContent, /wordplay/);
+  await b.tap('gear');
+  assert.ok(guide.hidden, 'opening settings closes it');
+  await b.tap('guide');
+  b.d.body.click();
+  assert.ok(guide.hidden, 'a click outside closes it');
+  await b.tap('guide');
+  await b.setOpt('guide', false);
+  assert.ok(guide.hidden, 'turning it off closes it');
+  assert.ok(b.panel.classList.contains('noguide'), 'and hides the button');
   b.close();
 });

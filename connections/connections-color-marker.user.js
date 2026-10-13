@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Color-code NYT Connections tiles as you work out the groups, then submit them in the order you choose, like purple first for a reverse rainbow
-// @version      1.1.3
+// @version      1.2.0
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -130,6 +130,7 @@
     { key: 'keys',      def: true,  label: 'Keyboard shortcuts', help: '1–4 colors, 0 clear, Z undo, G go',
       tip: '1–4 colors, 0 clear, Z undo, G go, Esc lets go of a tapped color; with maybe colors on, M maybe mode and Shift+1–4 add or remove an option' },
     { key: 'left',      def: false, label: 'Palette on the left', help: 'Move the palette to the bottom-left' },
+    { key: 'guide',     def: true,  label: 'Color guide', help: 'ⓘ shows what kinds of groups each color tends to be' },
     { key: 'define',    def: true,  label: 'Definition button', help: 'Look up the meanings of one selected word',
       tip: 'With one tile selected, a Definition button appears next to Shuffle. Tapping it looks the word up on Wiktionary and Wikidata (only the word and the script name are sent) and keeps the answer on this device for 60 days' },
   ];
@@ -271,9 +272,19 @@
       background: #222; color: #fff; border-radius: 8px; padding: 8px 10px; font: 600 13px/1 system-ui, sans-serif;
       box-shadow: 0 4px 12px rgba(0,0,0,.25);
     }
-    #ccm-panel.left #ccm-settings, #ccm-panel.left #ccm-history, #ccm-panel.left #ccm-note { right: auto; left: 0; }
-    #ccm-settings[hidden], #ccm-history[hidden], #ccm-note[hidden] { display: none; }
-    #ccm-panel.nohist .ccm-hist, #ccm-panel.nomaybe .ccm-maybe { display: none; }
+    #ccm-guide {
+      position: absolute; right: 0; bottom: calc(100% + 8px); width: 300px; max-width: calc(100vw - 24px); box-sizing: border-box;
+      background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.25);
+      padding: 10px 12px; font: 500 13px/1.35 system-ui, sans-serif; color: var(--fg); cursor: default;
+      max-height: calc(100vh - 90px); overflow-y: auto;
+    }
+    #ccm-guide p { margin: 0 0 8px; }
+    #ccm-guide b { display: inline-block; padding: 1px 6px; border-radius: 4px; color: #222; margin-right: 2px; }
+    #ccm-guide small { margin-top: 2px; }
+    .ccm-guide { font-size: 16px; }
+    #ccm-panel.left #ccm-settings, #ccm-panel.left #ccm-history, #ccm-panel.left #ccm-guide, #ccm-panel.left #ccm-note { right: auto; left: 0; }
+    #ccm-settings[hidden], #ccm-history[hidden], #ccm-guide[hidden], #ccm-note[hidden] { display: none; }
+    #ccm-panel.nohist .ccm-hist, #ccm-panel.nomaybe .ccm-maybe, #ccm-panel.noguide .ccm-guide { display: none; }
     .ccm-maybe { font-weight: 800; }
     #ccm-panel.maybemode .ccm-maybe { background: var(--fg); color: var(--bg); border-color: var(--fg); }
     #ccm-panel.maybemode button.swatch { border: 2px dashed var(--fg); }
@@ -338,8 +349,8 @@
       #ccm-panel:not(.collapsed) > .ccm-go { order: 3; flex: 1.6 1 0; height: 42px; }
       #ccm-panel:not(.collapsed) > .ccm-more { order: 4; display: block; flex: 0 0 44px; }
       #ccm-panel:not(.collapsed)::after { display: none; }
-      #ccm-panel:not(.collapsed) > :is(.ccm-sort, .ccm-hist, .ccm-gear, .ccm-toggle) { order: 3; }
-      #ccm-panel:not(.collapsed):not(.more) > :is(.ccm-sort, .ccm-hist, .ccm-gear, .ccm-toggle),
+      #ccm-panel:not(.collapsed) > :is(.ccm-sort, .ccm-hist, .ccm-guide, .ccm-gear, .ccm-toggle) { order: 3; }
+      #ccm-panel:not(.collapsed):not(.more) > :is(.ccm-sort, .ccm-hist, .ccm-guide, .ccm-gear, .ccm-toggle),
       #ccm-panel.more:not(.collapsed) > :is(.swatch, .ccm-erase, .ccm-undo, .ccm-maybe, .ccm-go) { display: none; }
     }
   `;
@@ -410,6 +421,9 @@
   const histBtn = addButton('📜', () => toggleHistory());
   histBtn.classList.add('ccm-hist');
   histBtn.title = 'Your wrong guesses on this puzzle';
+  const guideBtn = addButton('ⓘ', () => toggleGuide());
+  guideBtn.classList.add('ccm-guide');
+  guideBtn.title = 'Color guide: what kinds of groups each color tends to be';
   const gearBtn = addButton('⚙', () => toggleSettings());
   gearBtn.title = 'Settings';
   gearBtn.classList.add('ccm-gear');
@@ -443,6 +457,27 @@
   histSheet.hidden = true;
   histSheet.addEventListener('click', e => e.stopPropagation());
   panel.appendChild(histSheet);
+  // The colors run from easiest (yellow) to trickiest (purple); beyond that NYT says nothing,
+  // so these are tendencies people who track the puzzles see, not rules.
+  const GUIDE = [
+    ['yellow', 'The most straightforward: plain synonyms or an obvious set (fish, car makers), each word in its everyday sense.'],
+    ['green', 'Still about meaning, but a narrower set, or a less obvious sense of the words.'],
+    ['blue', 'Trivia or specialist knowledge (sports, pop culture, jargon), or words that each go with the same word.'],
+    ['purple', 'The trickiest, usually wordplay: words that complete a phrase ("___ OFFICE"), a word hidden in each, a letter added or dropped, sound-alikes. Sometimes just a very narrow set.'],
+  ];
+  const guideSheet = document.createElement('div');
+  guideSheet.id = 'ccm-guide';
+  guideSheet.hidden = true;
+  guideSheet.innerHTML = '<h4>What the colors tend to be</h4>' +
+    GUIDE.map(([k, t]) => `<p><b style="background:${COLORS.find(c => c.key === k).hex}">${k[0].toUpperCase() + k.slice(1)}</b> ${t}</p>`).join('') +
+    '<small>Tendencies, not rules: NYT only says the colors run from easiest to trickiest.</small>';
+  guideSheet.addEventListener('click', e => e.stopPropagation());
+  panel.appendChild(guideSheet);
+  function toggleGuide(open = guideSheet.hidden) {
+    guideSheet.hidden = !open;
+    guideBtn.classList.toggle('active', open);
+    if (open) { toggleSettings(false); toggleHistory(false); }
+  }
   const noteEl = document.createElement('div');
   noteEl.id = 'ccm-note';
   noteEl.hidden = true;
@@ -450,12 +485,13 @@
   function toggleSettings(open = sheet.hidden) {
     sheet.hidden = !open;
     gearBtn.classList.toggle('active', open);
-    if (open) toggleHistory(false);
+    if (open) { toggleHistory(false); toggleGuide(false); }
   }
   document.addEventListener('click', e => {
     if (e.composedPath().includes(host)) return;
     if (!sheet.hidden) toggleSettings(false);
     if (!histSheet.hidden) toggleHistory(false);
+    if (!guideSheet.hidden) toggleGuide(false);
   });
   function applySettings() {
     for (const box of sheet.querySelectorAll('input[data-k]')) box.checked = !!settings[box.dataset.k];
@@ -463,6 +499,8 @@
     panel.classList.toggle('nogo', !opt('goButton'));
     panel.classList.toggle('nohist', !opt('history'));
     panel.classList.toggle('nomaybe', !opt('maybes'));
+    panel.classList.toggle('noguide', !opt('guide'));
+    if (!opt('guide')) toggleGuide(false);
     if (!opt('maybes')) setMaybeMode(false);
     if (!opt('history')) toggleHistory(false);
     if (ready) apply();
@@ -485,14 +523,14 @@
   function showMore(on) {
     panel.classList.toggle('more', on);
     moreBtn.textContent = on ? '‹' : '⋯';
-    moreBtn.title = on ? 'Back to the colors' : 'More: sort, history, settings, hide';
+    moreBtn.title = on ? 'Back to the colors' : 'More: sort, history, color guide, settings, hide';
   }
   showMore(false);
   function showCollapsed() {
     const on = onBoard ? userCollapsed : !peek;
     panel.classList.toggle('collapsed', on);
     panel.classList.toggle('offboard', !onBoard);
-    if (on) { toggleSettings(false); toggleHistory(false); showMore(false); }
+    if (on) { toggleSettings(false); toggleHistory(false); toggleGuide(false); showMore(false); }
     toggleBtn.textContent = on ? '🎨' : '▾';
     toggleBtn.title = on ? 'Show the color palette' : 'Hide the palette';
   }
@@ -1043,7 +1081,7 @@
   function toggleHistory(open = histSheet.hidden) {
     histSheet.hidden = !open;
     histBtn.classList.toggle('active', open);
-    if (open) { toggleSettings(false); renderHistory(); }
+    if (open) { toggleSettings(false); toggleGuide(false); renderHistory(); }
   }
 
   // ---------- Go: submit the armed color, or the next one in order ----------
