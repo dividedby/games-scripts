@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Color-code NYT Connections tiles as you work out the groups, then submit them in the order you choose, like purple first for a reverse rainbow
-// @version      1.2.0
+// @version      1.2.1
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -130,7 +130,7 @@
     { key: 'keys',      def: true,  label: 'Keyboard shortcuts', help: '1–4 colors, 0 clear, Z undo, G go',
       tip: '1–4 colors, 0 clear, Z undo, G go, Esc lets go of a tapped color; with maybe colors on, M maybe mode and Shift+1–4 add or remove an option' },
     { key: 'left',      def: false, label: 'Palette on the left', help: 'Move the palette to the bottom-left' },
-    { key: 'guide',     def: true,  label: 'Color guide', help: 'ⓘ shows what kinds of groups each color tends to be' },
+    { key: 'guide',     def: true,  label: 'Color guide button', help: 'Guide, next to Submit: what kinds of groups each color tends to be' },
     { key: 'define',    def: true,  label: 'Definition button', help: 'Look up the meanings of one selected word',
       tip: 'With one tile selected, a Definition button appears next to Shuffle. Tapping it looks the word up on Wiktionary and Wikidata (only the word and the script name are sent) and keeps the answer on this device for 60 days' },
   ];
@@ -272,19 +272,9 @@
       background: #222; color: #fff; border-radius: 8px; padding: 8px 10px; font: 600 13px/1 system-ui, sans-serif;
       box-shadow: 0 4px 12px rgba(0,0,0,.25);
     }
-    #ccm-guide {
-      position: absolute; right: 0; bottom: calc(100% + 8px); width: 300px; max-width: calc(100vw - 24px); box-sizing: border-box;
-      background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.25);
-      padding: 10px 12px; font: 500 13px/1.35 system-ui, sans-serif; color: var(--fg); cursor: default;
-      max-height: calc(100vh - 90px); overflow-y: auto;
-    }
-    #ccm-guide p { margin: 0 0 8px; }
-    #ccm-guide b { display: inline-block; padding: 1px 6px; border-radius: 4px; color: #222; margin-right: 2px; }
-    #ccm-guide small { margin-top: 2px; }
-    .ccm-guide { font-size: 16px; }
-    #ccm-panel.left #ccm-settings, #ccm-panel.left #ccm-history, #ccm-panel.left #ccm-guide, #ccm-panel.left #ccm-note { right: auto; left: 0; }
-    #ccm-settings[hidden], #ccm-history[hidden], #ccm-guide[hidden], #ccm-note[hidden] { display: none; }
-    #ccm-panel.nohist .ccm-hist, #ccm-panel.nomaybe .ccm-maybe, #ccm-panel.noguide .ccm-guide { display: none; }
+    #ccm-panel.left #ccm-settings, #ccm-panel.left #ccm-history, #ccm-panel.left #ccm-note { right: auto; left: 0; }
+    #ccm-settings[hidden], #ccm-history[hidden], #ccm-note[hidden] { display: none; }
+    #ccm-panel.nohist .ccm-hist, #ccm-panel.nomaybe .ccm-maybe { display: none; }
     .ccm-maybe { font-weight: 800; }
     #ccm-panel.maybemode .ccm-maybe { background: var(--fg); color: var(--bg); border-color: var(--fg); }
     #ccm-panel.maybemode button.swatch { border: 2px dashed var(--fg); }
@@ -293,7 +283,7 @@
     #ccm-panel { flex-wrap: wrap; max-width: calc(100vw - 24px); box-sizing: border-box; }
     #ccm-panel:not(.collapsed) { width: 290px; row-gap: 0; }
     #ccm-panel:not(.collapsed)::after { content: ''; order: 3; flex-basis: 100%; height: 0; margin-top: 6px; }
-    #ccm-panel:not(.collapsed) > button { order: 4; flex: 1 1 auto; min-width: 26px; padding: 0 4px; } /* 8 tools fit one row */
+    #ccm-panel:not(.collapsed) > button { order: 4; flex: 1 1 auto; }
     #ccm-panel:not(.collapsed) > button.swatch { order: 1; flex: 1 1 0; height: 36px; }
     #ccm-panel:not(.collapsed) > .ccm-go { order: 2; flex: 1.6 1 0; height: 36px; }
     .ccm-more { display: none; font-size: 18px; }
@@ -332,6 +322,9 @@
     #ccm-define ul.names span { color: var(--muted); }
     #ccm-define .foot .src { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }
     #ccm-define .foot .lic { color: var(--muted); }
+    #ccm-define .guide p { margin: 8px 0 0; }
+    #ccm-define .guide b { display: inline-block; padding: 1px 7px; border-radius: 4px; color: #222; margin-right: 3px; }
+    #ccm-define .guide small { display: block; margin-top: 12px; color: var(--muted); font-size: 12px; }
     @keyframes ccm-shake { 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
     @media (max-width: 480px) {
       #ccm-panel { right: 6px; bottom: calc(6px + env(safe-area-inset-bottom, 0px)); gap: 3px; padding: 4px 5px; max-width: calc(100vw - 12px); }
@@ -349,8 +342,8 @@
       #ccm-panel:not(.collapsed) > .ccm-go { order: 3; flex: 1.6 1 0; height: 42px; }
       #ccm-panel:not(.collapsed) > .ccm-more { order: 4; display: block; flex: 0 0 44px; }
       #ccm-panel:not(.collapsed)::after { display: none; }
-      #ccm-panel:not(.collapsed) > :is(.ccm-sort, .ccm-hist, .ccm-guide, .ccm-gear, .ccm-toggle) { order: 3; }
-      #ccm-panel:not(.collapsed):not(.more) > :is(.ccm-sort, .ccm-hist, .ccm-guide, .ccm-gear, .ccm-toggle),
+      #ccm-panel:not(.collapsed) > :is(.ccm-sort, .ccm-hist, .ccm-gear, .ccm-toggle) { order: 3; }
+      #ccm-panel:not(.collapsed):not(.more) > :is(.ccm-sort, .ccm-hist, .ccm-gear, .ccm-toggle),
       #ccm-panel.more:not(.collapsed) > :is(.swatch, .ccm-erase, .ccm-undo, .ccm-maybe, .ccm-go) { display: none; }
     }
   `;
@@ -421,9 +414,6 @@
   const histBtn = addButton('📜', () => toggleHistory());
   histBtn.classList.add('ccm-hist');
   histBtn.title = 'Your wrong guesses on this puzzle';
-  const guideBtn = addButton('ⓘ', () => toggleGuide());
-  guideBtn.classList.add('ccm-guide');
-  guideBtn.title = 'Color guide: what kinds of groups each color tends to be';
   const gearBtn = addButton('⚙', () => toggleSettings());
   gearBtn.title = 'Settings';
   gearBtn.classList.add('ccm-gear');
@@ -457,27 +447,6 @@
   histSheet.hidden = true;
   histSheet.addEventListener('click', e => e.stopPropagation());
   panel.appendChild(histSheet);
-  // The colors run from easiest (yellow) to trickiest (purple); beyond that NYT says nothing,
-  // so these are tendencies people who track the puzzles see, not rules.
-  const GUIDE = [
-    ['yellow', 'The most straightforward: plain synonyms or an obvious set (fish, car makers), each word in its everyday sense.'],
-    ['green', 'Still about meaning, but a narrower set, or a less obvious sense of the words.'],
-    ['blue', 'Trivia or specialist knowledge (sports, pop culture, jargon), or words that each go with the same word.'],
-    ['purple', 'The trickiest, usually wordplay: words that complete a phrase ("___ OFFICE"), a word hidden in each, a letter added or dropped, sound-alikes. Sometimes just a very narrow set.'],
-  ];
-  const guideSheet = document.createElement('div');
-  guideSheet.id = 'ccm-guide';
-  guideSheet.hidden = true;
-  guideSheet.innerHTML = '<h4>What the colors tend to be</h4>' +
-    GUIDE.map(([k, t]) => `<p><b style="background:${COLORS.find(c => c.key === k).hex}">${k[0].toUpperCase() + k.slice(1)}</b> ${t}</p>`).join('') +
-    '<small>Tendencies, not rules: NYT only says the colors run from easiest to trickiest.</small>';
-  guideSheet.addEventListener('click', e => e.stopPropagation());
-  panel.appendChild(guideSheet);
-  function toggleGuide(open = guideSheet.hidden) {
-    guideSheet.hidden = !open;
-    guideBtn.classList.toggle('active', open);
-    if (open) { toggleSettings(false); toggleHistory(false); }
-  }
   const noteEl = document.createElement('div');
   noteEl.id = 'ccm-note';
   noteEl.hidden = true;
@@ -485,13 +454,12 @@
   function toggleSettings(open = sheet.hidden) {
     sheet.hidden = !open;
     gearBtn.classList.toggle('active', open);
-    if (open) { toggleHistory(false); toggleGuide(false); }
+    if (open) toggleHistory(false);
   }
   document.addEventListener('click', e => {
     if (e.composedPath().includes(host)) return;
     if (!sheet.hidden) toggleSettings(false);
     if (!histSheet.hidden) toggleHistory(false);
-    if (!guideSheet.hidden) toggleGuide(false);
   });
   function applySettings() {
     for (const box of sheet.querySelectorAll('input[data-k]')) box.checked = !!settings[box.dataset.k];
@@ -499,8 +467,6 @@
     panel.classList.toggle('nogo', !opt('goButton'));
     panel.classList.toggle('nohist', !opt('history'));
     panel.classList.toggle('nomaybe', !opt('maybes'));
-    panel.classList.toggle('noguide', !opt('guide'));
-    if (!opt('guide')) toggleGuide(false);
     if (!opt('maybes')) setMaybeMode(false);
     if (!opt('history')) toggleHistory(false);
     if (ready) apply();
@@ -523,14 +489,14 @@
   function showMore(on) {
     panel.classList.toggle('more', on);
     moreBtn.textContent = on ? '‹' : '⋯';
-    moreBtn.title = on ? 'Back to the colors' : 'More: sort, history, color guide, settings, hide';
+    moreBtn.title = on ? 'Back to the colors' : 'More: sort, history, settings, hide';
   }
   showMore(false);
   function showCollapsed() {
     const on = onBoard ? userCollapsed : !peek;
     panel.classList.toggle('collapsed', on);
     panel.classList.toggle('offboard', !onBoard);
-    if (on) { toggleSettings(false); toggleHistory(false); toggleGuide(false); showMore(false); }
+    if (on) { toggleSettings(false); toggleHistory(false); showMore(false); }
     toggleBtn.textContent = on ? '🎨' : '▾';
     toggleBtn.title = on ? 'Show the color palette' : 'Hide the palette';
   }
@@ -557,6 +523,19 @@
     const t = selectedTiles();
     if (t.length === 1) define(wordOf(t[0]));
   });
+  // and a Guide button after Submit, for what kinds of groups each color tends to be, shown in
+  // the same panel
+  const guideBtn = document.createElement('button');
+  guideBtn.id = 'ccm-guide-btn';
+  guideBtn.type = 'button';
+  guideBtn.textContent = 'Guide';
+  guideBtn.title = 'Color guide: what kinds of groups each color tends to be';
+  guideBtn.style.display = 'none';
+  guideBtn.addEventListener('mousedown', e => e.preventDefault());
+  guideBtn.addEventListener('click', e => {
+    e.preventDefault(); e.stopPropagation();
+    if (!defSheet.hidden && defSheet.dataset.view === 'guide') closeDefine(); else showGuide();
+  });
   const defSheet = document.createElement('div');
   defSheet.id = 'ccm-define';
   defSheet.hidden = true;
@@ -582,7 +561,8 @@
     // the palette's top, if it's under the board (on a phone; on a desktop it sits off to the side)
     const p = panel.getBoundingClientRect();
     const floor = p.height && (!board.length || (p.left < right && p.right > left)) ? p.top - 8 : h - 12;
-    const rowTop = row && defineBtn.style.display !== 'none' ? row.getBoundingClientRect().top : floor;
+    const rr = row?.getBoundingClientRect();
+    const rowTop = rr?.height ? rr.top : floor; // (the row is gone on the results screen)
     const at = Math.min(Math.max(rowTop, 180), floor); // never off the top, never under the palette
     const bar = Math.max(0, document.querySelector('.pz-nav')?.getBoundingClientRect().bottom || 0); // NYT's top bar
     const top = Math.max(bar + 8, board.length ? Math.min(...board.map(r => r.top)) : at - h * 0.6);
@@ -599,7 +579,7 @@
   window.addEventListener('resize', placeSoon, { passive: true });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !defSheet.hidden) closeDefine(); });
   document.addEventListener('pointerdown', e => {
-    if (!defSheet.hidden && !e.composedPath().includes(host) && e.target !== defineBtn) closeDefine();
+    if (!defSheet.hidden && !e.composedPath().includes(host) && e.target !== defineBtn && e.target !== guideBtn) closeDefine();
   });
 
   // Sources (only the word and the script name are sent):
@@ -757,9 +737,36 @@
   // the one link kept in a definition is the word a "plural of …" points to: tap to look it up
   const defNode = d => el('li', {}, d.map(s => typeof s === 'string' ? s
     : el('button', { className: 'w', type: 'button', textContent: s[0], onclick: () => define(s[1]) })));
+  // The colors run from easiest (yellow) to trickiest (purple); beyond that NYT says nothing,
+  // so these are tendencies people who track the puzzles see, not rules. Nothing here looks at
+  // the day's puzzle.
+  const GUIDE = [
+    ['yellow', 'The most straightforward: plain synonyms or an obvious set (fish, car makers), each word in its everyday sense.'],
+    ['green', 'Still about meaning, but a narrower set, or a less obvious sense of the words.'],
+    ['blue', 'Trivia or specialist knowledge (sports, pop culture, jargon), or words that each go with the same word.'],
+    ['purple', 'The trickiest, usually wordplay: words that complete a phrase ("___ OFFICE"), a word hidden in each, a letter added or dropped, sound-alikes. Sometimes just a very narrow set.'],
+  ];
+  const sheetHeader = text => {
+    const x = el('button', { className: 'x', type: 'button', textContent: '✕', title: 'Close', onclick: closeDefine });
+    x.setAttribute('aria-label', 'Close');
+    return el('header', {}, [el('h4', { textContent: text }), x]);
+  };
+  function showGuide() {
+    ++defineToken; // a lookup still loading won't replace it
+    defSheet.dataset.view = 'guide';
+    defSheet.replaceChildren(sheetHeader('Color guide'), el('div', { className: 'guide' }, [
+      ...GUIDE.map(([k, t]) => el('p', {}, [
+        el('b', { textContent: k[0].toUpperCase() + k.slice(1), style: `background:${COLORS.find(c => c.key === k).hex}` }), ' ' + t])),
+      el('small', { textContent: 'Tendencies, not rules: NYT only says the colors run from easiest to trickiest.' }),
+    ]));
+    defSheet.hidden = false;
+    defSheet.scrollTop = 0;
+    placeDefine();
+  }
   let defineToken = 0;
   async function define(word) {
     const token = ++defineToken;
+    defSheet.dataset.view = 'define';
     const title = el('h4', { textContent: up(word) });
     const x = el('button', { className: 'x', type: 'button', textContent: '✕', title: 'Close', onclick: closeDefine });
     x.setAttribute('aria-label', 'Close');
@@ -812,34 +819,49 @@
   // show the button only with one tile selected (and the setting on), right before Shuffle
   function showDefine() {
     const shuffle = document.querySelector('[data-testid="shuffle-btn"]') || gameButton(/^shuffle$/i);
+    const submit = document.querySelector('[data-testid="submit-btn"]') || gameButton(/^submit$/i);
     const on = !!shuffle && opt('define') && selectedTiles().length === 1;
+    const guideOn = !!submit && opt('guide');
     if (shuffle && defineBtn.nextElementSibling !== shuffle) {
       shuffle.before(defineBtn);
       defineBtn.className = shuffle.className; // look like the game's own buttons
     }
+    if (submit && submit.nextElementSibling !== guideBtn) {
+      submit.after(guideBtn);
+      guideBtn.className = (shuffle || submit).className;
+    }
     // (style, not the hidden attribute: the game's button class sets display itself)
-    const display = on ? '' : 'none';
+    const display = on ? '' : 'none', guideDisplay = guideOn ? '' : 'none';
     if (defineBtn.style.display !== display) defineBtn.style.display = display;
-    if (on !== defineShown) { defineShown = on; fitDefine(); }
-    if (!opt('define')) closeDefine();
+    if (guideBtn.style.display !== guideDisplay) guideBtn.style.display = guideDisplay;
+    const shown = `${on}|${guideOn}`;
+    if (shown !== rowShown) { rowShown = shown; fitDefine(); }
+    if (!opt('define') && defSheet.dataset.view === 'define') closeDefine();
+    if (!opt('guide') && defSheet.dataset.view === 'guide') closeDefine();
   }
-  // Four buttons are a squeeze on a phone: if they'd wrap, the button shortens to "Define" and
-  // the gaps shrink; only if that still doesn't fit do they wrap onto a second line.
-  let defineShown = false;
+  // Up to five buttons are a squeeze on a phone: if they'd wrap, ours shorten ("Define", "ⓘ")
+  // and the gaps shrink; only if that still doesn't fit do they wrap onto a second line.
+  let rowShown = '';
   function fitDefine() {
-    const row = defineBtn.parentElement;
+    const row = defineBtn.parentElement || guideBtn.parentElement;
     if (!row) return;
-    const compact = on => {
-      defineBtn.textContent = on ? 'Define' : 'Definition';
-      defineBtn.style.minWidth = on ? '0' : '';
-      defineBtn.style.paddingLeft = defineBtn.style.paddingRight = on ? '12px' : '';
-      row.style.gap = on ? '6px' : '';
+    const ours = [defineBtn, guideBtn].filter(b => b.style.display !== 'none');
+    const compact = (step) => {
+      defineBtn.textContent = step ? 'Define' : 'Definition';
+      guideBtn.textContent = step > 1 ? 'ⓘ' : 'Guide';
+      for (const b of [defineBtn, guideBtn]) {
+        b.style.minWidth = step ? '0' : '';
+        b.style.paddingLeft = b.style.paddingRight = step ? '12px' : '';
+      }
+      row.style.gap = step ? '6px' : '';
     };
-    compact(false);
-    row.style.flexWrap = defineShown ? 'wrap' : '';
-    if (!defineShown) return;
-    const wraps = () => [...row.children].some(c => c.offsetParent && c.offsetTop !== defineBtn.offsetTop);
-    if (wraps()) compact(true);
+    compact(0);
+    row.style.flexWrap = ours.length ? 'wrap' : '';
+    if (!ours.length) return;
+    const first = [...row.children].find(c => c.offsetParent);
+    const wraps = () => [...row.children].some(c => c.offsetParent && c.offsetTop !== first.offsetTop);
+    if (wraps()) compact(1);
+    if (wraps()) compact(2);
   }
   // tiles being selected only changes their class, which the redraw observer doesn't watch
   const selWatch = new MutationObserver(() => showDefine());
@@ -1081,7 +1103,7 @@
   function toggleHistory(open = histSheet.hidden) {
     histSheet.hidden = !open;
     histBtn.classList.toggle('active', open);
-    if (open) { toggleSettings(false); toggleGuide(false); renderHistory(); }
+    if (open) { toggleSettings(false); renderHistory(); }
   }
 
   // ---------- Go: submit the armed color, or the next one in order ----------
@@ -1386,7 +1408,7 @@
   // Watches the game's own container (#pz-game-root) rather than the whole page, so ads and
   // other page activity don't cause redraws; falls back to the page until the game appears.
   // Also watches the light/dark switches on <body> and <html>. Our own overlays are ignored.
-  const ours = n => n.nodeType === 1 && (n === host || n === defineBtn || n.localName === 'ccm-mark');
+  const ours = n => n.nodeType === 1 && (n === host || n === defineBtn || n === guideBtn || n.localName === 'ccm-mark');
   let queued = false, watched = null;
   const mo = new MutationObserver(muts => {
     if (watched === document.body || !watched?.isConnected) watch();

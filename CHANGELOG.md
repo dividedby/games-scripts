@@ -40,6 +40,10 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [1.2.1] - 2026-10-13
+#### Changed
+- The color guide moved from the palette's **ⓘ** to a **Guide** button next to the game's Submit button, and opens over the board like a definition. On a narrow phone it shortens to **ⓘ** when the row is full. Turn it off with "Color guide button" in settings.
+
 ### [1.2.0] - 2026-10-13
 #### Added
 - Color guide: the **ⓘ** button (behind **⋯** on a phone) shows what kinds of groups each color tends to be, from yellow's plain synonyms and obvious sets to purple's wordplay. General tendencies, nothing about the day's puzzle. Can be turned off in settings.

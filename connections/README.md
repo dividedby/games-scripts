@@ -67,7 +67,7 @@ Definitions come from [Wiktionary](https://en.wiktionary.org) (CC BY-SA) and nam
 
 ## Color guide
 
-Not sure which color a group you've found is likely to be? Tap **ⓘ** on the palette (behind **⋯** on a phone) for what each color tends to be:
+Not sure which color a group you've found is likely to be? Tap **Guide**, next to the game's Submit button (**ⓘ** when a narrow phone is short on room), for what each color tends to be. It opens over the board like a definition:
 
 - **Yellow**: the most straightforward. Plain synonyms or an obvious set, each word in its everyday sense.
 - **Green**: still about meaning, but a narrower set, or a less obvious sense of the words.
@@ -108,7 +108,7 @@ These are tendencies, not rules. NYT only says the colors run from easiest to tr
 
 ## On your phone
 
-On a phone the palette is a single row along the bottom of the screen: the colors, ⌫, ↶, **?**, Go and **⋯**. Tap **⋯** to switch the row to the other buttons (sort, 📜, ⓘ, ⚙ and hide), and **‹** to switch back. Before you press Play, and on the results screen, the palette shrinks to a small 🎨 button. The same happens on desktop.
+On a phone the palette is a single row along the bottom of the screen: the colors, ⌫, ↶, **?**, Go and **⋯**. Tap **⋯** to switch the row to the other buttons (sort, 📜, ⚙ and hide), and **‹** to switch back. Before you press Play, and on the results screen, the palette shrinks to a small 🎨 button. The same happens on desktop.
 
 <details>
 <summary>Screenshots: the ⋯ row and settings on iPhone</summary>
@@ -134,7 +134,7 @@ Tap ⚙ on the palette. Your choices are saved in your browser.
 | Show color letters (Y/G/B/P on each mark and on the palette, for colorblind players) | Off |
 | Keyboard shortcuts (desktop only) | On |
 | Palette on the left | Off |
-| Color guide (ⓘ) | On |
+| Color guide button (Guide, next to Submit) | On |
 | Definition button (with one tile selected) | On |
 
 The panel also has **Clear this puzzle** (removes all your colors on this puzzle; ↶ brings them back) and **Reset settings**.

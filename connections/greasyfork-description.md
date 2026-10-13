@@ -19,8 +19,9 @@ Works on desktop, iPhone and Android.
 
 **New in 1.2**
 
-- **Color guide**: tap ⓘ for what kinds of groups each color tends to be, from
-  yellow's plain synonyms to purple's wordplay. General tendencies only, no spoilers.
+- **Color guide**: tap Guide, next to Submit, for what kinds of groups each color tends
+  to be, from yellow's plain synonyms to purple's wordplay. General tendencies only, no
+  spoilers. Can be turned off in ⚙.
 
 **New in 1.1**
 

@@ -9,7 +9,7 @@ import { JSDOM } from 'jsdom';
 
 const SRC = readFileSync(new URL('../connections-color-marker.user.js', import.meta.url), 'utf8');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const BTN = { yellow: 0, green: 1, blue: 2, purple: 3, erase: 4, undo: 5, sort: 6, go: 7, maybe: 8, hist: 9, guide: 10, gear: 11, toggle: 12, more: 13 };
+const BTN = { yellow: 0, green: 1, blue: 2, purple: 3, erase: 4, undo: 5, sort: 6, go: 7, maybe: 8, hist: 9, gear: 10, toggle: 11, more: 12 };
 const RGB = { yellow: 'rgb(249, 223, 109)', blue: 'rgb(176, 196, 239)', purple: 'rgb(186, 129, 197)' };
 
 // Answers for the Definition tests. Wiktionary: { title: json | 404 | 'error' };
@@ -896,23 +896,27 @@ test('Definition: the first sense of each origin is shown, even past the first f
   b.close();
 });
 
-test('color guide: ⓘ opens what each color tends to be, closes like the other popovers, and can be turned off', async () => {
+test('color guide: a Guide button after Submit opens what each color tends to be, toggles, and can be turned off', async () => {
   const b = await board({ words: ['A', 'B', 'C', 'D'] });
-  const guide = b.root.getElementById('ccm-guide');
-  assert.ok(guide.hidden);
-  await b.tap('guide');
-  assert.ok(!guide.hidden);
-  assert.ok(b.btn('guide').classList.contains('active'));
-  assert.deepEqual([...guide.querySelectorAll('b')].map(x => x.textContent), ['Yellow', 'Green', 'Blue', 'Purple']);
-  assert.match(guide.textContent, /wordplay/);
-  await b.tap('gear');
-  assert.ok(guide.hidden, 'opening settings closes it');
-  await b.tap('guide');
-  b.d.body.click();
-  assert.ok(guide.hidden, 'a click outside closes it');
-  await b.tap('guide');
+  const btn = b.d.getElementById('ccm-guide-btn');
+  const submit = b.d.querySelector('[data-testid=submit-btn]');
+  assert.equal(submit.nextElementSibling, btn, 'right after Submit');
+  assert.equal(btn.style.display, '', 'shown without selecting anything');
+  assert.equal(btn.className, b.d.querySelector('[data-testid=shuffle-btn]').className, 'styled like the game\'s buttons');
+  const sheet = b.root.getElementById('ccm-define');
+  btn.click(); await sleep(20);
+  assert.ok(!sheet.hidden);
+  assert.equal(sheet.querySelector('h4').textContent, 'Color guide');
+  assert.deepEqual([...sheet.querySelectorAll('.guide b')].map(x => x.textContent), ['Yellow', 'Green', 'Blue', 'Purple']);
+  assert.match(sheet.textContent, /wordplay/);
+  btn.click(); await sleep(20);
+  assert.ok(sheet.hidden, 'a second tap closes it');
+  btn.click(); await sleep(20);
+  b.w.document.dispatchEvent(new b.w.KeyboardEvent('keydown', { key: 'Escape' }));
+  assert.ok(sheet.hidden, 'Escape closes it');
+  btn.click(); await sleep(20);
   await b.setOpt('guide', false);
-  assert.ok(guide.hidden, 'turning it off closes it');
-  assert.ok(b.panel.classList.contains('noguide'), 'and hides the button');
+  assert.ok(sheet.hidden, 'turning it off closes it');
+  assert.equal(btn.style.display, 'none', 'and hides the button');
   b.close();
 });

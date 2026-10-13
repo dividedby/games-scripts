@@ -88,7 +88,7 @@ from) the selected tiles' candidates instead of setting their Mark. Tiles hold
 still in maybe mode and re-sort when it's turned off.
 
 ### Color guide
-The **ⓘ** popover: what each color tends to be (yellow plain synonyms or an obvious set,
+The **Guide** button's panel (next to Submit): what each color tends to be (yellow plain synonyms or an obvious set,
 green a narrower set or a less obvious sense, blue trivia or a shared companion word,
 purple wordplay or a very narrow set). General tendencies from people who track the
 puzzles, never about the current puzzle.
