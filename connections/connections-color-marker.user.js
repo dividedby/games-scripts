@@ -854,14 +854,15 @@
     const row = defineBtn.parentElement || guideBtn.parentElement;
     if (!row) return;
     const ours = [defineBtn, guideBtn].filter(b => b.style.display !== 'none');
-    const narrow = (b, on) => { b.style.minWidth = on ? '0' : ''; b.style.paddingLeft = b.style.paddingRight = on ? '12px' : ''; };
+    const narrow = (b, pad) => { b.style.minWidth = pad ? '0' : ''; b.style.paddingLeft = b.style.paddingRight = pad; };
     const compact = step => {
       defineBtn.textContent = step ? 'Define' : 'Definition';
       guideBtn.textContent = step > 2 ? 'ⓘ' : 'Guide';
-      for (const b of [defineBtn, guideBtn]) narrow(b, step > 0);
-      for (const b of squeezed) narrow(b, false);
+      const pad = step > 1 ? '9px' : step ? '12px' : '';
+      for (const b of [defineBtn, guideBtn]) narrow(b, pad);
+      for (const b of squeezed) narrow(b, '');
       squeezed.clear();
-      if (step > 1) for (const b of row.children) if (b.localName === 'button' && !ours.includes(b)) { narrow(b, true); squeezed.add(b); }
+      if (step > 1) for (const b of row.children) if (b.localName === 'button' && !ours.includes(b)) { narrow(b, pad); squeezed.add(b); }
       row.style.gap = step > 1 ? '4px' : step ? '6px' : '';
     };
     compact(0);
