@@ -614,10 +614,26 @@
     // (style, not the hidden attribute: the game's button class sets display itself)
     const display = on ? '' : 'none';
     if (defineBtn.style.display !== display) defineBtn.style.display = display;
-    // four buttons don't fit a phone's width on one line
-    const row = defineBtn.parentElement;
-    if (row && row.style.flexWrap !== (on ? 'wrap' : '')) row.style.flexWrap = on ? 'wrap' : '';
+    if (on !== defineShown) { defineShown = on; fitDefine(); }
     if (!opt('define')) closeDefine();
+  }
+  // Four buttons are a squeeze on a phone: if they'd wrap, the button shortens to "Define" and
+  // the gaps shrink; only if that still doesn't fit do they wrap onto a second line.
+  let defineShown = false;
+  function fitDefine() {
+    const row = defineBtn.parentElement;
+    if (!row) return;
+    const compact = on => {
+      defineBtn.textContent = on ? 'Define' : 'Definition';
+      defineBtn.style.minWidth = on ? '0' : '';
+      defineBtn.style.padding = on ? '0 12px' : '';
+      row.style.gap = on ? '6px' : '';
+    };
+    compact(false);
+    row.style.flexWrap = defineShown ? 'wrap' : '';
+    if (!defineShown) return;
+    const wraps = () => [...row.children].some(c => c.offsetParent && c.offsetTop !== defineBtn.offsetTop);
+    if (wraps()) compact(true);
   }
   // tiles being selected only changes their class, which the redraw observer doesn't watch
   const selWatch = new MutationObserver(() => showDefine());
