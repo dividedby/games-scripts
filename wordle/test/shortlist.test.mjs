@@ -145,25 +145,26 @@ test('with five or fewer answers left, those are the picks', async () => {
 test('a finished puzzle shows a recap: guesses, how often you took the best pick, level', async () => {
   const g = await game({ answer: 'pouch' });
   await g.guess(g.picks()[0]);                       // the starting word: no choice, not counted
+  let choices = 0; // guesses made with more than one pick to choose from: only those are turns
   for (let turn = 0; turn < 5 && g.row < 6 && g.submitted.at(-1) !== 'pouch'; turn++) {
     const picks = g.picks();
+    if (picks.length > 1) choices++;
     const pick = picks.includes('pouch') ? 'pouch' : picks[turn % 2 ? 0 : picks.length - 1];
     const before = g.row;
     g.pick(pick).click();
-    // the pick is typed key by key: wait for its row to land (slower when the whole suite runs at once)
-    for (let i = 0; i < 40 && g.row === before; i++) await sleep(100);
-    await sleep(300);
+    // the pick is typed key by key: wait for its row to land
+    for (let i = 0; i < 50 && g.row === before; i++) await sleep(100);
+    await sleep(200);
   }
   assert.ok(!g.panel().hidden, 'the recap stays up');
   assert.equal(g.picks().length, 0, 'no picks once it is over');
   const text = g.panel().textContent;
   assert.match(text, g.submitted.at(-1) === 'pouch' ? new RegExp(`Solved in ${g.row}`) : /Out of guesses/);
-  assert.match(text, /best pick \d+ of \d+/);
+  assert.match(text, choices ? /best pick \d+ of \d+/ : /^(?![\s\S]*best pick)/);
   assert.match(text, /Medium/);
   // the last turn is saved once the row's colors settle, which can lag on a busy machine
-  for (let i = 0; i < 20 && g.saved().turns.length < g.row - 1; i++) await sleep(100);
-  const saved = g.saved();
-  assert.equal(saved.turns.length, g.row - 1, 'every guess after the start is a turn');
+  for (let i = 0; i < 20 && g.saved().turns.length < choices; i++) await sleep(100);
+  assert.equal(g.saved().turns.length, choices, 'every guess made with a choice of picks is a turn (a lone last answer is not)');
   const lost = await game({ answer: 'pouch', played: ['crane', 'pilot', 'shtum', 'dodgy', 'jazzy', 'fifty'] });
   assert.match(lost.panel().textContent, /Out of guesses/);
 });
