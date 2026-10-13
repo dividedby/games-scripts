@@ -839,29 +839,31 @@
     if (!opt('define') && defSheet.dataset.view === 'define') closeDefine();
     if (!opt('guide') && defSheet.dataset.view === 'guide') closeDefine();
   }
-  // Up to five buttons are a squeeze on a phone: if they'd wrap, ours shorten ("Define", "ⓘ")
-  // and the gaps shrink; only if that still doesn't fit do they wrap onto a second line.
+  // Up to five buttons are a squeeze on a phone. Step by step until they fit on one line:
+  // 1 "Define" and smaller gaps; 2 the game's buttons lose their fixed widths (just their text
+  // and some padding); 3 Guide becomes "ⓘ". Only if that still doesn't fit do they wrap.
   let rowShown = '';
+  const squeezed = new Set(); // the game's buttons we've narrowed, to put back
   function fitDefine() {
     const row = defineBtn.parentElement || guideBtn.parentElement;
     if (!row) return;
     const ours = [defineBtn, guideBtn].filter(b => b.style.display !== 'none');
-    const compact = (step) => {
+    const narrow = (b, on) => { b.style.minWidth = on ? '0' : ''; b.style.paddingLeft = b.style.paddingRight = on ? '12px' : ''; };
+    const compact = step => {
       defineBtn.textContent = step ? 'Define' : 'Definition';
-      guideBtn.textContent = step > 1 ? 'ⓘ' : 'Guide';
-      for (const b of [defineBtn, guideBtn]) {
-        b.style.minWidth = step ? '0' : '';
-        b.style.paddingLeft = b.style.paddingRight = step ? '12px' : '';
-      }
-      row.style.gap = step ? '6px' : '';
+      guideBtn.textContent = step > 2 ? 'ⓘ' : 'Guide';
+      for (const b of [defineBtn, guideBtn]) narrow(b, step > 0);
+      for (const b of squeezed) narrow(b, false);
+      squeezed.clear();
+      if (step > 1) for (const b of row.children) if (b.localName === 'button' && !ours.includes(b)) { narrow(b, true); squeezed.add(b); }
+      row.style.gap = step > 1 ? '4px' : step ? '6px' : '';
     };
     compact(0);
     row.style.flexWrap = ours.length ? 'wrap' : '';
     if (!ours.length) return;
     const first = [...row.children].find(c => c.offsetParent);
     const wraps = () => [...row.children].some(c => c.offsetParent && c.offsetTop !== first.offsetTop);
-    if (wraps()) compact(1);
-    if (wraps()) compact(2);
+    for (let step = 1; step <= 3 && wraps(); step++) compact(step);
   }
   // tiles being selected only changes their class, which the redraw observer doesn't watch
   const selWatch = new MutationObserver(() => showDefine());
