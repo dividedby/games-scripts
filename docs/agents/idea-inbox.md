@@ -46,7 +46,7 @@ end-to-end, adapting to what *this* idea needs:
    - Name the first decision the work hinges on.
    - File it as a `chore`/`needs-triage` spike: "Investigate X to determine Y."
    - Repeat for each downstream decision, in dependency order, until the remaining
-     work is concrete enough for `/to-issues` to carve into implementation tickets.
+     work is concrete enough for `/to-tickets` to carve into implementation tickets.
    A single spike that unblocks all downstream work is fine. Skip this step when
    the idea is already concrete — one decision, one clear owner.
    When an idea is decision-mapped into spikes, move the inbox row to
@@ -55,14 +55,15 @@ end-to-end, adapting to what *this* idea needs:
    the loop on the original idea.
 3. **Pick only the steps it needs** — do not run the whole pipeline by rote. Choose
    from:
-   - `/grilling` — when the idea is fuzzy; stress-test it before scoping.
-   - `/to-prd` — when it's big enough to warrant a spec before issues.
-   - `/to-issues` — to carve it into independently-grabbable tracked work.
-   - `/software-design` — when the work spans modules/seams and needs a design pass.
-   A small, clear idea may need only `/to-issues`.
-4. **Labels** — when filing issues, apply labels from `docs/agents/triage-labels.md`:
-   state (`needs-triage` to start), category (`bug` / `enhancement` / `chore` / `epic`),
-   and a size estimate (`size:S` / `size:M` / `size:L` / `size:XL`).
+   - `/grill-with-docs` — when the idea is fuzzy or contends with the domain model
+     (CONTEXT.md / ADRs); build shared understanding first.
+   - `/to-spec` — when it's big enough to warrant a spec before issues.
+   - `/to-tickets` — to carve it into independently-grabbable tracked work.
+   A small, clear idea may need only `/to-tickets`.
+4. **Labels** — when filing issues, apply labels from `docs/agents/triage-labels.md`: state
+   (`needs-triage` to start), category (`bug` / `enhancement` / `chore` / `epic`),
+   and a size estimate (`size:S` / `size:M` / `size:L` / `size:XL`). The compact
+   vocabulary reference is `docs/agents/triage-labels.md`.
 
 5. **Aim for a strong agent brief** — strive to emit a `ready-for-agent` issue that
    clears the strong-agent-brief bar (clear module + acceptance criteria + TDD
