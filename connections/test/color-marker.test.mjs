@@ -826,3 +826,26 @@ test('Definition: says so when there is no entry or no connection, shows what on
   assert.ok(sheet.hidden, 'turning it off closes the sheet');
   assert.equal(b.d.getElementById('ccm-define-btn').style.display, 'none');
 });
+
+test('Definition: the sheet sits just above the game\'s buttons, and a sense isn\'t repeated inside its sub-sense', async () => {
+  dictionary = { tether: { en: [{ partOfSpeech: 'Verb', definitions: [
+    { definition: 'To connect to something else. To connect (a smartphone) to a computer.' },
+    { definition: 'To connect (a smartphone) to a computer.' },
+  ] }] } };
+  wikidata = {};
+  const b = await board({ words: ['TETHER', 'B', 'C', 'D'] });
+  const row = b.d.querySelector('.Game-module_boardActionGroup');
+  let top = 500;
+  row.getBoundingClientRect = () => ({ top, bottom: top + 48, left: 0, right: 400, width: 400, height: 48 });
+  b.select(['TETHER']); await sleep(40);
+  b.d.getElementById('ccm-define-btn').click(); await sleep(40);
+  const sheet = b.root.getElementById('ccm-define');
+  const h = b.w.innerHeight;
+  assert.equal(sheet.style.bottom, `${h - 500 + 8}px`, 'its bottom edge is 8px above the button row');
+  top = 300; b.w.dispatchEvent(new b.w.Event('scroll')); // scrolled: the row moved up
+  assert.equal(sheet.style.bottom, `${h - 300 + 8}px`, 'and it follows the row');
+  assert.equal(sheet.style.maxHeight, '280px', 'never taller than the room above the row');
+  assert.deepEqual([...sheet.querySelectorAll('li')].map(li => li.textContent),
+    ['To connect to something else.', 'To connect (a smartphone) to a computer.']);
+  b.close();
+});

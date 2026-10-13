@@ -531,6 +531,19 @@
     return n;
   };
   const closeDefine = () => { defSheet.hidden = true; };
+  // The sheet sits right above the game's button row (Definition, Shuffle…) wherever the page
+  // is scrolled, so the buttons stay in view; it follows the row as the page scrolls.
+  function placeDefine() {
+    if (defSheet.hidden) return;
+    const row = defineBtn.parentElement;
+    const h = window.innerHeight;
+    const rowTop = row && defineBtn.style.display !== 'none' ? row.getBoundingClientRect().top : h - 82;
+    const at = Math.min(Math.max(rowTop, 180), h - 82); // never off the top, never under the palette
+    defSheet.style.bottom = (h - at + 8) + 'px';
+    defSheet.style.maxHeight = Math.min(h * 0.6, at - 20) + 'px';
+  }
+  window.addEventListener('scroll', placeDefine, { passive: true });
+  window.addEventListener('resize', placeDefine, { passive: true });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !defSheet.hidden) closeDefine(); });
   document.addEventListener('pointerdown', e => {
     if (!defSheet.hidden && !e.composedPath().includes(host) && e.target !== defineBtn) closeDefine();
@@ -670,6 +683,7 @@
     const status = text => el('p', { className: 'status', textContent: text });
     defSheet.replaceChildren(el('header', {}, [title, x]), status('Looking it up…'));
     defSheet.hidden = false;
+    placeDefine();
     const { entry, failed } = await lookup(word.trim());
     if (token !== defineToken) return; // another lookup started meanwhile
     const body = [];
@@ -679,7 +693,11 @@
       const shown = (common.length ? common : part.d).slice(0, PER_PART);
       const ol = el('ol');
       for (const d of part.d) {
-        const li = defNode(d);
+        // a sense whose text runs on into its sub-sense's ("To connect to something else. To
+        // connect (a smartphone)…" then "To connect (a smartphone)…"): keep only its own part
+        const t = defText(d), sub = d.every(s => typeof s === 'string') &&
+          part.d.map(defText).find(e => e.length < t.length - 3 && e.trim() && t.endsWith(e));
+        const li = defNode(sub ? [t.slice(0, -sub.length).trim()] : d);
         if (!shown.includes(d)) { li.classList.add('rare'); li.hidden = true; hidden++; }
         ol.append(li);
       }
@@ -706,6 +724,7 @@
     ] : []);
     defSheet.replaceChildren(el('header', {}, [title, x]), ...body, el('div', { className: 'foot' }, [all, src]));
     defSheet.scrollTop = 0;
+    placeDefine();
   }
   // show the button only with one tile selected (and the setting on), right before Shuffle
   function showDefine() {
