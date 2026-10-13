@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Color-code NYT Connections tiles as you work out the groups, then submit them in the order you choose, like purple first for a reverse rainbow
-// @version      1.1.2
+// @version      1.1.3
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -574,11 +574,14 @@
   // Nothing is fetched until the button is tapped, and a complete answer is kept on this device
   // (DEF_KEY) for KEEP_DAYS since it was last looked at, so a word costs its requests once.
   //
-  // An entry: { title: Wiktionary page to link, or null, parts: [{ p: part of speech, d: [def] }],
+  // An entry: { title: Wiktionary page to link, or null, parts: [{ p: part of speech, d: [def],
+  //   l: indexes in d where each of Wiktionary's same-named sections starts }],
   //   names: [{ id, l: label, d: description }] }. A def is a list of text pieces and, for the
   //   word a "plural of …"-style definition points to, [text, target] pairs.
   const DEF_KEY = 'ccm:defs';
-  const DEF_V = 2; // entries saved by an older version (1.1.0 ran sub-senses together) are looked up again
+  // entries saved by an older version are looked up again (2: 1.1.0 ran sub-senses together;
+  // 3: before l, so LASH's "to bind" sense stayed hidden)
+  const DEF_V = 3;
   const DEF_MAX = 300, DEF_BYTES = 400e3; // localStorage is ~5 MB per site, shared with NYT
   const defCache = new Map(); // WORD -> promise of { entry, failed: [source names] }
   // { WORD: { u: last used, v, e: entry } }, read from localStorage once, on the first lookup
@@ -680,8 +683,12 @@
       if (g.value.length && !title) title = forms[i];
       for (const p of g.value) {
         let into = parts.find(q => q.p === p.p);
-        if (!into) parts.push(into = { p: p.p, d: [] });
-        for (const d of p.d) if (!into.d.some(e => defText(e) === defText(d))) into.d.push(d);
+        if (!into) parts.push(into = { p: p.p, d: [], l: [] });
+        let lead = true;
+        for (const d of p.d) if (!into.d.some(e => defText(e) === defText(d))) {
+          if (lead) { into.l.push(into.d.length); lead = false; }
+          into.d.push(d);
+        }
       }
     });
     return { entry: { title, parts, names: n.v || [] }, failed };
@@ -727,12 +734,16 @@
     const body = [];
     let hidden = 0;
     for (const part of entry.parts) {
+      // Wiktionary splits a word by origin (LASH: the whip word, then a separate word meaning
+      // "to bind"), so the first sense of each origin gets a place before the rest fill up
       const common = part.d.filter(d => !RARE.test(defText(d)));
-      const shown = (common.length ? common : part.d).slice(0, PER_PART);
+      const pool = common.length ? common : part.d;
+      const shown = new Set((part.l || []).map(i => part.d[i]).filter(d => pool.includes(d)).slice(0, PER_PART));
+      for (const d of pool) if (shown.size < PER_PART) shown.add(d);
       const ol = el('ol');
       for (const d of part.d) {
         const li = defNode(d);
-        if (!shown.includes(d)) { li.classList.add('rare'); li.hidden = true; hidden++; }
+        if (!shown.has(d)) { li.classList.add('rare'); li.hidden = true; hidden++; }
         ol.append(li);
       }
       body.push(el('h5', { textContent: part.p }), ol);

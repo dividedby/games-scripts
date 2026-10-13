@@ -40,6 +40,10 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [1.1.3] - 2026-10-13
+#### Fixed
+- A word Wiktionary lists as two separate words of different origin now shows the main meaning of each, not just the first five of the first. LASH shows "to bind with a rope… so as to fasten" next to the whip meanings instead of hiding it behind Show all. Words saved by earlier versions are looked up again to pick this up.
+
 ### [1.1.2] - 2026-10-13
 #### Changed
 - Definition lookups now tell Wikimedia which script is asking (its name and this repo's link, nothing about you), as Wikimedia asks of browser scripts. A word's first lookup may take a fraction of a second longer.

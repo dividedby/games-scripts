@@ -803,7 +803,7 @@ test('Definition: keeps answers on the device for 60 days, and never keeps an in
 test('Definition: the stored answers stay under their size limit, dropping the oldest', async () => {
   const big = { title: 'x', parts: [{ p: 'Noun', d: [['y'.repeat(5000)]] }], names: [] };
   const many = {};
-  for (let i = 0; i < 120; i++) many['W' + i] = { u: Date.now() - (120 - i) * 1000, v: 2, e: big }; // W0 is the oldest
+  for (let i = 0; i < 120; i++) many['W' + i] = { u: Date.now() - (120 - i) * 1000, v: 3, e: big }; // W0 is the oldest
   dictionary = { lash: LASH }; wikidata = {};
   const b = await board({ words: ['LASH', 'B', 'C', 'D'], stored: { 'ccm:defs': many } });
   b.select(['LASH']); await sleep(40); b.d.getElementById('ccm-define-btn').click(); await sleep(40);
@@ -877,5 +877,21 @@ test('Definition: a sense with sub-senses doesn\'t repeat them, and fractions ke
   await lookUp('TETHER');
   assert.deepEqual([...sheet.querySelectorAll('li')].map(li => li.textContent),
     ['To connect to something else.', 'To share a connection.']);
+  b.close();
+});
+
+test('Definition: the first sense of each origin is shown, even past the first five (LASH: "to bind")', async () => {
+  const whip = ['To strike with a lash.', 'To beat upon.', 'To throw out quickly.', 'To scold.', 'To ply the whip.', 'To dash against.'];
+  dictionary = { lash: { en: [
+    { partOfSpeech: 'Verb', definitions: whip.map(definition => ({ definition })) },
+    { partOfSpeech: 'Verb', definitions: [{ definition: 'To bind with a rope, so as to fasten.' }] },
+  ] } };
+  wikidata = {};
+  const b = await board({ words: ['LASH', 'B', 'C', 'D'] });
+  b.select(['LASH']); await sleep(40); b.d.getElementById('ccm-define-btn').click(); await sleep(40);
+  const sheet = b.root.getElementById('ccm-define');
+  const shown = [...sheet.querySelectorAll('li:not([hidden])')].map(li => li.textContent);
+  assert.deepEqual(shown, [...whip.slice(0, 4), 'To bind with a rope, so as to fasten.'], 'four whip senses, then the second origin\'s first');
+  assert.match(sheet.querySelector('.foot').textContent, /Show all \(2 more\)/);
   b.close();
 });
