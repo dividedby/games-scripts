@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  NYT Wordle with a nudge: a random starting word, then a shortlist of possible answers to choose from each turn, so you still make the call
-// @version      1.0.1
+// @version      1.0.2
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -16,6 +16,9 @@
 
 (() => {
   'use strict';
+  // already running (a second install): the panel only appears once the board has, so mark the page
+  if (document.documentElement.hasAttribute('data-wsl')) return;
+  document.documentElement.setAttribute('data-wsl', '');
 
   const PICKS = 5;     // guesses offered each turn
   // Each level draws the picks at random from this many of the best possible answers, so
@@ -336,10 +339,24 @@ zonedzoneszooms
 
   // ---------- storage ----------
   const ls = {
+    // (storage off in private mode, full, or a value that isn't JSON: the script works without it)
     get(k, fallback) { try { const v = localStorage.getItem(k); return v === null ? fallback : JSON.parse(v); } catch { return fallback; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
     del(k) { try { localStorage.removeItem(k); } catch {} },
   };
+  // a saved puzzle record in the shape refresh() writes, or null (it ends up on screen)
+  const num = x => typeof x === 'number' && Number.isFinite(x);
+  function validSaved(v) {
+    if (!v || typeof v !== 'object' || Array.isArray(v) || typeof v.sig !== 'string') return null;
+    if (v.picks !== undefined && !(Array.isArray(v.picks) &&
+      v.picks.every(p => p && typeof p.word === 'string' && /^[a-z]{5}$/.test(p.word) && num(p.left)))) return null;
+    if (v.picks?.length && !num(v.left)) return null;
+    if (v.left !== undefined && !num(v.left)) return null;
+    if (v.easiest != null && !(Number.isInteger(v.easiest) && v.easiest >= 0 && v.easiest < LEVEL_ORDER.length)) return null;
+    if (v.level !== undefined && !LEVEL_ORDER.includes(v.level)) return null;
+    if (v.turns !== undefined && !(Array.isArray(v.turns) && v.turns.every(t => t && typeof t === 'object'))) return null;
+    return v;
+  }
   // Today's puzzle has no date in its URL, so it's filed under the day the page was opened
   const openedOn = new Date().toLocaleDateString('en-CA');
   const puzzleId = () => location.pathname.match(/\d{4}-\d{2}-\d{2}/)?.[0] || openedOn;
@@ -352,9 +369,9 @@ zonedzoneszooms
     try {
       for (const k of Object.keys(localStorage)) {
         const d = k.match(/^wsl:(\d{4}-\d{2}-\d{2})$/)?.[1];
-        if (d && ls.get(k, {}).at < cutoff) ls.del(k);
+        if (d && ls.get(k, {})?.at < cutoff) ls.del(k);
       }
-    } catch {}
+    } catch {} // storage off (private mode): nothing to tidy
   }
 
   // ---------- the board ----------
@@ -427,7 +444,7 @@ zonedzoneszooms
   let state = null;
   let busy = false;   // typing a pick in
   let collapsed = ls.get(COLLAPSED_KEY, false);
-  let level = LEVELS[ls.get(LEVEL_KEY, 'medium')] ? ls.get(LEVEL_KEY, 'medium') : 'medium';
+  let level = (v => LEVEL_ORDER.includes(v) ? v : 'medium')(ls.get(LEVEL_KEY, 'medium'));
 
   const leftText = n => n < 1.5 ? '~1 left' : `~${Math.round(n)} left`;
   const sigOf = rows => rows.map(r => r.word + ':' + toPattern(r.states)).join(',');
@@ -453,45 +470,65 @@ zonedzoneszooms
     if (dark !== ('dark' in host.dataset)) { if (dark) host.dataset.dark = ''; else delete host.dataset.dark; }
   }
 
+  // the panel is built from DOM nodes and text, never HTML, since the picks come back from storage
+  const el = (tag, props = {}, kids = []) => { const e = document.createElement(tag); Object.assign(e, props); e.append(...kids); return e; };
+  let shown = ''; // what the panel shows now, to skip rebuilding it when nothing changed
   function render(board) {
     checkTheme();
     const showPanel = !!state;
+    const now = JSON.stringify([showPanel && state, collapsed, busy, level, board.over, board.won, board.rows.length]);
+    if (now === shown) return;
+    shown = now;
     show.hidden = !showPanel || !collapsed;
     panel.hidden = !showPanel || collapsed;
     if (!showPanel || collapsed) { fit(); return; }
-    const hide = '<button class="tool" id="hide" title="Hide the shortlist">▾</button>';
+    const hide = () => el('button', { className: 'tool', id: 'hide', title: 'Hide the shortlist', textContent: '▾' });
     if (board.over) {
-      panel.innerHTML = `<div class="row"><span class="note">${recap(board)}</span><span class="tools">${hide}</span></div>`;
+      panel.replaceChildren(el('div', { className: 'row' }, [
+        el('span', { className: 'note', textContent: recap(board) }), el('span', { className: 'tools' }, [hide()])]));
       fit();
       return;
     }
     const first = !board.rows.length;
     const lv = LEVELS[level];
-    const info = `${plural(first ? ANSWERS.length : state.left, 'possible answer')} · ` +
-      `<button id="level"${busy ? ' disabled' : ''} title="Level. Easy: picks from the best 10, with hints. Medium: the best 30, with hints. Hard: any possible answer, no hints. The recap shows the easiest level you used">${lv.name} ▸</button>`;
-    let html = first ? '<span class="lead">Start with</span>' : '';
-    if (!state.picks.length) html += '<span class="note">No word on my list fits these colors</span>';
+    const info = el('div', { className: 'info' }, [`${plural(first ? ANSWERS.length : state.left, 'possible answer')} · `,
+      el('button', { id: 'level', disabled: busy, textContent: `${lv.name} ▸`,
+        title: 'Level. Easy: picks from the best 10, with hints. Medium: the best 30, with hints. Hard: any possible answer, no hints. The recap shows the easiest level you used' })]);
+    const row = [];
+    if (first) row.push(el('span', { className: 'lead', textContent: 'Start with' }));
+    if (!state.picks.length) row.push(el('span', { className: 'note', textContent: 'No word on my list fits these colors' }));
     const last = state.left === 1;
     for (const p of state.picks) {
       const hint = last ? 'only fit' : lv.hints || first ? leftText(p.left) : '';
       const tip = last ? `${p.word.toUpperCase()}: the only likely answer that fits. Tap to play it`
         : hint ? `${p.word.toUpperCase()}: if it isn't the answer, about ${Math.max(1, Math.round(p.left))} answer${Math.round(p.left) > 1 ? 's' : ''} left on average. Tap to play it`
         : `${p.word.toUpperCase()}: tap to play it`;
-      html += `<button class="pick" data-w="${p.word}" title="${tip}"${busy ? ' disabled' : ''}><b>${p.word}</b>${hint ? `<small>${hint}</small>` : ''}</button>`;
+      const b = el('button', { className: 'pick', title: tip, disabled: busy },
+        [el('b', { textContent: p.word }), ...(hint ? [el('small', { textContent: hint })] : [])]);
+      b.dataset.w = p.word;
+      row.push(b);
     }
-    html += `<span class="tools"><button class="tool" id="roll" title="Deal a different shortlist"${busy ? ' disabled' : ''}>🎲</button>${hide}</span>`;
-    panel.innerHTML = `<div class="info">${info}</div><div class="row">${html}</div>`;
+    row.push(el('span', { className: 'tools' }, [
+      el('button', { className: 'tool', id: 'roll', title: 'Deal a different shortlist', disabled: busy, textContent: '🎲' }), hide()]));
+    panel.replaceChildren(info, el('div', { className: 'row' }, row));
     fit();
   }
 
+  // say once in the console if the game's markup has changed under us (one part found, not the other)
+  const warned = new Set();
+  const warnOnce = (k, msg) => { if (!warned.has(k)) { warned.add(k); console.warn('[Wordle Shortlist] ' + msg); } };
   function refresh(force = false) {
     const board = readBoard();
-    if (!board.ready) return;
+    if (!board.ready) {
+      if (key('↵')) warnOnce('board', 'found the keyboard but not the board\'s tiles ([data-testid="tile"]); the game may have changed');
+      return;
+    }
+    if (!board.over && !keyboard()) warnOnce('keyboard', 'found the board but not the keyboard ([data-key="↵"]); the game may have changed');
     place(board);
     if (!host.isConnected) return;
     const sig = sigOf(board.rows);
     if (state?.sig !== sig) busy = false;
-    let saved = ls.get(picksKey(), null);
+    let saved = validSaved(ls.get(picksKey(), null));
     // a board that doesn't continue the saved one is a different game (say, today's tab left
     // open past midnight): start its record fresh
     const continues = (from, to) => !from || to === from || to.startsWith(from + ',');
@@ -578,7 +615,8 @@ zonedzoneszooms
     b.style.transformOrigin = 'top center';
     b.style.marginBottom = `${-Math.round(h * (1 - scale))}px`;
   }
-  addEventListener('resize', () => setTimeout(fit, 200));
+  let fitTimer = 0;
+  addEventListener('resize', () => { clearTimeout(fitTimer); fitTimer = setTimeout(fit, 200); });
 
   // wait for the page to settle, but never more than 400ms, so a busy page can't starve it
   let timer = 0, firstChange = 0;

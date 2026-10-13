@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  A proper dark mode for NYT Games in the browser (Connections, Wordle and the rest), using NYT's own dark colors so the game colors stay true
-// @version      1.0.0
+// @version      1.0.1
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -25,6 +25,7 @@
 
 (() => {
   'use strict';
+  if (document.getElementById('nytd-style')) return; // already running (a second install)
 
   // NYT already ships a full dark color set for its games (the one its apps use), switched
   // on by <body data-mode="dark" class="display-settings-enabled">, plus older ".dark" rules.
@@ -34,11 +35,13 @@
   const MODE_KEY = 'nytd:mode';          // 'auto' (follow the system) | 'dark' | 'light'
   const MODES = ['auto', 'dark', 'light'];
   const LABEL = { auto: 'Auto', dark: 'Dark', light: 'Light' };
+  // (storage off in private mode, or a value that isn't JSON: the mode just isn't remembered)
   const ls = {
     get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
   };
-  let mode = MODES.includes(ls.get(MODE_KEY, 'auto')) ? ls.get(MODE_KEY, 'auto') : 'auto';
+  const savedMode = () => { const v = ls.get(MODE_KEY, 'auto'); return MODES.includes(v) ? v : 'auto'; };
+  let mode = savedMode();
   const system = window.matchMedia?.('(prefers-color-scheme: dark)');
   const wantDark = () => mode === 'dark' || (mode === 'auto' && !!system?.matches);
   // Hints, companions, forums and the game bots are news-style pages, not game pages. NYT gives
@@ -151,13 +154,16 @@
   // White fades drawn with gradients (over the edge of a scrolling list or bar): the same
   // gradient in the darkened panel color. The page's own inline value is kept to put back.
   const fades = new Map();
-  function darkenFade(el) {
-    if (fades.has(el)) return;
+  // (split in two, reading then writing, so a scan reads every style before changing any)
+  function fadeFor(el) { // the darkened gradient, or null
+    if (fades.has(el)) return null;
     const img = getComputedStyle(el).backgroundImage;
-    if (!img.includes('gradient')) return;
+    if (!img.includes('gradient')) return null;
     const dark = img.replace(/rgba?\((\d+), (\d+), (\d+)((?:, [\d.]+)?)\)/g, (m, r, g, b, a) =>
       neutralLight([+r, +g, +b]) ? `${a ? 'rgba' : 'rgb'}(27, 27, 27${a})` : m);
-    if (dark === img) return;
+    return dark === img ? null : dark;
+  }
+  function darkenFade(el, dark) {
     fades.set(el, [el.style.getPropertyValue('background-image'), el.style.getPropertyPriority('background-image')]);
     el.style.setProperty('background-image', dark, 'important');
   }
@@ -201,27 +207,42 @@
     checked.set(el, sig);
     return true;
   };
-  function markPanels() {
+  // added: on news-style pages, just the elements the page added since the last look (instead
+  // of the whole page); { parents } are elements whose own children changed, looked at alone
+  function markPanels(added) {
     if (!document.documentElement.classList.contains('nytd-dark')) return;
     const roots = [...document.querySelectorAll(PANELS)];
-    if (ARTICLE && document.body) roots.push(document.body);
     const els = new Set();
+    if (ARTICLE && document.body) {
+      if (added) { roots.push(...added.subtrees); for (const el of added.parents) els.add(el); }
+      else roots.push(document.body);
+    }
     for (const root of roots) { els.add(root); for (const el of root.querySelectorAll(SCAN)) els.add(el); }
     const fresh = [...els].filter(changed);
     for (const el of fades.keys()) if (!el.isConnected) fades.delete(el); // don't hold on to removed elements
-    let marked = false;
-    // backgrounds first (outside in), so the text pass sees the final backdrops
+    // backgrounds first (outside in), so the text pass sees the final backdrops. Every
+    // element is read first, then all the changes are made: interleaving them would make the
+    // browser recompute styles once per element.
+    const todo = [];
     for (const el of fresh) {
       if ('nytdPanel' in el.dataset || 'nytdFlip' in el.dataset) continue;
       // the primary button is the one we deliberately make light: leave it
       if (el.matches('button[class*=primary i], button[class*=primary i] *')) continue;
-      if (!el.matches('.time-bar')) darkenFade(el);
-      if (!isPlainLight(el)) continue;
-      marked = true;
-      // a light button drawn with a dark icon image: flip the whole button
-      if (DARK_ICON.test(iconUrl(el))) el.dataset.nytdFlip = '';
+      const fade = el.matches('.time-bar') ? null : fadeFor(el);
+      const light = isPlainLight(el);
+      // a light button drawn with a dark icon image: flip the whole button;
       // an empty shape (a chart bar, an empty calendar day) stays a visible gray
-      else el.dataset.nytdPanel = el.childElementCount || el.textContent.trim() ? '' : 'shape';
+      const how = !light ? null : DARK_ICON.test(iconUrl(el)) ? 'flip'
+        : el.childElementCount || el.textContent.trim() ? '' : 'shape';
+      if (fade || how !== null) todo.push([el, fade, how]);
+    }
+    let marked = false;
+    for (const [el, fade, how] of todo) {
+      if (fade) darkenFade(el, fade);
+      if (how === null) continue;
+      marked = true;
+      if (how === 'flip') el.dataset.nytdFlip = '';
+      else el.dataset.nytdPanel = how;
     }
     // a newly darkened area changes the backdrop of everything inside it: look at all text
     // and icons again then, otherwise only at what changed
@@ -229,7 +250,14 @@
     // news-style pages: black logos and icons (the masthead, menu, search) on a dark backdrop
     // only when every shape is drawn in black: icons already in NYT's light colors, and
     // colorful drawings (game icons), are left alone
-    if (ARTICLE) for (const svg of document.body.querySelectorAll('svg')) {
+    // (read them all, then flip; an svg inside one just flipped is left alone)
+    const svgs = new Set();
+    if (ARTICLE) for (const root of added ? roots : [document.body]) {
+      if (root.localName === 'svg') svgs.add(root);
+      for (const svg of root.querySelectorAll('svg')) svgs.add(svg);
+    }
+    const flips = [];
+    for (const svg of svgs) {
       if (!changed(svg) && !marked) continue;
       if ('nytdFlip' in svg.dataset || svg.closest('[data-nytd-flip]') || svg.getBoundingClientRect().width > 400) continue;
       const paints = [];
@@ -237,8 +265,9 @@
         const cs = getComputedStyle(shape);
         for (const c of [cs.fill, cs.stroke]) if (c !== 'none') paints.push(rgb(c));
       }
-      if (paints.length && paints.every(c => !c || lightness(c) < 0.25) && !backdropIsLight(svg)) svg.dataset.nytdFlip = '';
+      if (paints.length && paints.every(c => !c || lightness(c) < 0.25) && !backdropIsLight(svg)) flips.push(svg);
     }
+    for (const svg of flips) if (!svg.parentElement?.closest('[data-nytd-flip]')) svg.dataset.nytdFlip = '';
     for (const el of look) {
       if ('nytdFlip' in el.dataset || 'nytdInk' in el.dataset || el.closest('[data-nytd-flip]')) continue;
       if (DARK_ICON.test(iconUrl(el))) { if (!backdropIsLight(el)) el.dataset.nytdFlip = ''; continue; }
@@ -342,9 +371,12 @@
   document.documentElement.classList.toggle('nytd-dark', wantDark());
 
   system?.addEventListener?.('change', apply);
-  window.addEventListener('storage', e => { if (e.key === MODE_KEY) { mode = ls.get(MODE_KEY, 'auto'); apply(); } });
+  window.addEventListener('storage', e => { if (e.key === MODE_KEY) { mode = savedMode(); apply(); } });
 
   let queued = false, panelQueued = false;
+  // news-style pages: what the page added since the last look (null: look at everything)
+  let addedSince = { subtrees: new Set(), parents: new Set() };
+  const MAX_ADDED = 300; // past this many, one look at the whole page is cheaper
   const later = () => { if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; apply(); }); } };
   const watch = () => {
     // the game sometimes rewrites <body>'s attributes; put ours back
@@ -352,9 +384,26 @@
     new MutationObserver(later).observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-mode'] });
     // the header is rendered late; place the toggle when it appears
     // (pages without the header, like Wordle's, never get a toggle: don't keep trying)
-    new MutationObserver(() => {
+    new MutationObserver(muts => {
+      if (ARTICLE && addedSince) {
+        for (const m of muts) {
+          if (m.target.nodeType === 1) addedSince.parents.add(m.target); // its own text may have changed
+          for (const n of m.addedNodes) if (n.nodeType === 1) addedSince.subtrees.add(n);
+        }
+        if (addedSince.subtrees.size + addedSince.parents.size > MAX_ADDED) addedSince = null;
+      }
       if (!document.getElementById('nytd-toggle')?.isConnected && document.querySelector(NAV)) later();
-      else if (!panelQueued) { panelQueued = true; setTimeout(() => { panelQueued = false; markPanels(); }, 150); }
+      else if (!panelQueued) {
+        panelQueued = true;
+        setTimeout(() => {
+          panelQueued = false;
+          const a = addedSince;
+          addedSince = { subtrees: new Set(), parents: new Set() };
+          if (!a) return markPanels();
+          for (const s of [a.subtrees, a.parents]) for (const el of s) if (!el.isConnected) s.delete(el);
+          markPanels({ subtrees: [...a.subtrees], parents: [...a.parents] });
+        }, 150);
+      }
     }).observe(document.body, { childList: true, subtree: true });
     if (style.parentNode !== document.head) document.head.appendChild(style);
     apply();

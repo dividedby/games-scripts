@@ -161,3 +161,54 @@ test('rescans look again at what changed: a card turned white later, and text th
   assert.ok('nytdPanel' in card.dataset, 'the card is darkened once it turns white');
   assert.equal(late.dataset.nytdInk, 'light', 'its late text is fixed too');
 });
+
+test('a mode from another tab is checked before use: anything unknown means Auto', async () => {
+  const p = await page({ mode: 'dark' });
+  assert.equal(p.w.__nytd.mode, 'dark');
+  for (const bad of ['"constructor"', '42', 'null', 'not json']) {
+    p.w.localStorage.setItem('nytd:mode', bad);
+    p.w.dispatchEvent(new p.w.StorageEvent('storage', { key: 'nytd:mode' }));
+    await sleep(20);
+    assert.equal(p.w.__nytd.mode, 'auto', bad);
+    assert.equal(p.toggle().textContent, '◐ Auto');
+  }
+  p.w.localStorage.setItem('nytd:mode', '"light"');
+  p.w.dispatchEvent(new p.w.StorageEvent('storage', { key: 'nytd:mode' }));
+  await sleep(20);
+  assert.equal(p.w.__nytd.mode, 'light');
+});
+
+test('news-style pages: what the page adds later is looked at too (just the new parts)', async () => {
+  const dom = new JSDOM(`<!doctype html><html class="story tpl-always-light"><head></head><body><main id="story"></main></body></html>`,
+  { url: 'https://www.nytimes.com/2026/10/10/crosswords/connections-companion-1218.html', runScripts: 'outside-only', pretendToBeVisual: true });
+  const w = dom.window;
+  w.matchMedia = () => ({ matches: false, addEventListener() {} });
+  w.localStorage.setItem('nytd:mode', '"dark"');
+  w.__NYTD_TEST__ = true;
+  w.eval(SRC);
+  await sleep(300);
+  const d = w.document;
+  // already looked at, then quietly turned white without any element being added: left for a full look
+  const quiet = d.createElement('div');
+  quiet.id = 'quiet';
+  d.getElementById('story').appendChild(quiet);
+  await sleep(300);
+  quiet.setAttribute('style', 'background-color: rgb(255, 255, 255)');
+  d.getElementById('story').insertAdjacentHTML('beforeend', `<aside id="late" style="background-color: rgb(255, 255, 255)">
+    <span id="txt" style="color: rgb(0, 0, 0)">More hints</span>
+    <svg id="ico"><path d="M0 0" style="fill: rgb(0, 0, 0)"></path></svg></aside>`);
+  await sleep(300);
+  assert.ok('nytdPanel' in d.getElementById('late').dataset, 'the added white box turns dark');
+  assert.equal(d.getElementById('txt').dataset.nytdInk, 'light', 'its text turns light');
+  assert.ok('nytdFlip' in d.getElementById('ico').dataset, 'its black icon is flipped');
+  assert.ok(!('nytdPanel' in quiet.dataset), 'the rest of the page isn\'t rescanned for it');
+  w.__nytd.markPanels();
+  assert.ok('nytdPanel' in quiet.dataset, 'a full look still finds it');
+});
+
+test('a second copy of the script does nothing', async () => {
+  const p = await page({ mode: 'dark' });
+  p.w.eval(SRC); await sleep(50);
+  assert.equal(p.d.querySelectorAll('#nytd-style').length, 1);
+  assert.equal(p.d.querySelectorAll('#nytd-toggle').length, 1);
+});

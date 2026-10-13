@@ -923,3 +923,55 @@ test('color guide: a Guide button after Submit opens what each color tends to be
   assert.equal(deselect.textContent, 'Deselect All', 'and puts Deselect All back');
   b.close();
 });
+
+test('bad saved values (null, wrong types) are ignored instead of breaking the palette', async () => {
+  const b = await board({
+    words: ['A', 'B', 'C', 'D'],
+    marks: null,
+    stored: {
+      'ccm:maybe:2023-07-01': { A: 'green', B: ['yellow', 'nope'], C: ['blue', 'purple'] },
+      'ccm:guesses:2023-07-01': [null, { w: 'ABCD' }, { w: ['A', 'B', 'C', 'X'], away: true }],
+      'ccm:used': 'oops',
+      'ccm:defs': { A: { u: Date.now(), v: 3, e: null } },
+    },
+  });
+  b.select(['A']); await b.tap('yellow');
+  assert.equal(b.store().A, 'yellow', 'marks still work');
+  assert.deepEqual(JSON.parse(b.w.localStorage.getItem('ccm:maybe:2023-07-01')), { C: ['blue', 'purple'] }, 'only well-formed maybes kept');
+  assert.equal(b.btn('hist').textContent, '📜1', 'only the well-formed guess counts');
+  // another tab writing junk is ignored too
+  b.w.localStorage.setItem('ccm:2023-07-01', '[1,2]');
+  b.w.dispatchEvent(new b.w.StorageEvent('storage', { key: 'ccm:2023-07-01' }));
+  b.w.localStorage.setItem('ccm:guesses:2023-07-01', '"x"');
+  b.w.dispatchEvent(new b.w.StorageEvent('storage', { key: 'ccm:guesses:2023-07-01' }));
+  await sleep(40);
+  assert.equal(b.btn('yellow').textContent, '0');
+  b.close();
+});
+
+test('a broken saved definition is looked up again instead of sticking on "Looking it up…"', async () => {
+  dictionary = { word: { en: [{ partOfSpeech: 'Noun', definitions: [{ definition: 'A unit of language.' }] }] } };
+  const b = await board({ words: ['WORD', 'B', 'C', 'D'], stored: { 'ccm:defs': { WORD: { u: Date.now(), v: 3, e: { parts: null } } } } });
+  b.select(['WORD']); await sleep(40);
+  b.d.getElementById('ccm-define-btn').click(); await sleep(60);
+  const sheet = b.root.getElementById('ccm-define');
+  assert.deepEqual([...sheet.querySelectorAll('h5')].map(h => h.textContent), ['Noun']);
+  b.close();
+});
+
+test('only the game\'s _selected class counts as selected, not "unselected"', async () => {
+  const b = await board({ words: ['A', 'B', 'C', 'D'] });
+  b.tile('A').classList.add('Card-module_unselected');
+  b.tile('B').classList.add('Card-module_selected__x1y2z');
+  await sleep(40);
+  assert.equal(b.d.getElementById('ccm-define-btn').style.display, '', 'one tile (B) selected: Definition shows');
+  b.close();
+});
+
+test('a second copy of the script does nothing', async () => {
+  const b = await board({ words: ['A', 'B', 'C', 'D'] });
+  b.w.eval(SRC); await sleep(40);
+  assert.equal(b.d.querySelectorAll('#ccm-root').length, 1);
+  assert.equal(b.d.querySelectorAll('#ccm-define-btn').length, 1);
+  b.close();
+});

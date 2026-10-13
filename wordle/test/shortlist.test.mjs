@@ -303,3 +303,27 @@ test('light text when the page behind is dark (Wordle dark theme or an extension
   await sleep(400);
   assert.ok(!('dark' in host.dataset), 'back to light');
 });
+
+test('a malformed saved record is ignored, never shown as markup', async () => {
+  const bad = [
+    { sig: '', left: 1, picks: [{ word: '<img src=x onerror=alert(1)>', left: 1 }], level: 'medium', turns: [], at: Date.now() },
+    { sig: '', left: '<b>x</b>', picks: [{ word: 'pouch', left: 1 }], at: Date.now() },
+    { sig: '', left: 3, picks: 'pouch', at: Date.now() },
+    { sig: '', left: 3, picks: [{ word: 'pouch', left: 1 }], easiest: 'constructor', at: Date.now() },
+    null, 'x', [1, 2],
+  ];
+  for (const rec of bad) {
+    const g = await game({ stored: { 'wsl:2023-07-11': rec, 'wsl:level': 'constructor' } });
+    assert.equal(g.panel().querySelector('img'), null);
+    const picks = g.picks();
+    assert.equal(picks.length, 1, 'a fresh starting word instead');
+    assert.match(picks[0], /^[a-z]{5}$/);
+    assert.match(g.panel().textContent, /Medium/, 'an unknown stored level falls back to Medium');
+  }
+});
+
+test('a second copy of the script does nothing', async () => {
+  const g = await game();
+  g.w.eval(SRC); await sleep(200);
+  assert.equal(g.d.querySelectorAll('#wsl-root').length, 1);
+});

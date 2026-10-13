@@ -11,6 +11,11 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [1.0.1] - 2026-10-13
+#### Fixed
+- Lighter on hint, forum and bot pages: as the page loads more, only the new parts are looked at instead of the whole page, and each look reads the page's colors before changing any.
+- A mode saved by another tab is checked before use (anything unknown means Auto), and a second copy of the script does nothing.
+
 ### [1.0.0] - 2026-10-11
 #### Added
 - First version: switches on NYT's own dark colors on the Games website (the ones the app uses) and darkens the parts of the site NYT never gave dark colors: the top bar, the ☰ menu, the page background, Wordle's start screen, white promo cards, the Games home page, the puzzle archives, the stats page and the footer. The crossword grid gets dark squares too, like the NYT app. Also darkens the hint and forum pages, Wordle Bot and Connections Bot, and the Help Center. Follows your device's dark mode, or tap ◐ in the top bar for always dark or always light. Tells Dark Reader to stand back so the page isn't darkened twice (Noir needs turning off for nytimes.com).
@@ -18,6 +23,12 @@ Versions below 1.0.0 are pre-release.
 ## Wordle Shortlist
 
 ### [Unreleased]
+
+### [1.0.2] - 2026-10-13
+#### Fixed
+- A damaged saved shortlist (or level) is ignored and a fresh one dealt, and the picks are built as plain text, never as page markup.
+- The shortlist is only redrawn when something in it changed, not on every change to the page; resizing the window no longer piles up refits.
+- A second copy of the script does nothing, and the console says once if the game's board or keyboard can't be found.
 
 ### [1.0.1] - 2026-10-11
 #### Fixed
@@ -39,6 +50,14 @@ Versions below 1.0.0 are pre-release.
 ## Connections Palette
 
 ### [Unreleased]
+
+### [1.2.3] - 2026-10-13
+#### Fixed
+- Damaged saved marks, maybe colors or guesses no longer break the palette: anything not in the shape the script saves is ignored.
+- A lookup that fails unexpectedly says it couldn't reach Wiktionary or Wikidata instead of staying on "Looking it up…".
+- A tile class like "unselected" no longer counts as selected.
+- Less work after Submit (the result is watched without redrawing everything every 150 ms) and when the Definition and Guide buttons change their own labels; the guess history isn't rebuilt when it hasn't changed.
+- Saving that fails (private browsing, storage full) is noted in the console, and a second copy of the script does nothing.
 
 ### [1.2.2] - 2026-10-13
 #### Changed

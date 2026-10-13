@@ -3,11 +3,12 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Color-code NYT Connections tiles as you work out the groups, then submit them in the order you choose, like purple first for a reverse rainbow
-// @version      1.2.2
+// @version      1.2.3
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
 // @match        https://www.nytimes.com/games/connections*
+// (no @noframes on purpose: phone-width testing runs the game in a same-origin 390px iframe)
 // @grant        none
 // @run-at       document-idle
 // @downloadURL  https://raw.githubusercontent.com/dividedby/games-scripts/main/connections/connections-color-marker.user.js
@@ -16,6 +17,7 @@
 
 (() => {
   'use strict';
+  if (document.getElementById('ccm-root')) return; // already running (a second install)
 
   // ORDER index matches the game's data-level on solved groups (0 yellow … 3 purple)
   const COLORS = [
@@ -42,9 +44,25 @@
   let ready = false; // true once the first setup has run
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const ls = {
-    get(k, fallback) { try { const v = localStorage.getItem(k); return v === null ? fallback : JSON.parse(v); } catch { return fallback; } },
-    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
-    del(k) { try { localStorage.removeItem(k); } catch {} },
+    get(k, fallback) { try { const v = localStorage.getItem(k); return v === null ? fallback : JSON.parse(v); } catch { return fallback; } }, // storage off or not JSON: use the default
+    // a failed write (private mode, storage full) only loses saving, so it's logged, not thrown
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { console.warn('[Connections Palette] could not save', k, e); } },
+    del(k) { try { localStorage.removeItem(k); } catch {} }, // nothing to do if storage is off
+  };
+  // saved values come back from storage as anything (another version, another script, a hand
+  // edit): keep only the shapes the script writes
+  const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
+  const isColor = c => typeof c === 'string' && ORDER.includes(c);
+  const loadMarks = () => {
+    const v = ls.get(marksKey(), {});
+    return isObj(v) ? Object.fromEntries(Object.entries(v).filter(([, c]) => isColor(c))) : {};
+  };
+  const loadMaybes = () => {
+    const v = ls.get(maybeKey(), {});
+    if (!isObj(v)) return {};
+    const out = {};
+    for (const [w, cs] of Object.entries(v)) if (Array.isArray(cs) && cs.length && cs.every(isColor)) out[w] = cs;
+    return out;
   };
 
   // ---------- storage (per puzzle date, keyed by word so shuffles don't matter) ----------
@@ -67,8 +85,9 @@
     return s.length % 2 === 0 && s.slice(0, h) === s.slice(h) ? s.slice(0, h) : s;
   };
 
+  const loadUsed = () => { const v = ls.get(USED_KEY, {}); return isObj(v) ? v : {}; };
   function touch() {
-    const used = ls.get(USED_KEY, {});
+    const used = loadUsed();
     used[puzzleId()] = Date.now();
     ls.set(USED_KEY, used);
   }
@@ -78,7 +97,7 @@
   // drop data for puzzles not touched in KEEP_DAYS (by last use, not puzzle date,
   // so archive puzzles you're playing now are kept)
   try {
-    const used = ls.get(USED_KEY, {});
+    const used = loadUsed();
     const cutoff = Date.now() - KEEP_DAYS * 864e5;
     for (const k of Object.keys(localStorage)) {
       const d = k.match(/^ccm:(?:1away:|guesses:|maybe:)?(\d{4}-\d{2}-\d{2})$/)?.[1];
@@ -88,18 +107,20 @@
     }
     for (const d of Object.keys(used)) if (used[d] < cutoff) delete used[d];
     ls.set(USED_KEY, used);
-  } catch {}
+  } catch {} // storage off (private mode): nothing to clean up
 
-  let marks = ls.get(marksKey(), {});
+  let marks = loadMarks();
   // "maybe" colors: { word: [colors] } — an undecided tile's candidate colors (shown as a split
   // outline). A tile is either decided (one color, in marks) or undecided (here), never both;
   // only decided tiles count toward Go, auto-fill and the 4-per-color limit.
-  let maybes = ls.get(maybeKey(), {});
+  let maybes = loadMaybes();
   // wrong guesses for this puzzle, oldest first: { w: [4 words, sorted], away: was it "One away" }
+  const isWords = w => Array.isArray(w) && w.every(x => typeof x === 'string');
   const loadGuesses = () => {
     const g = ls.get(guessKey(), null);
-    if (g) return g;
-    return ls.get(oldAwayKey(), []).map(w => ({ w, away: true })); // migrate
+    if (g != null) return Array.isArray(g) ? g.filter(x => isObj(x) && isWords(x.w)).map(x => ({ w: x.w, away: !!x.away })) : [];
+    const old = ls.get(oldAwayKey(), []);
+    return Array.isArray(old) ? old.filter(isWords).map(w => ({ w, away: true })) : []; // migrate
   };
   let guesses = loadGuesses();
   let lastId = puzzleId();
@@ -141,7 +162,8 @@
   // ---------- reading the board ----------
   const tiles = () => [...document.querySelectorAll('[data-testid="card-label"]')];
   const wordOf = el => el.dataset.flipId ? up(el.dataset.flipId) : undouble(el.textContent);
-  const isSelected = el => /selected/i.test(el.className); // the game's Card-module_selected class
+  // the game's Card-module_selected__xyz class (a whole class token, so "unselected" doesn't count)
+  const isSelected = el => /(^|\s)[\w-]*_selected(__[\w-]*)?(\s|$)/.test(el.className);
   const selectedTiles = () => tiles().filter(isSelected);
   // the puzzle's 16 words once the board is fully known; counts ignore anything else
   let puzzleWords = null;
@@ -384,7 +406,7 @@
   undoBtn.title = 'Undo your last color change';
   const sortBtn = addButton('', () => {
     sortMode = SORT_CYCLE[(SORT_CYCLE.indexOf(sortMode) + 1) % SORT_CYCLE.length];
-    try { localStorage.setItem(SORT_KEY, sortMode); } catch {}
+    try { localStorage.setItem(SORT_KEY, sortMode); } catch {} // storage off: the choice lasts this visit
     showSort();
     apply();
   });
@@ -606,9 +628,11 @@
   let defStore = null;
   function storedDefs() {
     if (!defStore) {
-      defStore = ls.get(DEF_KEY, {});
+      const v = ls.get(DEF_KEY, {});
+      defStore = isObj(v) ? v : {};
       const cutoff = Date.now() - KEEP_DAYS * 864e5;
-      for (const k of Object.keys(defStore)) if (!(defStore[k]?.u >= cutoff && defStore[k].v === DEF_V)) delete defStore[k];
+      const usable = d => d?.u >= cutoff && d.v === DEF_V && isObj(d.e) && Array.isArray(d.e.parts) && Array.isArray(d.e.names);
+      for (const k of Object.keys(defStore)) if (!usable(defStore[k])) delete defStore[k];
     }
     return defStore;
   }
@@ -725,6 +749,10 @@
           if (r.failed.length) defCache.delete(key); // incomplete: kept for nothing, tried again next time
           else storeDef(key, r.entry); // (a word with no entry anywhere is complete too)
           return r;
+        }).catch(e => { // something unexpected: show it as both sources failing, try again next time
+          console.warn('[Connections Palette] lookup failed', e);
+          defCache.delete(key);
+          return { entry: { title: null, parts: [], names: [] }, failed: ['Wiktionary', 'Wikidata'] };
         });
       }
       defCache.set(key, p);
@@ -820,6 +848,7 @@
   function showDefine() {
     const shuffle = document.querySelector('[data-testid="shuffle-btn"]') || gameButton(/^shuffle$/i);
     const submit = document.querySelector('[data-testid="submit-btn"]') || gameButton(/^submit$/i);
+    for (const b of squeezed) if (!b.isConnected) squeezed.delete(b); // the game replaced it
     const on = !!shuffle && opt('define') && selectedTiles().length === 1;
     const guideOn = !!submit && opt('guide');
     if (shuffle && defineBtn.nextElementSibling !== shuffle) {
@@ -856,11 +885,12 @@
     const ours = [defineBtn, guideBtn].filter(b => b.style.display !== 'none');
     const narrow = (b, pad) => { b.style.minWidth = pad ? '0' : ''; b.style.paddingLeft = b.style.paddingRight = pad; };
     const compact = step => {
-      defineBtn.textContent = step ? 'Define' : 'Definition';
-      guideBtn.textContent = step > 2 ? 'ⓘ' : 'Guide';
+      const setText = (b, t) => { if (b.textContent !== t) b.textContent = t; }; // unchanged: no mutation to redraw for
+      setText(defineBtn, step ? 'Define' : 'Definition');
+      setText(guideBtn, step > 2 ? 'ⓘ' : 'Guide');
       const pad = step > 1 ? '9px' : step ? '12px' : '';
       for (const b of [defineBtn, guideBtn]) narrow(b, pad);
-      for (const b of squeezed) narrow(b, '');
+      for (const b of squeezed) if (b.isConnected) narrow(b, '');
       squeezed.clear();
       if (step > 1) for (const b of row.children) if (b.localName === 'button' && !ours.includes(b)) { narrow(b, pad); squeezed.add(b); }
       row.style.gap = step > 1 ? '4px' : step ? '6px' : '';
@@ -1072,8 +1102,15 @@
     }
     pending = { w, before: mistakesLeft(), away: false, recorded: null, at: Date.now() };
     clearInterval(pollTimer);
-    pollTimer = setInterval(() => { if (!pending || Date.now() - pending.at > 6000) { pending = null; clearInterval(pollTimer); } else apply(); }, 150);
+    // until the game answers: just watch for the result, and redraw only when it changes something
+    pollTimer = setInterval(() => {
+      if (!pending || Date.now() - pending.at > 6000) { pending = null; clearInterval(pollTimer); return; }
+      const before = guessSig();
+      checkGuess();
+      if (!pending || guessSig() !== before) apply();
+    }, 150);
   }, true);
+  const guessSig = () => JSON.stringify(guesses);
   function checkGuess() {
     if (!pending) return;
     const p = pending;
@@ -1100,11 +1137,15 @@
     noteTimer = setTimeout(() => { noteEl.hidden = true; }, 2600);
   }
 
+  let historyShown = null; // the guess list the open sheet shows
   function renderHistory() {
     const wrong = guesses.length;
     const label = '📜' + (wrong ? wrong : '');
     if (histBtn.textContent !== label) histBtn.textContent = label;
-    if (histSheet.hidden) return;
+    if (histSheet.hidden) { historyShown = null; return; }
+    const sig = guessSig();
+    if (sig === historyShown) return; // already showing this list
+    historyShown = sig;
     histSheet.innerHTML = '<h4>Wrong guesses</h4>' + (wrong
       ? '<ol>' + guesses.map(g => `<li>${g.w.map(x => x.replace(/&/g, '&amp;').replace(/</g, '&lt;')).join(' · ')}${g.away ? ' <span class="away">one away</span>' : ''}</li>`).join('') + '</ol>'
       : '<p class="empty">No wrong guesses yet.</p>');
@@ -1253,8 +1294,8 @@
       const old = new Set([...tiles().map(wordOf), ...solvedGroups().flatMap(g => g.words)]);
       staleBoard = old.size === 16 ? [...old].sort().join('|') : null;
       lastId = puzzleId();
-      marks = ls.get(marksKey(), {});
-      maybes = ls.get(maybeKey(), {});
+      marks = loadMarks();
+      maybes = loadMaybes();
       guesses = loadGuesses();
       pending = null;
       undoStack = [];
@@ -1335,6 +1376,7 @@
   const setOrder = (el, v) => { if (el.style.order !== v) el.style.setProperty('order', v); };
   let lastBoard = null;
   function arrange(ts) {
+    if (lastBoard && !lastBoard.isConnected) lastBoard = null; // don't hold on to a replaced board
     const board = boardOf(ts) || lastBoard;
     if (!board) return;
     lastBoard = board;
@@ -1379,7 +1421,7 @@
     // marks and maybes are written together; read both so a half-arrived update
     // can't be "settled" and saved back over the other tab's change
     if (e.key === marksKey() || e.key === maybeKey()) {
-      marks = ls.get(marksKey(), {}); maybes = ls.get(maybeKey(), {});
+      marks = loadMarks(); maybes = loadMaybes();
       undoStack = []; showUndo(); // undoing here would quietly revert the other tab's change
     }
     else if (e.key === guessKey()) guesses = loadGuesses();
@@ -1422,7 +1464,9 @@
   const mo = new MutationObserver(muts => {
     if (watched === document.body || !watched?.isConnected) watch();
     if (queued) return;
-    if (muts.every(m => m.type === 'childList' && [...m.addedNodes, ...m.removedNodes].every(ours))) return;
+    // (the text inside our own buttons counts as ours too)
+    if (muts.every(m => m.type === 'childList' ? ours(m.target) || [...m.addedNodes, ...m.removedNodes].every(ours)
+      : m.type === 'characterData' && ours(m.target.parentNode))) return;
     queued = true;
     const run = () => { queued = false; apply(); };
     if (document.hidden) setTimeout(run, 50); else requestAnimationFrame(run);
