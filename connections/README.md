@@ -57,7 +57,7 @@ For tiles you're unsure about. Turn this on in ⚙, and a **?** button appears o
 
 Not sure what a word means, or which meaning the puzzle is after? Select just that one tile and a **Definition** button appears next to the game's Shuffle button (on a narrow phone it's labeled **Define**). Tap it for the word's common meanings, grouped by part of speech. **Show all** adds the rest. In a definition like "plural of *end*", the dotted word is tappable and takes you to END. Tap ✕, tap outside, or press Esc to close it.
 
-Definitions come from [Wiktionary](https://en.wiktionary.org); the selected word is the only thing sent there. Names and phrases sometimes have no entry. Turn the button off in ⚙ if you'd rather not have it.
+Definitions come from [Wiktionary](https://en.wiktionary.org). To have them ready when you tap, the script looks the word up as soon as you select a single tile; that word is the only thing sent. Names and phrases sometimes have no entry. Turn the button off in ⚙ if you'd rather not have it.
 
 <details>
 <summary>Screenshot: a definition on iPhone</summary>

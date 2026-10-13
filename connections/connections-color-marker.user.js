@@ -131,7 +131,7 @@
       tip: '1–4 colors, 0 clear, Z undo, G go, Esc lets go of a tapped color; with maybe colors on, M maybe mode and Shift+1–4 add or remove an option' },
     { key: 'left',      def: false, label: 'Palette on the left', help: 'Move the palette to the bottom-left' },
     { key: 'define',    def: true,  label: 'Definition button', help: 'Look up the meanings of one selected word',
-      tip: 'With one tile selected, a Definition button appears next to Shuffle. Definitions come from Wiktionary (the word is sent there)' },
+      tip: 'With one tile selected, a Definition button appears next to Shuffle. Definitions come from Wiktionary: the selected word is looked up there as soon as it is the only one selected' },
   ];
   const DEFAULTS = Object.fromEntries(SETTINGS.map(o => [o.key, o.def]));
   let settings = { ...DEFAULTS, ...ls.get(SETTINGS_KEY, {}) };
@@ -532,20 +532,30 @@
   });
 
   // Wiktionary's REST API: { en: [{ partOfSpeech, definitions: [{ definition: html }] }] }
-  const defCache = new Map();
-  async function lookup(word) {
-    const tries = [...new Set([word.toLowerCase(), word[0] + word.slice(1).toLowerCase(), word])];
-    for (const t of tries) {
-      if (defCache.has(t)) { if (defCache.get(t)) return defCache.get(t); continue; }
-      const r = await fetch('https://en.wiktionary.org/api/rest_v1/page/definition/' + encodeURIComponent(t.replace(/ /g, '_')));
-      if (r.status === 404) { defCache.set(t, null); continue; }
-      if (!r.ok) throw new Error('lookup failed');
-      // (codes like ISO language codes are listed as "Symbol": no help in a word puzzle)
-      const en = ((await r.json()).en || []).filter(p => p.partOfSpeech !== 'Symbol' && p.definitions?.some(d => d.definition?.trim()));
-      defCache.set(t, en.length ? { title: t, parts: en } : null);
-      if (en.length) return defCache.get(t);
+  // Wiktionary can take a few seconds for a word it hasn't served lately, so the lookup starts
+  // as soon as one tile is selected (when the button appears), and each word is fetched once.
+  const defCache = new Map(); // word -> promise of an entry (or null)
+  async function fetchEntry(t) {
+    const r = await fetch('https://en.wiktionary.org/api/rest_v1/page/definition/' + encodeURIComponent(t.replace(/ /g, '_')));
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error('lookup failed');
+    // (codes like ISO language codes are listed as "Symbol": no help in a word puzzle)
+    const en = ((await r.json()).en || []).filter(p => p.partOfSpeech !== 'Symbol' && p.definitions?.some(d => d.definition?.trim()));
+    return en.length ? { title: t, parts: en } : null;
+  }
+  function lookup(word) {
+    if (!defCache.has(word)) {
+      const p = (async () => {
+        for (const t of [...new Set([word.toLowerCase(), word[0] + word.slice(1).toLowerCase(), word])]) {
+          const entry = await fetchEntry(t);
+          if (entry) return entry;
+        }
+        return null;
+      })();
+      defCache.set(word, p);
+      p.catch(() => defCache.delete(word)); // a failed lookup can be tried again
     }
-    return null;
+    return defCache.get(word);
   }
   // rare, old or regional senses go behind "Show all"
   const RARE = /^\s*\([^)]*\b(obsolete|archaic|dated|rare|historical|dialect(al)?|nonstandard|uncommon|obscure)\b/i;
@@ -622,11 +632,12 @@
     const display = on ? '' : 'none';
     if (defineBtn.style.display !== display) defineBtn.style.display = display;
     if (on !== defineShown) { defineShown = on; fitDefine(); }
+    if (on) { const w = wordOf(selectedTiles()[0]); if (w !== prefetched) { prefetched = w; lookup(w.trim()).catch(() => {}); } }
     if (!opt('define')) closeDefine();
   }
   // Four buttons are a squeeze on a phone: if they'd wrap, the button shortens to "Define" and
   // the gaps shrink; only if that still doesn't fit do they wrap onto a second line.
-  let defineShown = false;
+  let defineShown = false, prefetched = null;
   function fitDefine() {
     const row = defineBtn.parentElement;
     if (!row) return;
