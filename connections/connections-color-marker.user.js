@@ -626,7 +626,7 @@
     const compact = on => {
       defineBtn.textContent = on ? 'Define' : 'Definition';
       defineBtn.style.minWidth = on ? '0' : '';
-      defineBtn.style.padding = on ? '0 12px' : '';
+      defineBtn.style.paddingLeft = defineBtn.style.paddingRight = on ? '12px' : '';
       row.style.gap = on ? '6px' : '';
     };
     compact(false);
