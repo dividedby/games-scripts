@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Color-code NYT Connections tiles as you work out the groups, then submit them in the order you choose, like purple first for a reverse rainbow
-// @version      1.1.0
+// @version      1.1.1
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -531,17 +531,25 @@
     return n;
   };
   const closeDefine = () => { defSheet.hidden = true; };
-  // The sheet sits right above the game's button row (Definition, Shuffle…) wherever the page
-  // is scrolled, so the buttons stay in view; it follows the row as the page scrolls.
+  // The sheet covers the board: from the top of the board (solved groups and tiles) down to
+  // just above the game's button row (Definition, Shuffle…), so the buttons stay in view. It
+  // follows the board as the page scrolls, staying below NYT's top bar and above the palette.
   function placeDefine() {
     if (defSheet.hidden) return;
     const row = defineBtn.parentElement;
     const h = window.innerHeight;
     const rowTop = row && defineBtn.style.display !== 'none' ? row.getBoundingClientRect().top : h - 82;
     const at = Math.min(Math.max(rowTop, 180), h - 82); // never off the top, never under the palette
-    defSheet.style.bottom = (h - at + 8) + 'px';
     const bar = Math.max(0, document.querySelector('.pz-nav')?.getBoundingClientRect().bottom || 0); // NYT's top bar
-    defSheet.style.maxHeight = Math.max(120, Math.min(h * 0.6, at - bar - 16)) + 'px';
+    const board = [...document.querySelectorAll('[data-testid="card-label"], [data-testid="solved-category-container"]')]
+      .map(n => n.getBoundingClientRect()).filter(r => r.height);
+    const top = Math.max(bar + 8, board.length ? Math.min(...board.map(r => r.top)) : at - h * 0.6);
+    // as wide as the board too (at least 320px, never past the screen's edges)
+    const left = Math.min(...board.map(r => r.left)), right = Math.max(...board.map(r => r.right));
+    const w = Math.min(window.innerWidth - 24, Math.max(320, right - left));
+    if (board.length) { defSheet.style.width = w + 'px'; defSheet.style.left = Math.max(12, Math.min((left + right - w) / 2, window.innerWidth - 12 - w)) + 'px'; defSheet.style.transform = 'none'; }
+    defSheet.style.bottom = (h - at + 8) + 'px';
+    defSheet.style.height = defSheet.style.maxHeight = Math.max(120, at - 8 - top) + 'px';
   }
   window.addEventListener('scroll', placeDefine, { passive: true });
   window.addEventListener('resize', placeDefine, { passive: true });
@@ -593,13 +601,16 @@
     const walk = node => {
       for (const n of node.childNodes) {
         if (n.nodeType === 3) add(n.textContent);
-        else if (n.nodeType !== 1 || /^(sup|style|script)$/i.test(n.localName) || n.classList.contains('maintenance-line')) continue;
+        // (sub-senses come again as definitions of their own, so a sense's nested list is skipped)
+        else if (n.nodeType !== 1 || /^(sup|style|script|ol|ul)$/i.test(n.localName) || n.classList.contains('maintenance-line')) continue;
         else if (n.localName === 'a' && n.closest('.form-of-definition-link') && /^\/wiki\/[^:#]+(#English)?$/.test(n.getAttribute('href') || ''))
           out.push([n.textContent, decodeURIComponent(n.getAttribute('href').slice(6).replace(/#.*/, '')).replace(/_/g, ' ')]);
         else walk(n);
       }
     };
     walk(new DOMParser().parseFromString(html, 'text/html').body);
+    // fractions like 1⁄16 arrive without their 1
+    for (let i = 0; i < out.length; i++) if (typeof out[i] === 'string') out[i] = out[i].replace(/(^|[^\d])⁄/g, '$11⁄');
     if (typeof out[0] === 'string') out[0] = out[0].trimStart();
     if (typeof out[out.length - 1] === 'string') out[out.length - 1] = out[out.length - 1].trimEnd();
     return out.filter(s => s !== '');
@@ -696,9 +707,11 @@
       for (const d of part.d) {
         // a sense whose text runs on into its sub-sense's ("To connect to something else. To
         // connect (a smartphone)…" then "To connect (a smartphone)…"): keep only its own part
-        const t = defText(d), sub = d.every(s => typeof s === 'string') &&
-          part.d.map(defText).find(e => e.length < t.length - 3 && e.trim() && t.endsWith(e));
-        const li = defNode(sub ? [t.slice(0, -sub.length).trim()] : d);
+        // (answers 1.1.0 stored on the device still have them run together)
+        let t = defText(d), sub;
+        const own = d.every(s => typeof s === 'string');
+        while (own && (sub = part.d.map(defText).find(e => e.trim() && e.length < t.length - 3 && t.trimEnd().endsWith(e.trim())))) t = t.trimEnd().slice(0, -sub.trim().length);
+        const li = defNode(own ? [t.trim()] : d);
         if (!shown.includes(d)) { li.classList.add('rare'); li.hidden = true; hidden++; }
         ol.append(li);
       }

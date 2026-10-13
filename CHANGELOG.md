@@ -39,6 +39,10 @@ Versions below 1.0.0 are pre-release.
 ## Connections Palette
 
 ### [Unreleased]
+#### Changed
+- The definition panel now covers the whole board, from its top row down to just above the game's buttons.
+#### Fixed
+- Definitions with sub-senses (like CUP's "customary unit of measure") no longer repeat the sub-senses inside them, and fractions like 1⁄16 keep their 1.
 
 ### [1.1.0] - 2026-10-13
 #### Added

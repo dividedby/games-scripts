@@ -827,25 +827,46 @@ test('Definition: says so when there is no entry or no connection, shows what on
   assert.equal(b.d.getElementById('ccm-define-btn').style.display, 'none');
 });
 
-test('Definition: the sheet sits just above the game\'s buttons, and a sense isn\'t repeated inside its sub-sense', async () => {
-  dictionary = { tether: { en: [{ partOfSpeech: 'Verb', definitions: [
-    { definition: 'To connect to something else. To connect (a smartphone) to a computer.' },
-    { definition: 'To connect (a smartphone) to a computer.' },
-  ] }] } };
+test('Definition: the sheet covers the board down to just above the game\'s buttons, and follows it as the page scrolls', async () => {
+  dictionary = { tether: { en: [{ partOfSpeech: 'Verb', definitions: [{ definition: 'To restrict with a tether.' }] }] } };
   wikidata = {};
-  const b = await board({ words: ['TETHER', 'B', 'C', 'D'] });
-  const row = b.d.querySelector('.Game-module_boardActionGroup');
-  let top = 500;
-  row.getBoundingClientRect = () => ({ top, bottom: top + 48, left: 0, right: 400, width: 400, height: 48 });
+  const b = await board({ words: ['TETHER', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] });
+  let shift = 0; // how far the page has scrolled
+  const rect = (top, left, width, height) => () => ({ top: top - shift, bottom: top - shift + height, left, right: left + width, width, height });
+  b.d.querySelector('.Game-module_boardActionGroup').getBoundingClientRect = rect(500, 0, 400, 48);
+  b.d.querySelectorAll('[data-testid=card-label]').forEach((t, i) => { t.getBoundingClientRect = rect(100 + 70 * Math.floor(i / 4), 20 + 150 * (i % 4), 140, 60); });
   b.select(['TETHER']); await sleep(40);
   b.d.getElementById('ccm-define-btn').click(); await sleep(40);
   const sheet = b.root.getElementById('ccm-define');
   const h = b.w.innerHeight;
   assert.equal(sheet.style.bottom, `${h - 500 + 8}px`, 'its bottom edge is 8px above the button row');
-  top = 300; b.w.dispatchEvent(new b.w.Event('scroll')); // scrolled: the row moved up
-  assert.equal(sheet.style.bottom, `${h - 300 + 8}px`, 'and it follows the row');
-  assert.equal(sheet.style.maxHeight, '284px', 'never taller than the room above the row');
+  assert.equal(sheet.style.height, '392px', 'its top is the board\'s top');
+  assert.equal(sheet.style.width, '590px', 'as wide as the board');
+  assert.equal(sheet.style.left, '20px');
+  shift = 200; b.w.dispatchEvent(new b.w.Event('scroll')); // the board's top is now off screen
+  assert.equal(sheet.style.bottom, `${h - 300 + 8}px`, 'it follows the row');
+  assert.equal(sheet.style.height, '284px', 'and stops at the top of the screen');
+  b.close();
+});
+
+test('Definition: a sense with sub-senses doesn\'t repeat them, and fractions keep their 1', async () => {
+  dictionary = { cup: { en: [{ partOfSpeech: 'Noun', definitions: [
+    { definition: 'A customary unit of measure<ol><li>A US unit equal to 8 fluid ounces (<small><big>⁄</big><sub>16</sub></small> of a US gallon).</li><li>A Canadian unit.</li></ol>' },
+    { definition: 'A US unit equal to 8 fluid ounces (<small><big>⁄</big><sub>16</sub></small> of a US gallon).' },
+    { definition: 'A Canadian unit.' },
+  ] }] } };
+  wikidata = {};
+  // and an answer 1.1.0 kept with the sub-senses run together
+  const stored = { 'ccm:defs': { TETHER: { u: Date.now(), e: { title: 'tether', names: [], parts: [{ p: 'Verb', d: [
+    ['To connect to something else. To connect (a phone) to a computer. To share a connection.'], ['To connect (a phone) to a computer.'], ['To share a connection.']] }] } } } };
+  const b = await board({ words: ['CUP', 'TETHER', 'C', 'D'], stored });
+  const sheet = b.root.getElementById('ccm-define');
+  const lookUp = async w => { b.select([w]); await sleep(40); b.d.getElementById('ccm-define-btn').click(); await sleep(40); };
+  await lookUp('CUP');
   assert.deepEqual([...sheet.querySelectorAll('li')].map(li => li.textContent),
-    ['To connect to something else.', 'To connect (a smartphone) to a computer.']);
+    ['A customary unit of measure', 'A US unit equal to 8 fluid ounces (1⁄16 of a US gallon).', 'A Canadian unit.']);
+  await lookUp('TETHER');
+  assert.deepEqual([...sheet.querySelectorAll('li')].map(li => li.textContent),
+    ['To connect to something else.', 'To connect (a phone) to a computer.', 'To share a connection.']);
   b.close();
 });
