@@ -549,9 +549,9 @@
   }
   // rare, old or regional senses go behind "Show all"
   const RARE = /^\s*\([^)]*\b(obsolete|archaic|dated|rare|historical|dialect(al)?|nonstandard|uncommon|obscure)\b/i;
-  const PER_PART = 4;
-  // a definition's HTML, rebuilt as plain text plus tappable words (Wiktionary's own links),
-  // never inserted as HTML
+  const PER_PART = 5; // Wiktionary lists senses by history, not by how common they are
+  // a definition's HTML, rebuilt as plain text, never inserted as HTML. The one link kept is
+  // the word a "plural of …"-style definition points to, which can be tapped to look it up.
   function defNode(html) {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const li = el('li');
@@ -559,7 +559,7 @@
       for (const n of node.childNodes) {
         if (n.nodeType === 3) into.append(n.textContent);
         else if (n.nodeType !== 1 || /^(sup|style|script)$/i.test(n.localName)) continue;
-        else if (n.localName === 'a' && /^\/wiki\/[^:#]+(#English)?$/.test(n.getAttribute('href') || '')) {
+        else if (n.localName === 'a' && n.closest('.form-of-definition-link') && /^\/wiki\/[^:#]+(#English)?$/.test(n.getAttribute('href') || '')) {
           const target = decodeURIComponent(n.getAttribute('href').slice(6).replace(/#.*/, '')).replace(/_/g, ' ');
           into.append(el('button', { className: 'w', type: 'button', textContent: n.textContent, onclick: () => define(target) }));
         }
@@ -584,7 +584,14 @@
     if (!entry) { defSheet.lastChild.textContent = 'No dictionary entry for this one. It may be a name, a phrase or part of a longer word.'; return; }
     const body = [];
     let hidden = 0;
-    for (const part of entry.parts) {
+    // one list per part of speech (Wiktionary splits them by word origin, e.g. two "Verb"s for LASH)
+    const parts = [];
+    for (const p of entry.parts) {
+      const same = parts.find(q => q.partOfSpeech === p.partOfSpeech);
+      if (same) same.definitions = [...same.definitions, ...p.definitions];
+      else parts.push({ partOfSpeech: p.partOfSpeech, definitions: [...p.definitions] });
+    }
+    for (const part of parts) {
       const defs = part.definitions.filter(d => d.definition?.trim());
       const common = defs.filter(d => !RARE.test(defNode(d.definition).textContent));
       const shown = (common.length ? common : defs).slice(0, PER_PART);

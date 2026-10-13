@@ -681,7 +681,9 @@ const LASH = { en: [
     { definition: 'A stroke with a whip.' },
     { definition: 'A hair growing from the edge of the eyelid; an <a rel="mw:WikiLink" href="/wiki/eyelash">eyelash</a>.<sup>[1]</sup>' },
   ] },
+  { partOfSpeech: 'Verb', definitions: [{ definition: 'To strike with a lash.' }] },
   { partOfSpeech: 'Verb', definitions: [{ definition: 'To bind with a rope, so as to fasten.' }] },
+  { partOfSpeech: 'Noun', definitions: [{ definition: '<span class="form-of-definition">plural of <span class="form-of-definition-link"><a rel="mw:WikiLink" href="/wiki/whip#English">whip</a></span></span>' }] },
 ] };
 
 test('Definition: shows before Shuffle with one tile selected, looks the word up, and lists its meanings', async () => {
@@ -701,9 +703,10 @@ test('Definition: shows before Shuffle with one tile selected, looks the word up
   const sheet = b.root.getElementById('ccm-define');
   assert.ok(!sheet.hidden);
   assert.equal(sheet.querySelector('h4').textContent, 'LASH');
-  assert.deepEqual([...sheet.querySelectorAll('h5')].map(h => h.textContent), ['Noun', 'Verb']);
+  assert.deepEqual([...sheet.querySelectorAll('h5')].map(h => h.textContent), ['Noun', 'Verb'], 'one list per part of speech');
   const shown = [...sheet.querySelectorAll('li:not([hidden])')].map(li => li.textContent);
-  assert.equal(shown.length, 4, 'the common meanings');
+  assert.equal(shown.length, 6, 'the common meanings: four nouns, two verbs');
+  assert.equal(sheet.querySelectorAll('button.w').length, 1, 'only a "plural of" target is a link');
   assert.ok(shown.some(t => /eyelash\.$/.test(t)), 'footnote markers dropped');
   assert.ok(!shown.some(t => /obsolete/.test(t)), 'the obsolete one waits behind Show all');
   const all = [...sheet.querySelectorAll('.foot button')].find(x => /Show all/.test(x.textContent));
@@ -711,7 +714,7 @@ test('Definition: shows before Shuffle with one tile selected, looks the word up
   all.click();
   assert.equal(sheet.querySelectorAll('li[hidden]').length, 0);
   assert.equal(sheet.querySelector('script, [onclick]'), null, 'Wiktionary\'s HTML is never inserted as HTML');
-  sheet.querySelector('button.w').click(); await sleep(40); // a linked word in a definition
+  sheet.querySelector('button.w').click(); await sleep(40); // the word a "plural of" points to
   assert.equal(sheet.querySelector('h4').textContent, 'WHIP', 'tapping a linked word looks it up');
   b.w.document.dispatchEvent(new b.w.KeyboardEvent('keydown', { key: 'Escape' }));
   assert.ok(sheet.hidden, 'Escape closes it');
