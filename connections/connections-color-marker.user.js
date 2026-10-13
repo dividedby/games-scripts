@@ -130,6 +130,8 @@
     { key: 'keys',      def: true,  label: 'Keyboard shortcuts', help: '1–4 colors, 0 clear, Z undo, G go',
       tip: '1–4 colors, 0 clear, Z undo, G go, Esc lets go of a tapped color; with maybe colors on, M maybe mode and Shift+1–4 add or remove an option' },
     { key: 'left',      def: false, label: 'Palette on the left', help: 'Move the palette to the bottom-left' },
+    { key: 'define',    def: true,  label: 'Definition button', help: 'Look up the meanings of one selected word',
+      tip: 'With one tile selected, a Definition button appears next to Shuffle. Definitions come from Wiktionary (the word is sent there)' },
   ];
   const DEFAULTS = Object.fromEntries(SETTINGS.map(o => [o.key, o.def]));
   let settings = { ...DEFAULTS, ...ls.get(SETTINGS_KEY, {}) };
@@ -292,6 +294,28 @@
     .row button { flex: 1; height: 30px; font: 600 12px system-ui, sans-serif; }
     /* keyboard shortcuts mean nothing on a touch-only device */
     @media (hover: none) and (pointer: coarse) { label.desk { display: none; } }
+    /* definitions: a sheet above the game's buttons */
+    #ccm-define {
+      --sheet: #fff; --fg: #222; --line: #ccc; --muted: #666; --link: #2b5bd7; --sep: #eee;
+      position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+      z-index: 2147483001; width: 420px; max-width: calc(100vw - 24px); max-height: 60vh; overflow-y: auto; box-sizing: border-box;
+      background: var(--sheet); color: var(--fg); border: 1px solid var(--line); border-radius: 12px;
+      box-shadow: 0 6px 24px rgba(0,0,0,.3); padding: 12px 14px 14px; font: 400 14px/1.4 system-ui, sans-serif;
+    }
+    :host([data-theme=dark]) #ccm-define { --sheet: #26272a; --fg: #eee; --line: #4a4b4c; --muted: #aaa; --link: #8fb3ff; --sep: #3a3b3c; }
+    #ccm-define[hidden] { display: none; }
+    #ccm-define header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    #ccm-define h4 { flex: 1; margin: 0; font: 700 17px/1.2 system-ui, sans-serif; letter-spacing: .5px; }
+    #ccm-define .x { min-width: 30px; height: 30px; background: transparent; font-size: 18px; color: var(--muted); }
+    #ccm-define h5 { margin: 10px 0 2px; font: 700 12px/1.2 system-ui, sans-serif; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
+    #ccm-define ol { margin: 0; padding-left: 20px; }
+    #ccm-define li { padding: 2px 0; }
+    #ccm-define li.rare { color: var(--muted); }
+    #ccm-define .w { all: unset; color: var(--link); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+    #ccm-define .status { margin: 6px 0 0; color: var(--muted); }
+    #ccm-define .foot { display: flex; justify-content: space-between; gap: 8px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--sep); font-size: 12px; }
+    #ccm-define .foot a, #ccm-define .foot button { all: unset; color: var(--link); cursor: pointer; }
+    #ccm-define .foot button[hidden] { display: none; }
     @keyframes ccm-shake { 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
     @media (max-width: 480px) {
       #ccm-panel { right: 6px; bottom: calc(6px + env(safe-area-inset-bottom, 0px)); gap: 3px; padding: 4px 5px; max-width: calc(100vw - 12px); }
@@ -474,6 +498,128 @@
     const t = isDark() ? 'dark' : 'light';
     if (host.dataset.theme !== t) host.dataset.theme = t;
   }
+
+  // ---------- definitions ----------
+  // With exactly one tile selected, a Definition button sits before the game's Shuffle button.
+  // It looks the word up on Wiktionary (the word is the only thing sent) and lists its
+  // meanings by part of speech: the usual ones first, rare and old ones behind "Show all".
+  const defineBtn = document.createElement('button');
+  defineBtn.id = 'ccm-define-btn';
+  defineBtn.type = 'button';
+  defineBtn.textContent = 'Definition';
+  defineBtn.style.display = 'none';
+  defineBtn.addEventListener('mousedown', e => e.preventDefault());
+  defineBtn.addEventListener('click', e => {
+    e.preventDefault(); e.stopPropagation();
+    const t = selectedTiles();
+    if (t.length === 1) define(wordOf(t[0]));
+  });
+  const defSheet = document.createElement('div');
+  defSheet.id = 'ccm-define';
+  defSheet.hidden = true;
+  defSheet.setAttribute('role', 'dialog');
+  defSheet.addEventListener('click', e => e.stopPropagation());
+  shadow.appendChild(defSheet);
+  const el = (tag, props = {}, kids = []) => {
+    const n = Object.assign(document.createElement(tag), props);
+    for (const k of [].concat(kids)) n.append(k);
+    return n;
+  };
+  const closeDefine = () => { defSheet.hidden = true; };
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !defSheet.hidden) closeDefine(); });
+  document.addEventListener('pointerdown', e => {
+    if (!defSheet.hidden && !e.composedPath().includes(host) && e.target !== defineBtn) closeDefine();
+  });
+
+  // Wiktionary's REST API: { en: [{ partOfSpeech, definitions: [{ definition: html }] }] }
+  const defCache = new Map();
+  async function lookup(word) {
+    const tries = [...new Set([word.toLowerCase(), word[0] + word.slice(1).toLowerCase(), word])];
+    for (const t of tries) {
+      if (defCache.has(t)) { if (defCache.get(t)) return defCache.get(t); continue; }
+      const r = await fetch('https://en.wiktionary.org/api/rest_v1/page/definition/' + encodeURIComponent(t.replace(/ /g, '_')));
+      if (r.status === 404) { defCache.set(t, null); continue; }
+      if (!r.ok) throw new Error('lookup failed');
+      const en = ((await r.json()).en || []).filter(p => p.definitions?.some(d => d.definition?.trim()));
+      defCache.set(t, en.length ? { title: t, parts: en } : null);
+      if (en.length) return defCache.get(t);
+    }
+    return null;
+  }
+  // rare, old or regional senses go behind "Show all"
+  const RARE = /^\s*\([^)]*\b(obsolete|archaic|dated|rare|historical|dialect(al)?|nonstandard|uncommon|obscure)\b/i;
+  const PER_PART = 4;
+  // a definition's HTML, rebuilt as plain text plus tappable words (Wiktionary's own links),
+  // never inserted as HTML
+  function defNode(html) {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const li = el('li');
+    const walk = (node, into) => {
+      for (const n of node.childNodes) {
+        if (n.nodeType === 3) into.append(n.textContent);
+        else if (n.nodeType !== 1 || /^(sup|style|script)$/i.test(n.localName)) continue;
+        else if (n.localName === 'a' && /^\/wiki\/[^:#]+(#English)?$/.test(n.getAttribute('href') || '')) {
+          const target = decodeURIComponent(n.getAttribute('href').slice(6).replace(/#.*/, '')).replace(/_/g, ' ');
+          into.append(el('button', { className: 'w', type: 'button', textContent: n.textContent, onclick: () => define(target) }));
+        }
+        else walk(n, into);
+      }
+    };
+    walk(doc.body, li);
+    return li;
+  }
+  let defineToken = 0;
+  async function define(word) {
+    const token = ++defineToken;
+    const title = el('h4', { textContent: up(word) });
+    const x = el('button', { className: 'x', type: 'button', textContent: '✕', title: 'Close', onclick: closeDefine });
+    x.setAttribute('aria-label', 'Close');
+    defSheet.replaceChildren(el('header', {}, [title, x]), el('p', { className: 'status', textContent: 'Looking it up…' }));
+    defSheet.hidden = false;
+    let entry;
+    try { entry = await lookup(word.trim()); }
+    catch { if (token === defineToken) defSheet.lastChild.textContent = 'Couldn\'t reach Wiktionary. Check your connection and try again.'; return; }
+    if (token !== defineToken) return; // another lookup started meanwhile
+    if (!entry) { defSheet.lastChild.textContent = 'No dictionary entry for this one. It may be a name, a phrase or part of a longer word.'; return; }
+    const body = [];
+    let hidden = 0;
+    for (const part of entry.parts) {
+      const defs = part.definitions.filter(d => d.definition?.trim());
+      const common = defs.filter(d => !RARE.test(defNode(d.definition).textContent));
+      const shown = (common.length ? common : defs).slice(0, PER_PART);
+      const ol = el('ol');
+      for (const d of defs) {
+        const li = defNode(d.definition);
+        if (!shown.includes(d)) { li.classList.add('rare'); li.hidden = true; hidden++; }
+        ol.append(li);
+      }
+      body.push(el('h5', { textContent: part.partOfSpeech }), ol);
+    }
+    const all = el('button', { type: 'button', textContent: `Show all (${hidden} more)`, hidden: !hidden });
+    all.onclick = () => { defSheet.querySelectorAll('li[hidden]').forEach(li => { li.hidden = false; }); all.hidden = true; };
+    const src = el('a', { textContent: 'Wiktionary ↗', target: '_blank', rel: 'noopener',
+      href: 'https://en.wiktionary.org/wiki/' + encodeURIComponent(entry.title.replace(/ /g, '_')) + '#English' });
+    defSheet.replaceChildren(el('header', {}, [title, x]), ...body, el('div', { className: 'foot' }, [all, src]));
+    defSheet.scrollTop = 0;
+  }
+  // show the button only with one tile selected (and the setting on), right before Shuffle
+  function showDefine() {
+    const shuffle = document.querySelector('[data-testid="shuffle-btn"]') || gameButton(/^shuffle$/i);
+    const on = !!shuffle && opt('define') && selectedTiles().length === 1;
+    if (shuffle && defineBtn.nextElementSibling !== shuffle) {
+      shuffle.before(defineBtn);
+      defineBtn.className = shuffle.className; // look like the game's own buttons
+    }
+    // (style, not the hidden attribute: the game's button class sets display itself)
+    const display = on ? '' : 'none';
+    if (defineBtn.style.display !== display) defineBtn.style.display = display;
+    // four buttons don't fit a phone's width on one line
+    const row = defineBtn.parentElement;
+    if (row && row.style.flexWrap !== (on ? 'wrap' : '')) row.style.flexWrap = on ? 'wrap' : '';
+    if (!opt('define')) closeDefine();
+  }
+  // tiles being selected only changes their class, which the redraw observer doesn't watch
+  const selWatch = new MutationObserver(() => showDefine());
 
   // a color tapped with nothing selected: waiting for a second color (swap) or Go (submit)
   let armed = null;
@@ -915,6 +1061,7 @@
     renderHistory();
     if (onBoard !== ts.length > 0) { onBoard = ts.length > 0; peek = false; showCollapsed(); }
     arrange(ts);
+    showDefine();
   }
 
   // ---------- visual grouping ----------
@@ -1016,7 +1163,7 @@
   // Watches the game's own container (#pz-game-root) rather than the whole page, so ads and
   // other page activity don't cause redraws; falls back to the page until the game appears.
   // Also watches the light/dark switches on <body> and <html>. Our own overlays are ignored.
-  const ours = n => n.nodeType === 1 && (n === host || n.localName === 'ccm-mark');
+  const ours = n => n.nodeType === 1 && (n === host || n === defineBtn || n.localName === 'ccm-mark');
   let queued = false, watched = null;
   const mo = new MutationObserver(muts => {
     if (watched === document.body || !watched?.isConnected) watch();
@@ -1030,7 +1177,9 @@
     const r = document.getElementById('pz-game-root') || document.body;
     if (r === watched && r.isConnected) return;
     mo.disconnect();
+    selWatch.disconnect();
     watched = r;
+    selWatch.observe(r, { attributes: true, attributeFilter: ['class'], subtree: true });
     // one observe() per node: a second call on the same node would replace its options
     const theme = { attributes: true, attributeFilter: ['data-mode'] };
     if (r === document.body) mo.observe(r, { childList: true, subtree: true, characterData: true, ...theme });

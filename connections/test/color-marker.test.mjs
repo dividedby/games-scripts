@@ -12,16 +12,30 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 const BTN = { yellow: 0, green: 1, blue: 2, purple: 3, erase: 4, undo: 5, sort: 6, go: 7, maybe: 8, hist: 9, gear: 10, toggle: 11, more: 12 };
 const RGB = { yellow: 'rgb(249, 223, 109)', blue: 'rgb(176, 196, 239)', purple: 'rgb(186, 129, 197)' };
 
+// Wiktionary's answers for the Definition tests: { title: json | 404 | 'error' }
+let dictionary = {};
+const lookedUp = [];
+async function fetchStub(url) {
+  const title = decodeURIComponent(String(url).split('/definition/')[1] || '');
+  lookedUp.push(title);
+  const v = dictionary[title];
+  if (v === 'error') throw new TypeError('Failed to fetch');
+  if (!v) return { ok: false, status: 404, json: async () => ({}) };
+  return { ok: true, status: 200, json: async () => v };
+}
+
 // words: tiles on the board; solved: [{ level, words }]; stored: localStorage seed
 async function board({ words = [], solved = [], date = '2023-07-01', marks = {}, stored = {} } = {}) {
   const tiles = words.map(w => `<label class="Card-module_label" data-testid="card-label" data-flip-id="${w}">${w}<span>${w}</span></label>`).join('');
   const secs = solved.map(s => `<section data-testid="solved-category-container" data-level="${s.level}"><ol>${s.words.map(w => `<li>${w}</li>`).join('')}</ol></section>`).join('');
   const dom = new JSDOM(`<!doctype html><body>${secs}<div id="board" style="display:grid">${tiles}</div>` +
     `<span data-testid="mistake-count">4 mistakes remaining out of 4</span>` +
-    `<button data-testid="deselect-btn">Deselect All</button><button data-testid="submit-btn" disabled>Submit</button></body>`,
+    `<section class="Game-module_boardActionGroup" style="display:flex"><button data-testid="shuffle-btn" class="ActionButton-module_button">Shuffle</button>` +
+    `<button data-testid="deselect-btn">Deselect All</button><button data-testid="submit-btn" disabled>Submit</button></section></body>`,
   { url: `https://www.nytimes.com/games/connections${date ? '/' + date : ''}`, runScripts: 'outside-only', pretendToBeVisual: true });
   const w = dom.window;
   w.PointerEvent = w.PointerEvent || w.MouseEvent;
+  w.fetch = fetchStub; // the Definition lookup (Wiktionary); see wiktionary() below
   w.__CCM_TEST__ = true;
   w.localStorage.setItem(`ccm:${date}`, JSON.stringify(marks));
   for (const [k, v] of Object.entries(stored)) w.localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
@@ -658,4 +672,65 @@ test('color buttons have names for screen readers and say which is armed', async
   assert.equal(b.btn('blue').getAttribute('aria-pressed'), 'true');
   assert.equal(b.btn('purple').getAttribute('aria-pressed'), 'false');
   b.close();
+});
+
+const LASH = { en: [
+  { partOfSpeech: 'Noun', definitions: [
+    { definition: 'The thong or braided cord of a <a rel="mw:WikiLink" href="/wiki/whip#English">whip</a>.' },
+    { definition: '(<span>obsolete</span>) A leash in which an animal is held.' },
+    { definition: 'A stroke with a whip.' },
+    { definition: 'A hair growing from the edge of the eyelid; an <a rel="mw:WikiLink" href="/wiki/eyelash">eyelash</a>.<sup>[1]</sup>' },
+  ] },
+  { partOfSpeech: 'Verb', definitions: [{ definition: 'To bind with a rope, so as to fasten.' }] },
+] };
+
+test('Definition: shows before Shuffle with one tile selected, looks the word up, and lists its meanings', async () => {
+  dictionary = { lash: LASH, whip: { en: [{ partOfSpeech: 'Noun', definitions: [{ definition: 'A lash.' }] }] } };
+  const b = await board({ words: ['LASH', 'EYE', 'LIPS', 'SENSE'] });
+  const def = () => b.d.getElementById('ccm-define-btn');
+  const shuffle = b.d.querySelector('[data-testid=shuffle-btn]');
+  assert.equal(def().nextElementSibling, shuffle, 'sits right before Shuffle');
+  assert.equal(def().className, shuffle.className, 'styled like the game\'s buttons');
+  assert.equal(def().style.display, 'none', 'hidden with nothing selected');
+  b.select(['LASH']); await sleep(40);
+  assert.equal(def().style.display, '', 'shown with one tile selected');
+  b.select(['LASH', 'EYE']); await sleep(40);
+  assert.equal(def().style.display, 'none', 'hidden again with two');
+  b.select(['LASH']); await sleep(40);
+  def().click(); await sleep(40);
+  const sheet = b.root.getElementById('ccm-define');
+  assert.ok(!sheet.hidden);
+  assert.equal(sheet.querySelector('h4').textContent, 'LASH');
+  assert.deepEqual([...sheet.querySelectorAll('h5')].map(h => h.textContent), ['Noun', 'Verb']);
+  const shown = [...sheet.querySelectorAll('li:not([hidden])')].map(li => li.textContent);
+  assert.equal(shown.length, 4, 'the common meanings');
+  assert.ok(shown.some(t => /eyelash\.$/.test(t)), 'footnote markers dropped');
+  assert.ok(!shown.some(t => /obsolete/.test(t)), 'the obsolete one waits behind Show all');
+  const all = [...sheet.querySelectorAll('.foot button')].find(x => /Show all/.test(x.textContent));
+  assert.match(all.textContent, /1 more/);
+  all.click();
+  assert.equal(sheet.querySelectorAll('li[hidden]').length, 0);
+  assert.equal(sheet.querySelector('script, [onclick]'), null, 'Wiktionary\'s HTML is never inserted as HTML');
+  sheet.querySelector('button.w').click(); await sleep(40); // a linked word in a definition
+  assert.equal(sheet.querySelector('h4').textContent, 'WHIP', 'tapping a linked word looks it up');
+  b.w.document.dispatchEvent(new b.w.KeyboardEvent('keydown', { key: 'Escape' }));
+  assert.ok(sheet.hidden, 'Escape closes it');
+});
+
+test('Definition: tries the word capitalized, says so when there is no entry or no connection, and can be turned off', async () => {
+  dictionary = { Saturn: { en: [{ partOfSpeech: 'Proper noun', definitions: [{ definition: 'The sixth planet.' }] }] }, cannon: 'error' };
+  const b = await board({ words: ['SATURN', 'QZXW', 'CANNON', 'RING'] });
+  const sheet = b.root.getElementById('ccm-define');
+  const lookUp = async w => { b.select([w]); await sleep(40); b.d.getElementById('ccm-define-btn').click(); await sleep(40); };
+  lookedUp.length = 0;
+  await lookUp('SATURN');
+  assert.deepEqual(lookedUp, ['saturn', 'Saturn']);
+  assert.equal(sheet.querySelector('h5').textContent, 'Proper noun');
+  await lookUp('QZXW');
+  assert.match(sheet.textContent, /No dictionary entry/);
+  await lookUp('CANNON');
+  assert.match(sheet.textContent, /Couldn't reach Wiktionary/);
+  await b.setOpt('define', false);
+  assert.ok(sheet.hidden, 'turning it off closes the sheet');
+  assert.equal(b.d.getElementById('ccm-define-btn').style.display, 'none');
 });
