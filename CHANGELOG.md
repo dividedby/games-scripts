@@ -42,7 +42,7 @@ Versions below 1.0.0 are pre-release.
 
 ### [1.2.1] - 2026-10-13
 #### Changed
-- The color guide moved from the palette's **ⓘ** to a **Guide** button next to the game's Submit button, and opens over the board like a definition. On a narrow phone it shortens to **ⓘ** when the row is full. Turn it off with "Color guide button" in settings.
+- The color guide moved from the palette's **ⓘ** to a **Guide** button next to the game's Submit button, and opens over the board like a definition. On a narrow phone the row tightens up to fit, and it shortens to **ⓘ** when Define is showing too. Turn it off with "Color guide button" in settings.
 
 ### [1.2.0] - 2026-10-13
 #### Added
