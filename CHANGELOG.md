@@ -42,7 +42,7 @@ Versions below 1.0.0 are pre-release.
 
 ### [1.2.2] - 2026-10-13
 #### Changed
-- With the Guide button on, the game's **Deselect All** button reads **Deselect**, so the row has room for Guide (and Definition) on a phone. Turning the Guide button off puts the full label back.
+- With the Guide button on, the game's **Deselect All** button reads **Deselect**, so on a phone Definition, Shuffle, Deselect, Submit and Guide all fit on one line with their names (Guide only shortens to **ⓘ** on the narrowest screens). Turning the Guide button off puts the full label back.
 
 ### [1.2.1] - 2026-10-13
 #### Changed
