@@ -87,6 +87,14 @@ The palette state while **?** is on: tapping a color adds it to (or removes it
 from) the selected tiles' candidates instead of setting their Mark. Tiles hold
 still in maybe mode and re-sort when it's turned off.
 
+### Definition
+The meanings of one selected tile's word, shown in a panel over the board when the
+**Definition** button (next to Shuffle; **Define** on a narrow phone) is tapped:
+**senses** from Wiktionary by part of speech (common ones first, rare and old ones
+behind **Show all**), then up to three **names and titles** from Wikidata (people,
+places, films with that name). A word is looked up only when tapped, and a complete
+answer is kept on the device for 60 days since it was last opened.
+
 ## NYT Games Dark
 
 ### Mode

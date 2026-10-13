@@ -800,7 +800,7 @@ test('Definition: keeps answers on the device for 60 days, and never keeps an in
 test('Definition: the stored answers stay under their size limit, dropping the oldest', async () => {
   const big = { title: 'x', parts: [{ p: 'Noun', d: [['y'.repeat(5000)]] }], names: [] };
   const many = {};
-  for (let i = 0; i < 120; i++) many['W' + i] = { u: Date.now() - (120 - i) * 1000, e: big }; // W0 is the oldest
+  for (let i = 0; i < 120; i++) many['W' + i] = { u: Date.now() - (120 - i) * 1000, v: 2, e: big }; // W0 is the oldest
   dictionary = { lash: LASH }; wikidata = {};
   const b = await board({ words: ['LASH', 'B', 'C', 'D'], stored: { 'ccm:defs': many } });
   b.select(['LASH']); await sleep(40); b.d.getElementById('ccm-define-btn').click(); await sleep(40);
@@ -848,7 +848,7 @@ test('Definition: the sheet covers the board down to just above the game\'s butt
   assert.equal(sheet.style.height, '392px', 'its top is the board\'s top');
   assert.equal(sheet.style.width, '590px', 'as wide as the board');
   assert.equal(sheet.style.left, '20px');
-  shift = 200; b.w.dispatchEvent(new b.w.Event('scroll')); // the board's top is now off screen
+  shift = 200; b.w.dispatchEvent(new b.w.Event('scroll')); await sleep(40); // the board's top is now off screen (placed on the next frame)
   assert.equal(sheet.style.bottom, `${h - 300 + 8}px`, 'it follows the row');
   assert.equal(sheet.style.height, '284px', 'and stops at the top of the screen');
   b.close();
@@ -861,9 +861,10 @@ test('Definition: a sense with sub-senses doesn\'t repeat them, and fractions ke
     { definition: 'A Canadian unit.' },
   ] }] } };
   wikidata = {};
-  // and an answer 1.1.0 kept with the sub-senses run together
+  // and an answer 1.1.0 kept with the sub-senses run together: looked up again
+  dictionary.tether = { en: [{ partOfSpeech: 'Verb', definitions: [{ definition: 'To connect to something else.<ol><li>To share a connection.</li></ol>' }, { definition: 'To share a connection.' }] }] };
   const stored = { 'ccm:defs': { TETHER: { u: Date.now(), e: { title: 'tether', names: [], parts: [{ p: 'Verb', d: [
-    ['To connect to something else. To connect (a phone) to a computer. To share a connection.'], ['To connect (a phone) to a computer.'], ['To share a connection.']] }] } } } };
+    ['To connect to something else. To share a connection.'], ['To share a connection.']] }] } } } };
   const b = await board({ words: ['CUP', 'TETHER', 'C', 'D'], stored });
   const sheet = b.root.getElementById('ccm-define');
   const lookUp = async w => { b.select([w]); await sleep(40); b.d.getElementById('ccm-define-btn').click(); await sleep(40); };
@@ -872,6 +873,6 @@ test('Definition: a sense with sub-senses doesn\'t repeat them, and fractions ke
     ['A customary unit of measure', 'A US unit equal to 8 fluid ounces (1⁄16 of a US gallon).', 'A Canadian unit.']);
   await lookUp('TETHER');
   assert.deepEqual([...sheet.querySelectorAll('li')].map(li => li.textContent),
-    ['To connect to something else.', 'To connect (a phone) to a computer.', 'To share a connection.']);
+    ['To connect to something else.', 'To share a connection.']);
   b.close();
 });

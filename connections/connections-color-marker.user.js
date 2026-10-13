@@ -554,8 +554,11 @@
     defSheet.style.bottom = (h - at + 8) + 'px';
     defSheet.style.height = defSheet.style.maxHeight = Math.max(120, at - 8 - top) + 'px';
   }
-  window.addEventListener('scroll', placeDefine, { passive: true });
-  window.addEventListener('resize', placeDefine, { passive: true });
+  // (once per frame however many scroll events arrive, and only while it's open)
+  let placing = 0;
+  const placeSoon = () => { if (!defSheet.hidden && !placing) placing = requestAnimationFrame(() => { placing = 0; placeDefine(); }); };
+  window.addEventListener('scroll', placeSoon, { passive: true });
+  window.addEventListener('resize', placeSoon, { passive: true });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !defSheet.hidden) closeDefine(); });
   document.addEventListener('pointerdown', e => {
     if (!defSheet.hidden && !e.composedPath().includes(host) && e.target !== defineBtn) closeDefine();
@@ -575,25 +578,33 @@
   //   names: [{ id, l: label, d: description }] }. A def is a list of text pieces and, for the
   //   word a "plural of …"-style definition points to, [text, target] pairs.
   const DEF_KEY = 'ccm:defs';
+  const DEF_V = 2; // entries saved by an older version (1.1.0 ran sub-senses together) are looked up again
   const DEF_MAX = 300, DEF_BYTES = 400e3; // localStorage is ~5 MB per site, shared with NYT
   const defCache = new Map(); // WORD -> promise of { entry, failed: [source names] }
+  // { WORD: { u: last used, v, e: entry } }, read from localStorage once, on the first lookup
+  let defStore = null;
   function storedDefs() {
-    const all = ls.get(DEF_KEY, {});
-    const cutoff = Date.now() - KEEP_DAYS * 864e5;
-    for (const k of Object.keys(all)) if (!(all[k]?.u >= cutoff)) delete all[k];
-    return all;
+    if (!defStore) {
+      defStore = ls.get(DEF_KEY, {});
+      const cutoff = Date.now() - KEEP_DAYS * 864e5;
+      for (const k of Object.keys(defStore)) if (!(defStore[k]?.u >= cutoff && defStore[k].v === DEF_V)) delete defStore[k];
+    }
+    return defStore;
   }
   function storeDef(word, entry) {
+    defStore = null; // re-read first: another tab may have added words since
     const all = storedDefs();
-    if (entry) all[word] = { u: Date.now(), e: entry };
+    all[word] = { u: Date.now(), v: DEF_V, e: entry };
     // newest first; drop the oldest past the word or size limit
     let keys = Object.keys(all).sort((a, b) => all[b].u - all[a].u).slice(0, DEF_MAX);
     const pick = () => Object.fromEntries(keys.map(k => [k, all[k]]));
-    while (keys.length > 1 && JSON.stringify(pick()).length > DEF_BYTES) keys = keys.slice(0, Math.ceil(keys.length * 0.9));
+    let json = JSON.stringify(pick());
+    while (keys.length > 1 && json.length > DEF_BYTES) { keys = keys.slice(0, Math.ceil(keys.length * 0.9)); json = JSON.stringify(pick()); }
     for (let tries = 0; tries < 3; tries++) {
-      try { localStorage.setItem(DEF_KEY, JSON.stringify(pick())); return; }
-      catch { keys = keys.slice(0, Math.floor(keys.length / 2)); } // full: make room
+      try { localStorage.setItem(DEF_KEY, json); break; }
+      catch { keys = keys.slice(0, Math.floor(keys.length / 2)); json = JSON.stringify(pick()); } // full: make room
     }
+    defStore = pick();
   }
   const defText = d => d.map(s => typeof s === 'string' ? s : s[0]).join('');
   // a definition's HTML as text pieces (never inserted as HTML): footnotes, styles and
@@ -618,9 +629,11 @@
     if (typeof out[out.length - 1] === 'string') out[out.length - 1] = out[out.length - 1].trimEnd();
     return out.filter(s => s !== '');
   }
+  // a request still hanging after 15 s counts as failed (and is tried again next time)
+  const giveUp = () => AbortSignal.timeout?.(15e3);
   // one Wiktionary page: [{ p, d }], or [] when there's no page
   async function fetchPage(t) {
-    const r = await fetch('https://en.wiktionary.org/api/rest_v1/page/definition/' + encodeURIComponent(t.replace(/ /g, '_')));
+    const r = await fetch('https://en.wiktionary.org/api/rest_v1/page/definition/' + encodeURIComponent(t.replace(/ /g, '_')), { signal: giveUp() });
     if (r.status === 404) return [];
     if (!r.ok) throw new Error('lookup failed');
     // (codes like ISO language codes are listed as "Symbol": no help in a word puzzle)
@@ -634,7 +647,7 @@
   // counts only when the word is in its label (MARS: Bruno Mars, but not SLIGHT: "snub"), and
   // those and bare "family name"/"given name" entries come after the rest.
   async function fetchNames(word) {
-    const r = await fetch('https://www.wikidata.org/w/api.php?action=wbsearchentities&format=json&origin=*&language=en&uselang=en&type=item&limit=10&search=' + encodeURIComponent(word));
+    const r = await fetch('https://www.wikidata.org/w/api.php?action=wbsearchentities&format=json&origin=*&language=en&uselang=en&type=item&limit=10&search=' + encodeURIComponent(word), { signal: giveUp() });
     if (!r.ok) throw new Error('lookup failed');
     const want = plain(word);
     const inLabel = s => plain(s.label) === want || String(s.label || '').split(/[\s,()-]+/).some(p => plain(p) === want);
@@ -673,7 +686,10 @@
     if (!defCache.has(key)) {
       const kept = storedDefs()[key];
       let p;
-      if (kept) { p = Promise.resolve({ entry: kept.e, failed: [] }); storeDef(key, kept.e); } // (refreshes its date)
+      if (kept) {
+        p = Promise.resolve({ entry: kept.e, failed: [] });
+        if (Date.now() - kept.u > 864e5) storeDef(key, kept.e); // restart its 60 days (at most once a day)
+      }
       else {
         p = fetchDef(word.trim()).then(r => {
           if (r.failed.length) defCache.delete(key); // incomplete: kept for nothing, tried again next time
@@ -710,13 +726,7 @@
       const shown = (common.length ? common : part.d).slice(0, PER_PART);
       const ol = el('ol');
       for (const d of part.d) {
-        // a sense whose text runs on into its sub-sense's ("To connect to something else. To
-        // connect (a smartphone)…" then "To connect (a smartphone)…"): keep only its own part
-        // (answers 1.1.0 stored on the device still have them run together)
-        let t = defText(d), sub;
-        const own = d.every(s => typeof s === 'string');
-        while (own && (sub = part.d.map(defText).find(e => e.trim() && e.length < t.length - 3 && t.trimEnd().endsWith(e.trim())))) t = t.trimEnd().slice(0, -sub.trim().length);
-        const li = defNode(own ? [t.trim()] : d);
+        const li = defNode(d);
         if (!shown.includes(d)) { li.classList.add('rare'); li.hidden = true; hidden++; }
         ol.append(li);
       }

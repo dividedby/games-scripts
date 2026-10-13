@@ -39,10 +39,14 @@ Versions below 1.0.0 are pre-release.
 ## Connections Palette
 
 ### [Unreleased]
+
+### [1.1.1] - 2026-10-13
 #### Changed
-- The definition panel now covers the whole board, from its top row down to just above the game's buttons.
+- The definition panel now covers the whole board, from its top row down to just above the game's buttons, and follows it as you scroll.
 #### Fixed
-- Definitions with sub-senses (like CUP's "customary unit of measure") no longer repeat the sub-senses inside them, and fractions like 1⁄16 keep their 1.
+- Definitions with sub-senses (like CUP's "customary unit of measure") no longer repeat the sub-senses inside them, and fractions like 1⁄16 keep their 1. Words saved by 1.1.0 are looked up again to pick this up.
+- Names and titles no longer list unrelated entries that only share an abbreviation or nickname with the word (SLIGHT: "snub"; WEE: "Western equine encephalitis"), or entries with no description.
+- A lookup that never answers now gives up after 15 seconds with a "Couldn't reach" message instead of saying "Looking it up…" forever.
 
 ### [1.1.0] - 2026-10-13
 #### Added
