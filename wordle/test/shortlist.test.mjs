@@ -148,7 +148,11 @@ test('a finished puzzle shows a recap: guesses, how often you took the best pick
   for (let turn = 0; turn < 5 && g.row < 6 && g.submitted.at(-1) !== 'pouch'; turn++) {
     const picks = g.picks();
     const pick = picks.includes('pouch') ? 'pouch' : picks[turn % 2 ? 0 : picks.length - 1];
-    g.pick(pick).click(); await sleep(600);
+    const before = g.row;
+    g.pick(pick).click();
+    // the pick is typed key by key: wait for its row to land (slower when the whole suite runs at once)
+    for (let i = 0; i < 40 && g.row === before; i++) await sleep(100);
+    await sleep(300);
   }
   assert.ok(!g.panel().hidden, 'the recap stays up');
   assert.equal(g.picks().length, 0, 'no picks once it is over');
