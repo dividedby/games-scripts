@@ -61,7 +61,7 @@ Works on desktop, iPhone and Android.
 <img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/connections/desktop-settings.png" alt="The settings panel open above the palette" width="460">
 <br><br>
 <img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/connections/iphone-more.jpg" alt="iPhone: the palette swapped to sort, history, settings and hide" width="200">
-<img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/connections/iphone-settings.jpg" alt="iPhone: the settings panel" width="200">
+<img src="https://raw.githubusercontent.com/dividedby/games-scripts/main/docs/images/connections/iphone-settings.jpg" alt="Phone: the settings panel" width="200">
 </center>
 </details>
 

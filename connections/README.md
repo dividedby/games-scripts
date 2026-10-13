@@ -60,9 +60,9 @@ Not sure what a word means, or which meaning the puzzle is after? Select just th
 Definitions come from [Wiktionary](https://en.wiktionary.org) (CC BY-SA) and names from [Wikidata](https://www.wikidata.org). Nothing is looked up until you tap, and the word is the only thing sent. A first lookup can take a few seconds; the answer is then kept on your device for 60 days, so the same word opens instantly next time. Turn the button off in ⚙ if you'd rather not have it.
 
 <details>
-<summary>Screenshot: a definition on iPhone</summary>
+<summary>Screenshot: a definition on a phone</summary>
 <br>
-<img src="../docs/images/connections/phone-definition.jpg" alt="iPhone: LANTERN selected and its definitions open over the board, noun, verb and adjective, with Show all (6 more) and a Wiktionary link" width="260">
+<img src="../docs/images/connections/phone-definition.jpg" alt="Phone: LANTERN selected and its definitions covering the board just above the Define, Shuffle, Deselect All and Submit buttons: five noun senses, a verb and an adjective" width="260">
 </details>
 
 ## Submitting
@@ -104,7 +104,7 @@ On a phone the palette is a single row along the bottom of the screen: the color
 <br>
 <img src="../docs/images/connections/iphone-more.jpg" alt="iPhone: the palette swapped to its other tools: sort, history, settings, hide and back" width="250">
 &nbsp;
-<img src="../docs/images/connections/iphone-settings.jpg" alt="iPhone: the settings panel open above the palette" width="250">
+<img src="../docs/images/connections/iphone-settings.jpg" alt="Phone: the Palette settings panel open above the palette, the Definition button setting at the bottom" width="250">
 </details>
 
 ## Settings
@@ -130,7 +130,7 @@ The panel also has **Clear this puzzle** (removes all your colors on this puzzle
 <details>
 <summary>Screenshots: settings panel and color letters</summary>
 <br>
-<img src="../docs/images/connections/desktop-settings.png" alt="Desktop: the settings panel open above the palette" width="560">
+<img src="../docs/images/connections/desktop-settings.png" alt="Desktop: the Palette settings panel open above the palette, the Definition button setting at the bottom" width="560">
 <br><br>
 <img src="../docs/images/connections/desktop-letters.png" alt="Color letters on: each tile has a small Y, G, B or P badge, splits show both letters (YG, YGB), and the palette buttons read Y3, G3, B4, P4" width="560">
 </details>
