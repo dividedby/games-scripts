@@ -319,7 +319,7 @@
     #ccm-define ul.names { margin: 0; padding-left: 20px; }
     #ccm-define ul.names a { color: inherit; text-decoration: underline dotted var(--muted); text-underline-offset: 3px; }
     #ccm-define ul.names span { color: var(--muted); }
-    #ccm-define .foot .src { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    #ccm-define .foot .src { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }
     #ccm-define .foot .lic { color: var(--muted); }
     @keyframes ccm-shake { 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
     @media (max-width: 480px) {
@@ -538,14 +538,17 @@
     if (defSheet.hidden) return;
     const row = defineBtn.parentElement;
     const h = window.innerHeight;
-    const rowTop = row && defineBtn.style.display !== 'none' ? row.getBoundingClientRect().top : h - 82;
-    const at = Math.min(Math.max(rowTop, 180), h - 82); // never off the top, never under the palette
-    const bar = Math.max(0, document.querySelector('.pz-nav')?.getBoundingClientRect().bottom || 0); // NYT's top bar
     const board = [...document.querySelectorAll('[data-testid="card-label"], [data-testid="solved-category-container"]')]
       .map(n => n.getBoundingClientRect()).filter(r => r.height);
+    const left = Math.min(...board.map(r => r.left)), right = Math.max(...board.map(r => r.right));
+    // the palette's top, if it's under the board (on a phone; on a desktop it sits off to the side)
+    const p = panel.getBoundingClientRect();
+    const floor = p.height && (!board.length || (p.left < right && p.right > left)) ? p.top - 8 : h - 12;
+    const rowTop = row && defineBtn.style.display !== 'none' ? row.getBoundingClientRect().top : floor;
+    const at = Math.min(Math.max(rowTop, 180), floor); // never off the top, never under the palette
+    const bar = Math.max(0, document.querySelector('.pz-nav')?.getBoundingClientRect().bottom || 0); // NYT's top bar
     const top = Math.max(bar + 8, board.length ? Math.min(...board.map(r => r.top)) : at - h * 0.6);
     // as wide as the board too (at least 320px, never past the screen's edges)
-    const left = Math.min(...board.map(r => r.left)), right = Math.max(...board.map(r => r.right));
     const w = Math.min(window.innerWidth - 24, Math.max(320, right - left));
     if (board.length) { defSheet.style.width = w + 'px'; defSheet.style.left = Math.max(12, Math.min((left + right - w) / 2, window.innerWidth - 12 - w)) + 'px'; defSheet.style.transform = 'none'; }
     defSheet.style.bottom = (h - at + 8) + 'px';
