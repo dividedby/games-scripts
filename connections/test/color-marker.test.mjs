@@ -975,3 +975,54 @@ test('a second copy of the script does nothing', async () => {
   assert.equal(b.d.querySelectorAll('#ccm-define-btn').length, 1);
   b.close();
 });
+
+// A rough layout for the button row (jsdom has none): a button is its text at 9px a letter plus
+// its padding (20px a side unless set), at least 110px wide unless its min-width is cleared;
+// buttons sit left to right with the row's gap (12px unless set) and wrap past `rowWidth`.
+function fakeRowLayout(w, rowWidth) {
+  const width = b => {
+    const pad = parseInt(b.style.paddingLeft, 10);
+    const own = b.textContent.length * 9 + 2 * (Number.isNaN(pad) ? 20 : pad);
+    return b.style.minWidth === '0' ? own : Math.max(110, own);
+  };
+  const shown = b => b.style.display !== 'none';
+  Object.defineProperty(w.HTMLElement.prototype, 'offsetParent', { configurable: true, get() { return shown(this) ? this.ownerDocument.body : null; } });
+  Object.defineProperty(w.HTMLElement.prototype, 'offsetTop', { configurable: true, get() {
+    const row = this.parentElement;
+    if (!row || this.localName !== 'button') return 0;
+    const gap = parseInt(row.style.gap, 10) || 12;
+    let x = 0, line = 0;
+    for (const b of row.children) {
+      if (!shown(b)) continue;
+      const bw = width(b);
+      if (x && x + gap + bw > rowWidth) { line++; x = bw; } else x += (x ? gap : 0) + bw;
+      if (b === this) return line * 50;
+    }
+    return 0;
+  } });
+}
+
+test('Definition: with Define and Guide in the row, buttons shrink only as far as the row needs', async () => {
+  const fit = async rowWidth => {
+    const b = await board({ words: ['LASH', 'EYE', 'LIPS', 'SENSE'] });
+    fakeRowLayout(b.w, rowWidth);
+    b.select(['LASH']); await sleep(60);
+    const q = s => b.d.querySelector(s);
+    return { def: q('#ccm-define-btn'), guide: q('#ccm-guide-btn'), shuffle: q('[data-testid=shuffle-btn]'), row: q('[data-testid=shuffle-btn]').parentElement };
+  };
+  let r = await fit(520); // room once the fixed widths go: the game's padding stays
+  assert.equal(r.def.textContent, 'Define');
+  assert.equal(r.shuffle.style.minWidth, '0');
+  assert.equal(r.shuffle.style.paddingLeft, '', 'the game\'s own padding kept');
+  assert.equal(r.guide.textContent, 'Guide');
+  r = await fit(430); // a big phone: a little less padding, not the smallest
+  assert.equal(r.shuffle.style.paddingLeft, '12px');
+  assert.equal(r.guide.textContent, 'Guide');
+  r = await fit(300); // very narrow: everything, then the ⓘ
+  assert.equal(r.shuffle.style.paddingLeft, '8px');
+  assert.equal(r.guide.textContent, 'ⓘ');
+  r = await fit(2000); // a desktop: nothing changes
+  assert.equal(r.def.textContent, 'Definition');
+  assert.equal(r.shuffle.style.minWidth, '');
+  assert.equal(r.row.style.gap, '');
+});
