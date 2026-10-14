@@ -51,6 +51,10 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [1.2.4] - 2026-10-14
+#### Fixed
+- On a phone, adding Define to the button row no longer shrinks every button to its text: the buttons now share the row's full width, and only lose padding if the row is still too tight.
+
 ### [1.2.3] - 2026-10-13
 #### Fixed
 - Damaged saved marks, maybe colors or guesses no longer break the palette: anything not in the shape the script saves is ignored.
