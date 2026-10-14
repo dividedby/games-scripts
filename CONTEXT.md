@@ -139,3 +139,17 @@ was dealt at.
 ### Answers left
 A pick's hint: the number of likely answers you'd expect to still fit after playing
 it, if it isn't the answer (averaged over the answers that fit now). Fewer is better.
+
+## Minute Cryptic Plus
+
+### Answer boxes
+The row of squares the answer is typed into (the game's "Letter N of M" buttons). The
+scribble space shows the same row. A box a hint has filled is **revealed** and is never
+moved by the script.
+
+### Scribble space
+The game's workspace for playing with letters. Letters in it are either in the answer
+boxes or **loose** (tiles you can drag), laid out in a **Grid** or a **Circle**.
+
+### Own keyboard
+The phone's (or computer's) keyboard, used instead of the game's on-screen one.
