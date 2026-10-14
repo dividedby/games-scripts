@@ -265,7 +265,7 @@
   new MutationObserver(() => {
     if (!queued && !(kbdBtn?.isConnected && (boxesBtn?.isConnected || !document.querySelector('button[aria-label="Circle layout"]')))) {
       queued = true;
-      requestAnimationFrame(ensure);
+      setTimeout(ensure, 0); // after the game's update has landed
     }
   }).observe(document.body, { childList: true, subtree: true });
   showMode();
