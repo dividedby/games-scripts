@@ -31,6 +31,14 @@ Current scripts:
   (`data-nytd-flip`). News-style pages (hints, forums, the bots, help.nytimes.com) swap NYT's
   `tpl-always-light` class on `<html>` for `tpl-always-dark` and scan the whole body.
 
+- `minute-cryptic/minute-cryptic-plus.user.js` — Minute Cryptic Plus (0.x, pre-release) —
+  minutecryptic.com: hides the game's keyboard (`.react-simple-keyboard`) for the phone's own
+  (a hidden field; letters reach the game as keydown on the page), and extends the scribble
+  space through its React context (found from the `Circle layout` button's fiber; names like
+  `gridAdapter.getCells/writeLetter`, `dragLetterFromGrid`, `dropTileOnGrid`, `shuffleTiles`).
+  Never read a cell's `answer` (the state holds it): only `index`, `letter`, `isRevealed`.
+  Never solve or hint the owner's daily puzzle; test with letters like q/x/z and clear them.
+
 Each script folder holds the script, its `README.md` (the user guide),
 `greasyfork-description.md` (the Greasy Fork listing, synced from `main`) and
 `test/`. Screenshots live in `docs/images/<script>/`; the READMEs and the Greasy Fork
@@ -45,7 +53,8 @@ into jsdom against a simulated board (`<script folder>/test/`). Use pnpm, never 
 - **Never move or rename a published `.user.js` file.** Its path is the install and
   update URL.
 - **Bump `@version` on every user-facing change**, or installed copies never update.
-  All three are past 1.0: new capability → minor, fix → patch.
+  Connections Palette, Wordle Shortlist and NYT Games Dark are past 1.0 (new capability → minor,
+  fix → patch); Minute Cryptic Plus is 0.x until the owner calls it ready.
 - **Public identity is `dividedby` only.** No real name or personal email in code,
   headers, docs or commits. Commit as `dividedby <64715420+dividedby@users.noreply.github.com>`.
 - **Pushing to `main` releases**, everywhere: GitHub installs pick it up directly, and
