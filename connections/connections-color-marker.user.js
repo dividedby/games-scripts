@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  Color-code NYT Connections tiles as you work out the groups, then submit them in the order you choose, like purple first for a reverse rainbow
-// @version      1.2.3
+// @version      1.2.4
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -876,37 +876,38 @@
     if (!opt('define') && defSheet.dataset.view === 'define') closeDefine();
     if (!opt('guide') && defSheet.dataset.view === 'guide') closeDefine();
   }
-  // Up to five buttons are a squeeze on a phone. Step by step, only as far as needed to fit
-  // them on one line, so they stay as big as the row allows: "Define" and smaller gaps; ours
-  // lose their fixed widths, then the game's too (each keeps its padding); then everyone's
-  // padding shrinks a little at a time; last, Guide becomes "ⓘ". Only then do they wrap.
-  // Each step: [short labels (1) or Guide as ⓘ (2), who loses min-width, padding, gap]
+  // Up to five buttons are a squeeze on a phone. The game sizes its buttons by fixed minimum
+  // widths, so with ours in the row every button instead takes its text plus some padding and
+  // grows to share the row's full width. If that still doesn't fit one line, the padding and
+  // gaps shrink a step at a time, and last Guide becomes "ⓘ". Only then do they wrap.
+  // Each step: [short labels (1) or Guide as ⓘ (2), padding, gap]
   const FIT = [
-    [0, '', '', ''],
-    [1, 'ours', '', '6px'],
-    [1, 'all', '', '6px'],
-    [1, 'all', '14px', '6px'],
-    [1, 'all', '12px', '5px'],
-    [1, 'all', '10px', '4px'],
-    [1, 'all', '8px', '4px'],
-    [2, 'all', '8px', '4px'],
+    [0, '', ''],
+    [1, '14px', '6px'],
+    [1, '10px', '5px'],
+    [1, '6px', '4px'],
+    [2, '6px', '4px'],
   ];
   let rowShown = '';
-  const squeezed = new Set(); // the game's buttons we've narrowed, to put back
+  const squeezed = new Set(); // the game's buttons we've resized, to put back
   function fitDefine() {
     const row = defineBtn.parentElement || guideBtn.parentElement;
     if (!row) return;
     const ours = [defineBtn, guideBtn].filter(b => b.style.display !== 'none');
-    const narrow = (b, min, pad) => { b.style.minWidth = min ? '0' : ''; b.style.paddingLeft = b.style.paddingRight = pad; };
+    const size = (b, pad) => {
+      b.style.minWidth = pad ? '0' : '';
+      b.style.flex = pad ? '1 1 auto' : '';
+      b.style.paddingLeft = b.style.paddingRight = pad;
+    };
     const compact = step => {
-      const [short, who, pad, gap] = FIT[step];
+      const [short, pad, gap] = FIT[step];
       const setText = (b, t) => { if (b.textContent !== t) b.textContent = t; }; // unchanged: no mutation to redraw for
       setText(defineBtn, short ? 'Define' : 'Definition');
       setText(guideBtn, short > 1 ? 'ⓘ' : 'Guide');
-      for (const b of [defineBtn, guideBtn]) narrow(b, !!who, pad);
-      for (const b of squeezed) if (b.isConnected) narrow(b, false, '');
+      for (const b of [defineBtn, guideBtn]) size(b, pad);
+      for (const b of squeezed) if (b.isConnected) size(b, '');
       squeezed.clear();
-      if (who === 'all') for (const b of row.children) if (b.localName === 'button' && !ours.includes(b)) { narrow(b, true, pad); squeezed.add(b); }
+      if (pad) for (const b of row.children) if (b.localName === 'button' && !ours.includes(b)) { size(b, pad); squeezed.add(b); }
       row.style.gap = gap;
     };
     compact(0);

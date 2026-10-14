@@ -1008,21 +1008,28 @@ test('Definition: with Define and Guide in the row, buttons shrink only as far a
     fakeRowLayout(b.w, rowWidth);
     b.select(['LASH']); await sleep(60);
     const q = s => b.d.querySelector(s);
-    return { def: q('#ccm-define-btn'), guide: q('#ccm-guide-btn'), shuffle: q('[data-testid=shuffle-btn]'), row: q('[data-testid=shuffle-btn]').parentElement };
+    return { b, def: q('#ccm-define-btn'), guide: q('#ccm-guide-btn'), shuffle: q('[data-testid=shuffle-btn]'), row: q('[data-testid=shuffle-btn]').parentElement };
   };
-  let r = await fit(520); // room once the fixed widths go: the game's padding stays
+  let r = await fit(520); // fits once every button is its text plus padding
   assert.equal(r.def.textContent, 'Define');
-  assert.equal(r.shuffle.style.minWidth, '0');
-  assert.equal(r.shuffle.style.paddingLeft, '', 'the game\'s own padding kept');
+  assert.equal(r.shuffle.style.minWidth, '0', 'the game\'s fixed widths let go');
+  assert.equal(r.shuffle.style.flex, '1 1 auto', 'and the buttons share the row');
+  assert.equal(r.shuffle.style.paddingLeft, '14px');
+  assert.equal(r.guide.style.flex, '1 1 auto');
   assert.equal(r.guide.textContent, 'Guide');
-  r = await fit(430); // a big phone: a little less padding, not the smallest
-  assert.equal(r.shuffle.style.paddingLeft, '12px');
+  r.b.select(['LASH', 'EYE']); await sleep(60); // Define goes and the other four fit: the game's buttons are put back
+  assert.equal(r.shuffle.style.flex, '');
+  assert.equal(r.shuffle.style.minWidth, '');
+  assert.equal(r.shuffle.style.paddingLeft, '');
+  r = await fit(430); // a big phone: a little less padding
+  assert.equal(r.shuffle.style.paddingLeft, '10px');
   assert.equal(r.guide.textContent, 'Guide');
-  r = await fit(300); // very narrow: everything, then the ⓘ
-  assert.equal(r.shuffle.style.paddingLeft, '8px');
+  r = await fit(300); // very narrow: the least padding, then the ⓘ
+  assert.equal(r.shuffle.style.paddingLeft, '6px');
   assert.equal(r.guide.textContent, 'ⓘ');
   r = await fit(2000); // a desktop: nothing changes
   assert.equal(r.def.textContent, 'Definition');
   assert.equal(r.shuffle.style.minWidth, '');
+  assert.equal(r.shuffle.style.flex, '');
   assert.equal(r.row.style.gap, '');
 });
