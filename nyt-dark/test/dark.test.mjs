@@ -212,3 +212,42 @@ test('a second copy of the script does nothing', async () => {
   assert.equal(p.d.querySelectorAll('#nytd-style').length, 1);
   assert.equal(p.d.querySelectorAll('#nytd-toggle').length, 1);
 });
+
+test('Wordle, which has its own toolbar instead of the site header, gets the toggle after ⚙ once the toolbar appears', async () => {
+  const dom = new JSDOM(`<!doctype html><html><head></head><body class="pz-page"><div id="wordle-app-game"></div></body></html>`,
+  { url: 'https://www.nytimes.com/games/wordle/2023-08-01', runScripts: 'outside-only', pretendToBeVisual: true });
+  const w = dom.window;
+  w.matchMedia = () => ({ matches: false, addEventListener() {} });
+  w.__NYTD_TEST__ = true;
+  w.eval(SRC);
+  await sleep(50);
+  const d = w.document;
+  assert.equal(d.getElementById('nytd-toggle'), null, 'the start screen has no toolbar yet');
+  // past the start screen: the game draws its toolbar
+  d.getElementById('wordle-app-game').innerHTML = `<header class="Toolbar-module_header__x"><menu class="AppHeader-module_toolbar__menu__y">
+    <button id="help-button"></button><button id="settings-button" aria-label="Settings"></button><span>Create a Puzzle</span></menu></header>`;
+  await sleep(100);
+  const t = d.getElementById('nytd-toggle');
+  assert.ok(t, 'a toggle in the toolbar');
+  assert.equal(t.previousElementSibling.id, 'settings-button');
+  assert.ok(t.classList.contains('nytd-in-toolbar'), 'styled to fit the toolbar');
+  assert.equal(t.textContent, '◐ Auto');
+  assert.equal(t.querySelector('.nytd-word').textContent, ' Auto', 'the word can be hidden on phones');
+  t.click(); await sleep(30);
+  assert.equal(d.documentElement.dataset.mode, 'dark');
+  assert.equal(t.getAttribute('aria-label'), 'Dark mode: Dark');
+});
+
+test('links in the dark header bar get light text and outline (Upgrade subscription), NYT\'s filled buttons and the menu are left alone', async () => {
+  const p = await page({ mode: 'dark' });
+  p.d.querySelector('.pz-nav').insertAdjacentHTML('beforeend',
+    '<a id="up" class="css-1o52ud2">Upgrade subscription</a><a id="sub" class="pz-nav__button default">Subscribe</a>' +
+    '<div class="pz-nav-drawer"><a id="menu">Wordle</a></div>');
+  // (jsdom's cascade doesn't weigh !important against the page's own classes, so check the rule matches)
+  const rule = [...p.d.getElementById('nytd-style').sheet.cssRules].find(r => r.selectorText?.includes(':not(.pz-nav__button)'));
+  assert.ok(rule, 'a header-link rule');
+  assert.equal(rule.style.getPropertyPriority('color'), 'important');
+  assert.ok(p.d.getElementById('up').matches(rule.selectorText));
+  assert.ok(!p.d.getElementById('sub').matches(rule.selectorText));
+  assert.ok(!p.d.getElementById('menu').matches(rule.selectorText));
+});
