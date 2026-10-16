@@ -24,7 +24,7 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
-### [1.1.0] - 2026-10-15
+### [1.1.0] - 2026-10-16
 #### Added
 - Each level has its own start: Easy gives one of the 10 best openers (with its hint), Medium any likely answer as before, and Hard a choice of five random words from the whole guess list (about 4,600 words), not just the likely answers. Switching level before the first guess deals that level's start, and an Easy start you play counts toward the recap's easiest level.
 
