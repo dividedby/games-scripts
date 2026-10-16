@@ -232,7 +232,8 @@ test('Wordle, which has its own toolbar instead of the site header, gets the tog
   assert.equal(t.previousElementSibling.id, 'settings-button');
   assert.ok(t.classList.contains('nytd-in-toolbar'), 'styled to fit the toolbar');
   assert.equal(t.textContent, '◐ Auto');
-  assert.equal(t.querySelector('.nytd-word').textContent, ' Auto', 'the word can be hidden on phones');
+  assert.equal(t.querySelector('.nytd-word').textContent, 'Auto', 'phones keep the word, not ◐');
+  assert.equal(t.querySelector('.nytd-icon').textContent, '◐ ');
   t.click(); await sleep(30);
   assert.equal(d.documentElement.dataset.mode, 'dark');
   assert.equal(t.getAttribute('aria-label'), 'Dark mode: Dark');
@@ -250,4 +251,17 @@ test('links in the dark header bar get light text and outline (Upgrade subscript
   assert.ok(p.d.getElementById('up').matches(rule.selectorText));
   assert.ok(!p.d.getElementById('sub').matches(rule.selectorText));
   assert.ok(!p.d.getElementById('menu').matches(rule.selectorText));
+});
+
+test('a tap on the toggle switches once, even where the header swallows the click (iPhone)', async () => {
+  const p = await page({ mode: 'light' });
+  // (jsdom has no PointerEvent: a plain event with the fields the script reads)
+  const tap = () => p.toggle().dispatchEvent(Object.assign(new p.w.Event('pointerup', { bubbles: true, cancelable: true }), { pointerType: 'touch', isPrimary: true }));
+  tap(); await sleep(30);
+  assert.equal(p.toggle().textContent, '◐ Auto', 'pointerup alone switches');
+  tap(); p.toggle().click(); await sleep(30);
+  assert.equal(p.toggle().textContent, '◐ Dark', 'the click that follows a tap is not a second switch');
+  await sleep(850);
+  p.toggle().click(); await sleep(30);
+  assert.equal(p.toggle().textContent, '◐ Light', 'a mouse click still switches');
 });
