@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  A proper dark mode for NYT Games in the browser (Connections, Wordle and the rest), using NYT's own dark colors so the game colors stay true
-// @version      1.0.1
+// @version      1.1.0
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -64,9 +64,16 @@
     html.nytd-dark .pz-nav__hamburger-inner::after { background-color: #f8f8f8 !important; }
     #nytd-toggle { font: 600 12px/1 nyt-franklin, helvetica, arial, sans-serif; color: inherit; background: transparent;
       border: 1px solid currentColor; border-radius: 999px; padding: 5px 10px; margin-left: 12px; cursor: pointer;
-      opacity: .75; align-self: center; white-space: nowrap; }
+      opacity: .75; align-self: center; white-space: nowrap; position: relative; z-index: 2; touch-action: manipulation; }
     #nytd-toggle:hover { opacity: 1; }
     html.nytd-dark #nytd-toggle { color: #f8f8f8; }
+    /* other links in the header bar (like Upgrade subscription) come with their own black text
+       and outline; the drawer and NYT's filled buttons (Subscribe, Log In) have their own colors */
+    html.nytd-dark .pz-nav :is(a, button):not(.pz-nav__button):not(.pz-nav-drawer *) { color: #f8f8f8 !important; border-color: #f8f8f8 !important; }
+    /* Wordle has its own toolbar instead of the site header: the toggle sits after ⚙, and on
+       phones shows just the word (Auto, Dark, Light) so the toolbar still fits */
+    #nytd-toggle.nytd-in-toolbar { margin: 0 4px; }
+    @media (max-width: 500px) { #nytd-toggle.nytd-in-toolbar .nytd-icon { display: none; } #nytd-toggle.nytd-in-toolbar { padding: 5px 8px; } }
 
     /* the site menu (the ☰ drawer) */
     html.nytd-dark .pz-nav-drawer, html.nytd-dark .pz-nav-drawer__account { background: #121212 !important; color: #f8f8f8 !important; }
@@ -342,25 +349,50 @@
   }
 
   // ---------- the toggle in the site header ----------
+  // after the site header's logo, or, in Wordle (which has its own toolbar), after ⚙ Settings
   const NAV = '.pz-nav__title, #js-logo-nav';
+  const TOOLBAR = '[class*="AppHeader-module_toolbar__menu"] > #settings-button';
+  const anchor = () => document.querySelector(NAV) || document.querySelector(TOOLBAR);
   function showToggle() {
-    const nav = document.querySelector(NAV);
+    const nav = anchor();
     let t = document.getElementById('nytd-toggle');
     if (!nav) return;
     if (!t) {
       t = document.createElement('button');
       t.id = 'nytd-toggle';
       t.type = 'button';
-      t.addEventListener('click', e => {
-        e.preventDefault(); e.stopPropagation();
+      // On iPhones the site header handles touches itself, so a tap there never becomes a
+      // click: a finger switches on pointerup, a mouse (or keyboard) on click, and the click
+      // that may still follow a tap is skipped.
+      let tapped = 0;
+      const cycle = () => {
         mode = MODES[(MODES.indexOf(mode) + 1) % MODES.length];
         ls.set(MODE_KEY, mode);
         apply();
+      };
+      t.addEventListener('pointerup', e => {
+        if (e.pointerType === 'mouse' || !e.isPrimary) return;
+        e.preventDefault(); e.stopPropagation();
+        tapped = Date.now();
+        cycle();
+      });
+      t.addEventListener('click', e => {
+        e.preventDefault(); e.stopPropagation();
+        if (Date.now() - tapped < 800) return;
+        cycle();
       });
     }
     if (t.previousElementSibling !== nav) nav.after(t);
+    t.classList.toggle('nytd-in-toolbar', !nav.matches(NAV));
     const label = `◐ ${LABEL[mode]}`;
-    if (t.textContent !== label) t.textContent = label;
+    if (t.textContent !== label) {
+      // ◐ is its own element so a narrow toolbar can leave it out and keep the word
+      const icon = document.createElement('span'), word = document.createElement('span');
+      icon.className = 'nytd-icon'; icon.textContent = '◐ ';
+      word.className = 'nytd-word'; word.textContent = LABEL[mode];
+      t.replaceChildren(icon, word);
+    }
+    t.setAttribute('aria-label', `Dark mode: ${LABEL[mode]}`);
     t.title = mode === 'auto' ? 'Dark mode: following your device (tap for always dark)'
       : mode === 'dark' ? 'Dark mode: always on (tap for always light)' : 'Dark mode: off (tap to follow your device)';
   }
@@ -384,8 +416,8 @@
     // the game sometimes rewrites <body>'s attributes; put ours back
     new MutationObserver(later).observe(document.body, { attributes: true, attributeFilter: ['class', 'data-mode'] });
     new MutationObserver(later).observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-mode'] });
-    // the header is rendered late; place the toggle when it appears
-    // (pages without the header, like Wordle's, never get a toggle: don't keep trying)
+    // the header (or Wordle's toolbar, once past its start screen) is rendered late; place the
+    // toggle when it appears (pages with neither never get a toggle: don't keep trying)
     new MutationObserver(muts => {
       if (ARTICLE && addedSince) {
         for (const m of muts) {
@@ -394,7 +426,7 @@
         }
         if (addedSince.subtrees.size + addedSince.parents.size > MAX_ADDED) addedSince = null;
       }
-      if (!document.getElementById('nytd-toggle')?.isConnected && document.querySelector(NAV)) later();
+      if (!document.getElementById('nytd-toggle')?.isConnected && anchor()) later();
       else if (!panelQueued) {
         panelQueued = true;
         setTimeout(() => {
