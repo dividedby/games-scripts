@@ -16,7 +16,7 @@ It turns out the website already ships NYT's dark colors for the games themselve
 
 1. Install the script (see [Installing](../README.md#installing)) and open any NYT game.
 2. By default it follows your device: dark when your phone or computer is in dark mode, light otherwise.
-3. Tap **◐ Auto** in the top bar, next to the Games logo, to switch between **Auto**, **Dark** (always) and **Light** (always). Your choice is remembered across the games.
+3. Tap **◐ Auto** in the top bar, next to the Games logo (in Wordle, next to ⚙ once you're past the start screen; just **◐** on a phone), to switch between **Auto**, **Dark** (always) and **Light** (always). Your choice is remembered across the games.
 
 **Using a dark-mode extension?** Dark Reader steps aside on its own: the script tells it the page is already dark. Noir (Safari on iPhone and iPad) doesn't, so turn Noir off for nytimes.com (and help.nytimes.com), or the page gets darkened twice and the colors go off again.
 
@@ -32,8 +32,6 @@ It turns out the website already ships NYT's dark colors for the games themselve
 
 - **Hints and bots**: the Connections Companion, Spelling Bee Forum, Wordle Review and Wordplay pages (comments included), Wordle Bot and Connections Bot, and the NYT Help Center.
 - **The crossword grid**: dark squares with light letters, the current word in deep blue and the selected square still yellow, like the NYT app.
-
-Wordle's own page has no top bar, so set the mode from another game or the Games home page; it carries over.
 
 ## Development
 

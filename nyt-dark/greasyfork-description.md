@@ -33,8 +33,11 @@ of the site NYT never gave dark colors.
   Wordplay (comments too), Wordle Bot and Connections Bot, and the NYT Help Center.
 
 **How to use it:** it follows your device's dark mode. Tap **◐ Auto** in the top bar,
-next to the Games logo, for **Dark** (always) or **Light** (always); your choice carries
-across the games.
+next to the Games logo (in Wordle, next to ⚙), for **Dark** (always) or **Light**
+(always); your choice carries across the games.
+
+**New in 1.1:** the ◐ toggle is in Wordle's toolbar too, and links in the dark top bar
+(like Upgrade subscription) are no longer black on black.
 
 **Using a dark-mode extension?** Dark Reader steps aside on its own. Noir (Safari on
 iPhone and iPad) doesn't, so turn Noir off for nytimes.com, or the page gets darkened
