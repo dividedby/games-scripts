@@ -13,10 +13,11 @@ Versions below 1.0.0 are pre-release.
 
 ### [1.1.0] - 2026-10-15
 #### Added
-- The ◐ toggle is now in Wordle's toolbar too, next to ⚙ (just ◐ on a phone), so the mode can be switched without leaving Wordle.
+- The ◐ toggle is now in Wordle's toolbar too, next to ⚙ (just Auto, Dark or Light on a phone), so the mode can be switched without leaving Wordle.
 
 #### Fixed
 - Links in the dark top bar, like Upgrade subscription, were black on black: invisible but still clickable. They're now light, outline included.
+- Tapping the toggle in the top bar did nothing on iPhone; it now switches the mode.
 
 ### [1.0.1] - 2026-10-13
 #### Fixed
