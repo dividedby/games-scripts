@@ -24,6 +24,13 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [1.1.0] - 2026-10-15
+#### Added
+- Each level has its own start: Easy gives one of the 10 best openers (with its hint), Medium any likely answer as before, and Hard a choice of five random words from the whole guess list (about 4,600 words), not just the likely answers. Switching level before the first guess deals that level's start, and an Easy start you play counts toward the recap's easiest level.
+
+#### Changed
+- Hard no longer shows how many answers are left, on the line above the picks or as "only fit", and Medium's start word no longer shows a hint.
+
 ### [1.0.2] - 2026-10-13
 #### Fixed
 - A damaged saved shortlist (or level) is ignored and a fresh one dealt, and the picks are built as plain text, never as page markup.

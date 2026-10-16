@@ -197,12 +197,10 @@ test('levels: Easy draws from the best 10, Hard from all with hints hidden; swit
   for (let i = 0; i < 4; i++) { lv().click(); await sleep(20); cycle.push(lv().textContent.split(' ')[0]); }
   assert.deepEqual(cycle, ['Hard', 'Easy', 'Medium', 'Hard']);
   assert.equal(g.w.localStorage.getItem('wsl:level'), '"hard"', 'the level is remembered for the next puzzles');
-  const start = g.picks()[0];
-  lv().click(); await sleep(20); lv().click(); await sleep(20); lv().click(); await sleep(20); // back to Hard
-  assert.equal(g.picks()[0], start, 'switching before the first guess keeps the starting word');
-  await g.guess(start);
+  assert.equal(g.picks().length, 5, 'Hard starts with a choice of five');
+  await g.guess(g.picks()[0]);
   await sleep(300);
-  assert.match(g.root.querySelector('.info').textContent, /· Hard ▸$/);
+  assert.equal(g.root.querySelector('.info').textContent, 'Hard ▸', 'Hard never says how many answers are left');
   assert.ok(g.picks().length > 0);
   for (const p of g.picks()) assert.equal(g.pick(p).querySelector('small'), null, `${p} has no hint in Hard`);
 
@@ -219,6 +217,73 @@ test('levels: Easy draws from the best 10, Hard from all with hints hidden; swit
   const cands = easy.E.candidates(rows, easy.E.ANSWERS);
   const cutoff = Array.from(cands, i => easy.E.expectedLeft(easy.E.codes(easy.E.ALL[i]), cands)).sort((a, b) => a - b)[9];
   for (const p of easy.picks()) assert.ok(easy.E.expectedLeft(easy.E.codes(p), cands) <= cutoff + 1e-9, `${p} is among the best 10`);
+});
+
+test('Easy starts with one of the 10 best starters, with its hint', async () => {
+  const g = await game({ stored: { 'wsl:level': '"easy"' } });
+  const ranked = g.E.ANSWERS.map(i => g.E.expectedLeft(g.E.codes(g.E.ALL[i]), g.E.ANSWERS)).sort((a, b) => a - b);
+  const seen = new Set();
+  for (let i = 0; i < 30; i++) {
+    assert.equal(g.picks().length, 1);
+    const w = g.picks()[0];
+    seen.add(w);
+    assert.ok(g.E.expectedLeft(g.E.codes(w), g.E.ANSWERS) <= ranked[9] + 1e-9, `${w} is among the 10 best starters`);
+    assert.match(g.pick(w).querySelector('small').textContent, /^~\d+ left$/);
+    g.root.getElementById('roll').click(); await sleep(5);
+  }
+  assert.ok(seen.size > 3, 'not the same opener every day');
+});
+
+test('Medium starts with any likely answer, without a hint', async () => {
+  const g = await game();
+  assert.equal(g.picks().length, 1);
+  assert.equal(g.pick(g.picks()[0]).querySelector('small'), null);
+  assert.match(g.panel().textContent, /Start with/);
+});
+
+test('Hard starts with a choice of five from every guessable word, no hints or counts', async () => {
+  const g = await game({ stored: { 'wsl:level': '"hard"' } });
+  assert.equal(g.root.querySelector('.info').textContent, 'Pick a starting word · Hard ▸');
+  assert.doesNotMatch(g.panel().textContent, /Start with|possible answer/);
+  let junk = 0;
+  for (let i = 0; i < 20; i++) {
+    const picks = g.picks();
+    assert.equal(new Set(picks).size, 5);
+    for (const w of picks) {
+      assert.ok(g.E.ALL.includes(w), `${w} is a word the game takes`);
+      assert.equal(g.pick(w).querySelector('small'), null, `${w} has no hint`);
+      if (!g.E.ANSWERS.some(j => g.E.ALL[j] === w)) junk++;
+    }
+    g.root.getElementById('roll').click(); await sleep(5);
+  }
+  assert.ok(junk > 0, 'words that are never answers come up too');
+  const one = await game({ answer: 'earth', played: ['crane', 'tales'], stored: { 'wsl:level': '"hard"' } });
+  assert.deepEqual(one.picks(), ['earth']);
+  assert.equal(one.pick('earth').querySelector('small'), null, 'not even "only fit" gives the count away');
+});
+
+test('switching level before the first guess deals that level\'s start', async () => {
+  const g = await game();
+  g.root.getElementById('level').click(); await sleep(20); // Hard
+  assert.equal(g.picks().length, 5);
+  assert.equal(g.saved().level, 'hard');
+  g.root.getElementById('level').click(); await sleep(20); // Easy
+  assert.equal(g.picks().length, 1);
+  assert.ok(g.pick(g.picks()[0]).querySelector('small'));
+});
+
+test('the start word: an Easy one played counts toward the recap, a Hard choice is not a turn', async () => {
+  const easy = await game({ answer: 'pouch', stored: { 'wsl:level': '"easy"' } });
+  easy.root.getElementById('level').click(); await sleep(20); // Medium: a new start, so Easy wasn't used
+  await easy.guess(easy.picks()[0]);
+  assert.equal(easy.saved().easiest, 1);
+  const again = await game({ answer: 'pouch', stored: { 'wsl:level': '"easy"' } });
+  await again.guess(again.picks()[0]);
+  assert.equal(again.saved().easiest, 0, 'an Easy start counts');
+  const hard = await game({ answer: 'pouch', stored: { 'wsl:level': '"hard"' } });
+  await hard.guess(hard.picks()[0]);
+  assert.deepEqual([...hard.saved().turns], [], 'choosing a start is not a best-pick turn');
+  assert.equal(hard.saved().easiest, 2);
 });
 
 test('the recap names the easiest level a shortlist was dealt at', async () => {
