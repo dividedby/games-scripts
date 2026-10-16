@@ -585,7 +585,9 @@ zonedzoneszooms
     if (board.over) {
       state = { ...(saved || {}), sig, picks: [], at: Date.now() };
       ls.set(picksKey(), state);
-    } else if (force || !saved || saved.sig !== sig || !saved.picks || saved.level !== level) {
+    } else if (force || !saved || saved.sig !== sig || !saved.picks || saved.level !== level ||
+      // a start saved by an older version: one word where Hard now offers five
+      (!board.rows.length && (saved.picks.length > 1) !== (LEVELS[level].start === 'any'))) {
       const c = choose(board.rows, LEVELS[level]);
       // the recap names the easiest level any shortlist was dealt at, or a start word played at
       const idx = LEVEL_ORDER.indexOf(level);

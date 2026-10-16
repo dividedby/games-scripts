@@ -272,6 +272,12 @@ test('switching level before the first guess deals that level\'s start', async (
   assert.ok(g.pick(g.picks()[0]).querySelector('small'));
 });
 
+test('a one-word Hard start saved by an older version is dealt again as five', async () => {
+  const old = { sig: '', left: 2983, picks: [{ word: 'beard', left: 169.6 }], level: 'hard', turns: [], at: Date.now() };
+  const g = await game({ stored: { 'wsl:2023-07-11': old, 'wsl:level': '"hard"' } });
+  assert.equal(g.picks().length, 5);
+});
+
 test('the start word: an Easy one played counts toward the recap, a Hard choice is not a turn', async () => {
   const easy = await game({ answer: 'pouch', stored: { 'wsl:level': '"easy"' } });
   easy.root.getElementById('level').click(); await sleep(20); // Medium: a new start, so Easy wasn't used
