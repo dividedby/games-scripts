@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  A proper dark mode for NYT Games in the browser (Connections, Wordle and the rest), using NYT's own dark colors so the game colors stay true
-// @version      1.1.0
+// @version      1.1.1
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -97,6 +97,8 @@
     html.nytd-dark [data-nytd-panel] button[class*=primary i] { background: #f8f8f8 !important; color: #121212 !important; }
     html.nytd-dark [data-nytd-panel] button:not([class*=primary i]) { color: #f8f8f8 !important; border-color: #f8f8f8 !important; }
     html.nytd-dark [data-nytd-panel] button:disabled, html.nytd-dark button[data-nytd-panel]:disabled { opacity: .35; }
+    /* the lock badge on logged-out home cards is NYT's black lock on a page-colored circle: keep the circle light */
+    html.nytd-dark .featured.action-subscribe::before { background-color: #f8f8f8 !important; }
 
     /* game archives (Wordle, Connections, Strands…) */
     html.nytd-dark [class*=ArchiveDatePicker-module_dropDownSelect] { filter: invert(.93); }

@@ -11,6 +11,10 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [1.1.1] - 2026-10-16
+#### Fixed
+- On the Games home page when logged out, the lock on each puzzle card was invisible in dark (black on a dark circle). The circle is light again, so the lock shows.
+
 ### [1.1.0] - 2026-10-16
 #### Added
 - The ◐ toggle is now in Wordle's toolbar too, next to ⚙ (just Auto, Dark or Light on a phone), so the mode can be switched without leaving Wordle.
