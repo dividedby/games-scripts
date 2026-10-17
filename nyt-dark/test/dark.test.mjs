@@ -259,6 +259,9 @@ test('the lock badge on logged-out home cards keeps a light circle in the dark, 
   const rule = [...p.d.getElementById('nytd-style').sheet.cssRules].find(r => r.selectorText?.includes('.featured.action-subscribe::before'));
   assert.ok(rule, 'a lock badge rule');
   assert.match(rule.selectorText, /^html\.nytd-dark /, 'only in the dark');
+  p.d.querySelector('main').insertAdjacentHTML('beforeend',
+    '<div class="hub-welcome__section mini"><div id="card" class="featured button action-subscribe standard puzzleInfo hasUpsell"></div></div>');
+  assert.ok(p.d.getElementById('card').matches(rule.selectorText.replace('::before', '')), 'it reaches the card NYT draws the badge on');
   assert.match(rule.style.getPropertyValue('background-color'), /^(#f8f8f8|rgb\(248, 248, 248\))$/);
   assert.equal(rule.style.getPropertyPriority('background-color'), 'important');
 });
