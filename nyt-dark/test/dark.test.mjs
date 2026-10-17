@@ -253,6 +253,16 @@ test('links in the dark header bar get light text and outline (Upgrade subscript
   assert.ok(!p.d.getElementById('menu').matches(rule.selectorText));
 });
 
+test('the lock badge on logged-out home cards keeps a light circle in the dark, so NYT\'s black lock shows', async () => {
+  const p = await page({ mode: 'dark' });
+  // (a pseudo-element can't be matched or styled in jsdom: find the rule in the sheet)
+  const rule = [...p.d.getElementById('nytd-style').sheet.cssRules].find(r => r.selectorText?.includes('.featured.action-subscribe::before'));
+  assert.ok(rule, 'a lock badge rule');
+  assert.match(rule.selectorText, /^html\.nytd-dark /, 'only in the dark');
+  assert.match(rule.style.getPropertyValue('background-color'), /^(#f8f8f8|rgb\(248, 248, 248\))$/);
+  assert.equal(rule.style.getPropertyPriority('background-color'), 'important');
+});
+
 test('a tap on the toggle switches once, even where the header swallows the click (iPhone)', async () => {
   const p = await page({ mode: 'light' });
   // (jsdom has no PointerEvent: a plain event with the fields the script reads)
