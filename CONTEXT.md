@@ -7,46 +7,56 @@ the glossary wins (or the glossary is wrong and gets fixed here).
 ## Connections Palette
 
 ### Tile
+
 One of the 16 word cards on the Connections board. Identified by its word (the
 game's `data-flip-id`), never by position, because Shuffle moves tiles.
 
 ### Group
+
 Four tiles that share a connection. The game gives each group a **difficulty
 color**: yellow (easiest), green, blue, purple (hardest).
 
 ### Mark
-The color the player *thinks* a tile belongs to. A guess, not a fact; at most 4
+
+The color the player _thinks_ a tile belongs to. A guess, not a fact; at most 4
 tiles per mark color. Saved per puzzle.
 
 ### Solved group
+
 A group the game has confirmed, shown as a colored bar with its four words. Its
 color is fact and overrides any marks (see Reconcile).
 
 ### Reconcile
+
 Correcting marks after a group is solved: if 3 or 4 of its tiles shared a mark
 color, that color and the real color swap everywhere; then any other tile still
 wearing the solved color loses it.
 
 ### Palette
+
 The floating bar of controls: the four mark colors and Go on top; erase, undo,
 the sort button, the optional ? and 📜, settings and the hide toggle below. On
 phones it is one row, and ⋯ swaps that row for the less-used tools (‹ swaps back).
 Before Play, on the results screen, or when hidden, it shrinks to 🎨.
 
 ### Armed color
+
 A color tapped on the palette while no tiles are selected. The next tap decides
 what it does: a second color swaps the two; Go submits it.
 
 ### Out of order / Sure?
+
 Submitting an armed color that isn't next in the sort order. Go turns red and asks
 **Sure?**; a second tap within 4 seconds submits. Right after Sure? expires, Go
 ignores taps briefly so a late tap can't submit the next color instead.
 
 ### Exchange
+
 Tapping a full color with one of its tiles and one outside tile selected: the two
 tiles trade colors, so the color stays at 4.
 
 ### Sort order / reverse rainbow
+
 The order rows are drawn and Go submits in. **Reverse rainbow** (P→Y, the
 default) is purple, blue, green, yellow: hardest first, a challenge many players
 go for. **Rainbow** (Y→P) is the opposite. **Off** leaves tiles in the game's
@@ -55,24 +65,29 @@ their color's row as soon as they're marked; blank tiles pad short rows, and spl
 tiles come after the color rows.
 
 ### Go next
+
 Go with nothing armed: submits the next unsolved color in the sort order.
 
 ### Auto-fill
+
 Once three colors have 4 tiles (marked or solved) and exactly 4 tiles are left
 (blank, split, or already the last color), those 4 get the last color.
 
 ### One away
+
 The game's message for a wrong guess with 3 of 4 tiles from one group. The script
 remembers such guesses and badges their tiles with a letter per guess. A guess is
 **settled** once a solved group holds 3 of its words; settled guesses lose their
 badges.
 
 ### Guess history
+
 The wrong guesses on a puzzle, oldest first, each flagged if the game called it
 One away. A guess counts as wrong when the game's mistake count drops; right
 guesses and repeats ("Already guessed") are not recorded.
 
 ### Maybe / split tile
+
 An undecided tile: two or more candidate colors ("could be yellow or green"), shown
 as an outline split like a pie. A tile is either decided (one Mark) or split, never
 both. Split tiles are notes only: Go, auto-fill and the 4-per-color limit use Marks
@@ -83,17 +98,20 @@ A **lone candidate** is a split down to one color whose color is already full: i
 can't become a Mark yet, so its outline is dashed.
 
 ### Maybe mode
+
 The palette state while **?** is on: tapping a color adds it to (or removes it
 from) the selected tiles' candidates instead of setting their Mark. Tiles hold
 still in maybe mode and re-sort when it's turned off.
 
 ### Color guide
+
 The **Guide** button's panel (next to Submit): what each color tends to be (yellow plain synonyms or an obvious set,
 green a narrower set or a less obvious sense, blue trivia or a shared companion word,
 purple wordplay or a very narrow set). General tendencies from people who track the
 puzzles, never about the current puzzle.
 
 ### Definition
+
 The meanings of one selected tile's word, shown in a panel over the board when the
 **Definition** button (next to Shuffle; **Define** on a narrow phone) is tapped:
 **senses** from Wiktionary by part of speech (common ones first, rare and old ones
@@ -104,20 +122,24 @@ answer is kept on the device for 60 days since it was last opened.
 ## NYT Games Dark
 
 ### Mode
+
 **Auto** (default) follows the device's dark-mode setting; **Dark** and **Light** force
 it. Chosen with the ◐ button in the site's top bar and shared by every NYT game page.
 
 ### NYT's dark colors
+
 The dark color set NYT ships with the website but never switches on (the app's dark
 mode). The script only turns it on and fills gaps; it doesn't invent game colors.
 
 ## Wordle Shortlist
 
 ### Likely answers
+
 The words the script treats as possible answers: NYT WordleBot's answer list. If none
 of them fits the board, every word on the guess list counts instead.
 
 ### Picks
+
 The words offered for the next guess. Before the first guess, one likely answer at
 random, good opener or not (the **starting word**). After that, only words that could
 still be the answer (never "filler" words played just to narrow things down): 5 drawn
@@ -125,11 +147,13 @@ at random from the best 30 of them, so they are good but not equally good; with 
 fewer left, all of them. Picks are kept per puzzle and turn until 🎲 deals new ones.
 
 ### Level
+
 How hard the picks make it. Switchable any time (mid-puzzle it deals a new shortlist);
 **Easy** draws the picks from the best 10 possible answers, **Medium** (default) from
 the best 30, both with hints; **Hard** from every possible answer, without hints.
 
 ### Best pick / recap
+
 A turn's **best pick** is the pick with the fewest answers left (ties all count). Turns
 are only counted when there was a choice (not the starting word or a lone pick), and a
 word you typed yourself is never a best pick. When the puzzle ends, the **recap**
@@ -137,5 +161,6 @@ shows the guesses taken, best picks out of turns, and the easiest level any shor
 was dealt at.
 
 ### Answers left
+
 A pick's hint: the number of likely answers you'd expect to still fit after playing
 it, if it isn't the answer (averaged over the answers that fit now). Fewer is better.

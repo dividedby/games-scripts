@@ -2,15 +2,36 @@
 // Connections board in jsdom:  pnpm test
 // The board markup mirrors what the live game renders (data-testid, data-flip-id,
 // data-level, Card-module_selected); keep it in step if NYT changes the page.
-import { test } from 'node:test';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { JSDOM } from 'jsdom';
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { JSDOM } from "jsdom";
 
-const SRC = readFileSync(new URL('../connections-color-marker.user.js', import.meta.url), 'utf8');
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-const BTN = { yellow: 0, green: 1, blue: 2, purple: 3, erase: 4, undo: 5, sort: 6, go: 7, maybe: 8, hist: 9, gear: 10, toggle: 11, more: 12 };
-const RGB = { yellow: 'rgb(249, 223, 109)', blue: 'rgb(176, 196, 239)', purple: 'rgb(186, 129, 197)' };
+const SRC = readFileSync(
+  new URL("../connections-color-marker.user.js", import.meta.url),
+  "utf8",
+);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const BTN = {
+  yellow: 0,
+  green: 1,
+  blue: 2,
+  purple: 3,
+  erase: 4,
+  undo: 5,
+  sort: 6,
+  go: 7,
+  maybe: 8,
+  hist: 9,
+  gear: 10,
+  toggle: 11,
+  more: 12,
+};
+const RGB = {
+  yellow: "rgb(249, 223, 109)",
+  blue: "rgb(176, 196, 239)",
+  purple: "rgb(186, 129, 197)",
+};
 
 // Answers for the Definition tests. Wiktionary: { title: json | 404 | 'error' };
 // Wikidata: { search word: [results] | 'error' } (no key: no results)
@@ -20,959 +41,1771 @@ const lookedUp = []; // Wiktionary titles, and 'wikidata:WORD'
 const agents = new Set(); // the Api-User-Agent each request named
 async function fetchStub(url, opts = {}) {
   url = String(url);
-  agents.add(opts.headers?.['Api-User-Agent']);
-  if (url.startsWith('https://www.wikidata.org/')) {
-    const word = new URL(url).searchParams.get('search');
-    lookedUp.push('wikidata:' + word);
+  agents.add(opts.headers?.["Api-User-Agent"]);
+  if (url.startsWith("https://www.wikidata.org/")) {
+    const word = new URL(url).searchParams.get("search");
+    lookedUp.push("wikidata:" + word);
     const v = wikidata[word];
-    if (v === 'error') throw new TypeError('Failed to fetch');
+    if (v === "error") throw new TypeError("Failed to fetch");
     return { ok: true, status: 200, json: async () => ({ search: v || [] }) };
   }
-  const title = decodeURIComponent(url.split('/definition/')[1] || '');
+  const title = decodeURIComponent(url.split("/definition/")[1] || "");
   lookedUp.push(title);
   const v = dictionary[title];
-  if (v === 'error') throw new TypeError('Failed to fetch');
+  if (v === "error") throw new TypeError("Failed to fetch");
   if (!v) return { ok: false, status: 404, json: async () => ({}) };
   return { ok: true, status: 200, json: async () => v };
 }
 
 // words: tiles on the board; solved: [{ level, words }]; stored: localStorage seed
-async function board({ words = [], solved = [], date = '2023-07-01', marks = {}, stored = {} } = {}) {
-  const tiles = words.map(w => `<label class="Card-module_label" data-testid="card-label" data-flip-id="${w}">${w}<span>${w}</span></label>`).join('');
-  const secs = solved.map(s => `<section data-testid="solved-category-container" data-level="${s.level}"><ol>${s.words.map(w => `<li>${w}</li>`).join('')}</ol></section>`).join('');
-  const dom = new JSDOM(`<!doctype html><body>${secs}<div id="board" style="display:grid">${tiles}</div>` +
-    `<span data-testid="mistake-count">4 mistakes remaining out of 4</span>` +
-    `<section class="Game-module_boardActionGroup" style="display:flex"><button data-testid="shuffle-btn" class="ActionButton-module_button">Shuffle</button>` +
-    `<button data-testid="deselect-btn">Deselect All</button><button data-testid="submit-btn" disabled>Submit</button></section></body>`,
-  { url: `https://www.nytimes.com/games/connections${date ? '/' + date : ''}`, runScripts: 'outside-only', pretendToBeVisual: true });
+async function board({
+  words = [],
+  solved = [],
+  date = "2023-07-01",
+  marks = {},
+  stored = {},
+} = {}) {
+  const tiles = words
+    .map(
+      (w) =>
+        `<label class="Card-module_label" data-testid="card-label" data-flip-id="${w}">${w}<span>${w}</span></label>`,
+    )
+    .join("");
+  const secs = solved
+    .map(
+      (s) =>
+        `<section data-testid="solved-category-container" data-level="${s.level}"><ol>${s.words.map((w) => `<li>${w}</li>`).join("")}</ol></section>`,
+    )
+    .join("");
+  const dom = new JSDOM(
+    `<!doctype html><body>${secs}<div id="board" style="display:grid">${tiles}</div>` +
+      `<span data-testid="mistake-count">4 mistakes remaining out of 4</span>` +
+      `<section class="Game-module_boardActionGroup" style="display:flex"><button data-testid="shuffle-btn" class="ActionButton-module_button">Shuffle</button>` +
+      `<button data-testid="deselect-btn">Deselect All</button><button data-testid="submit-btn" disabled>Submit</button></section></body>`,
+    {
+      url: `https://www.nytimes.com/games/connections${date ? "/" + date : ""}`,
+      runScripts: "outside-only",
+      pretendToBeVisual: true,
+    },
+  );
   const w = dom.window;
   w.PointerEvent = w.PointerEvent || w.MouseEvent;
   w.fetch = fetchStub; // the Definition lookup (Wiktionary); see wiktionary() below
   w.__CCM_TEST__ = true;
   w.localStorage.setItem(`ccm:${date}`, JSON.stringify(marks));
-  for (const [k, v] of Object.entries(stored)) w.localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
+  for (const [k, v] of Object.entries(stored))
+    w.localStorage.setItem(k, typeof v === "string" ? v : JSON.stringify(v));
   w.eval(SRC);
   await sleep(60);
   const d = w.document;
   const root = w.__ccmRoot; // the palette's (closed) shadow root, exposed for tests
-  const panel = root.getElementById('ccm-panel');
+  const panel = root.getElementById("ccm-panel");
   const b = {
-    w, d, panel,
-    btn: k => panel.querySelectorAll(':scope > button')[BTN[k]],
+    w,
+    d,
+    panel,
+    btn: (k) => panel.querySelectorAll(":scope > button")[BTN[k]],
     root,
-    sheet: () => root.getElementById('ccm-settings'),
-    box: k => root.querySelector(`#ccm-settings input[data-k="${k}"]`),
-    async setOpt(k, on) { const x = b.box(k); x.checked = on; x.dispatchEvent(new w.Event('change', { bubbles: true })); await sleep(40); },
-    tile: x => d.querySelector(`[data-flip-id="${x}"]`),
+    sheet: () => root.getElementById("ccm-settings"),
+    box: (k) => root.querySelector(`#ccm-settings input[data-k="${k}"]`),
+    async setOpt(k, on) {
+      const x = b.box(k);
+      x.checked = on;
+      x.dispatchEvent(new w.Event("change", { bubbles: true }));
+      await sleep(40);
+    },
+    tile: (x) => d.querySelector(`[data-flip-id="${x}"]`),
     select(ws) {
-      for (const t of d.querySelectorAll('[data-testid=card-label]')) t.classList.remove('Card-module_selected');
-      ws.forEach(x => b.tile(x).classList.add('Card-module_selected'));
+      for (const t of d.querySelectorAll("[data-testid=card-label]"))
+        t.classList.remove("Card-module_selected");
+      ws.forEach((x) => b.tile(x).classList.add("Card-module_selected"));
     },
     store: () => JSON.parse(w.localStorage.getItem(`ccm:${date}`)),
-    shook: () => panel.classList.contains('shake'),
-    unshake: () => panel.classList.remove('shake'),
-    async tap(k) { b.unshake(); b.btn(k).click(); await sleep(40); },
+    shook: () => panel.classList.contains("shake"),
+    unshake: () => panel.classList.remove("shake"),
+    async tap(k) {
+      b.unshake();
+      b.btn(k).click();
+      await sleep(40);
+    },
     // play a guess the way the game would answer it: 'right' | 'wrong' | 'away' | 'repeat'
     async guess(ws, result) {
       b.select(ws);
-      const submit = d.querySelector('[data-testid=submit-btn]');
+      const submit = d.querySelector("[data-testid=submit-btn]");
       submit.disabled = false;
       submit.click();
-      const mc = d.querySelector('[data-testid=mistake-count]');
-      if (result === 'wrong' || result === 'away') mc.textContent = `${parseInt(mc.textContent, 10) - 1} mistakes remaining out of 4`;
-      if (result === 'away' || result === 'repeat') {
-        const t = d.createElement('div'); t.dataset.testid = 'connection-toast';
-        t.innerHTML = `<h2>${result === 'away' ? 'One away...' : 'Already guessed!'}</h2>`;
-        d.body.appendChild(t); await sleep(200); t.remove();
+      const mc = d.querySelector("[data-testid=mistake-count]");
+      if (result === "wrong" || result === "away")
+        mc.textContent = `${parseInt(mc.textContent, 10) - 1} mistakes remaining out of 4`;
+      if (result === "away" || result === "repeat") {
+        const t = d.createElement("div");
+        t.dataset.testid = "connection-toast";
+        t.innerHTML = `<h2>${result === "away" ? "One away..." : "Already guessed!"}</h2>`;
+        d.body.appendChild(t);
+        await sleep(200);
+        t.remove();
       }
       await sleep(200);
     },
-    guesses: () => JSON.parse(w.localStorage.getItem(`ccm:${date}`.replace('ccm:', 'ccm:guesses:')) || '[]'),
+    guesses: () =>
+      JSON.parse(
+        w.localStorage.getItem(`ccm:${date}`.replace("ccm:", "ccm:guesses:")) ||
+          "[]",
+      ),
     close: () => {}, // closing mid-mutation makes jsdom throw from the observer; let it be collected
   };
   return b;
 }
 const four = (p, n = 4) => Array.from({ length: n }, (_, i) => `${p}${i + 1}`);
 
-test('a solved group corrects your colors: marked blue, solved purple, so blue and purple swap', async () => {
+test("a solved group corrects your colors: marked blue, solved purple, so blue and purple swap", async () => {
   const b = await board({
-    words: four('X'),
-    solved: [{ level: 3, words: four('A') }],
-    marks: { ...Object.fromEntries(four('A').map(x => [x, 'blue'])), ...Object.fromEntries(four('X').map(x => [x, 'purple'])) },
+    words: four("X"),
+    solved: [{ level: 3, words: four("A") }],
+    marks: {
+      ...Object.fromEntries(four("A").map((x) => [x, "blue"])),
+      ...Object.fromEntries(four("X").map((x) => [x, "purple"])),
+    },
   });
   const s = b.store();
-  assert.ok(four('A').every(x => s[x] === 'purple'));
-  assert.ok(four('X').every(x => s[x] === 'blue'), 'tiles you had as purple take your old guess, blue');
+  assert.ok(four("A").every((x) => s[x] === "purple"));
+  assert.ok(
+    four("X").every((x) => s[x] === "blue"),
+    "tiles you had as purple take your old guess, blue",
+  );
   b.close();
 });
 
-test('one stray tile never triggers a swap, and leftovers of a solved color are cleared', async () => {
+test("one stray tile never triggers a swap, and leftovers of a solved color are cleared", async () => {
   const b = await board({
-    words: ['BAT', 'IRON', 'SPIDER', 'SUPER', 'CATS'],
-    solved: [{ level: 2, words: ['DUST', 'MOP', 'SWEEP', 'VACUUM'] }, { level: 0, words: ['ADIDAS', 'NIKE', 'PUMA', 'REEBOK'] }],
-    marks: { BAT: 'purple', IRON: 'purple', SPIDER: 'purple', ADIDAS: 'purple', DUST: 'blue', MOP: 'blue', SWEEP: 'blue', SUPER: 'blue' },
+    words: ["BAT", "IRON", "SPIDER", "SUPER", "CATS"],
+    solved: [
+      { level: 2, words: ["DUST", "MOP", "SWEEP", "VACUUM"] },
+      { level: 0, words: ["ADIDAS", "NIKE", "PUMA", "REEBOK"] },
+    ],
+    marks: {
+      BAT: "purple",
+      IRON: "purple",
+      SPIDER: "purple",
+      ADIDAS: "purple",
+      DUST: "blue",
+      MOP: "blue",
+      SWEEP: "blue",
+      SUPER: "blue",
+    },
   });
   const s = b.store();
   assert.equal(s.SUPER, undefined);
-  assert.equal(s.VACUUM, 'blue');
-  assert.equal(s.ADIDAS, 'yellow');
-  assert.deepEqual([s.BAT, s.IRON, s.SPIDER], ['purple', 'purple', 'purple']);
+  assert.equal(s.VACUUM, "blue");
+  assert.equal(s.ADIDAS, "yellow");
+  assert.deepEqual([s.BAT, s.IRON, s.SPIDER], ["purple", "purple", "purple"]);
   b.close();
 });
 
-test('max 4 per color, and exchange when the color is full', async () => {
+test("max 4 per color, and exchange when the color is full", async () => {
   const b = await board({
-    words: ['TENOR', 'PEKE', 'LAB', 'KING', 'AMIGO', 'STOOGE', 'X1', 'X2'],
-    marks: { TENOR: 'blue', PEKE: 'blue', LAB: 'purple', KING: 'purple', AMIGO: 'purple', STOOGE: 'purple' },
+    words: ["TENOR", "PEKE", "LAB", "KING", "AMIGO", "STOOGE", "X1", "X2"],
+    marks: {
+      TENOR: "blue",
+      PEKE: "blue",
+      LAB: "purple",
+      KING: "purple",
+      AMIGO: "purple",
+      STOOGE: "purple",
+    },
   });
-  b.select(['TENOR']); await b.tap('purple');
-  assert.ok(b.shook(), 'a 5th purple is refused');
-  b.select(['TENOR', 'LAB']); await b.tap('purple');
+  b.select(["TENOR"]);
+  await b.tap("purple");
+  assert.ok(b.shook(), "a 5th purple is refused");
+  b.select(["TENOR", "LAB"]);
+  await b.tap("purple");
   assert.ok(!b.shook());
-  assert.equal(b.store().TENOR, 'purple');
-  assert.equal(b.store().LAB, 'blue');
-  b.select(['X1', 'KING']); await b.tap('purple');
-  assert.equal(b.store().X1, 'purple');
-  assert.equal(b.store().KING, undefined, 'exchanging with an unmarked tile unmarks the one kicked out');
-  b.select(['PEKE', 'X2', 'AMIGO']); await b.tap('purple');
-  assert.ok(b.shook(), 'uneven exchange is refused');
+  assert.equal(b.store().TENOR, "purple");
+  assert.equal(b.store().LAB, "blue");
+  b.select(["X1", "KING"]);
+  await b.tap("purple");
+  assert.equal(b.store().X1, "purple");
+  assert.equal(
+    b.store().KING,
+    undefined,
+    "exchanging with an unmarked tile unmarks the one kicked out",
+  );
+  b.select(["PEKE", "X2", "AMIGO"]);
+  await b.tap("purple");
+  assert.ok(b.shook(), "uneven exchange is refused");
   b.close();
 });
 
-test('solved colors show ✓ and cannot be armed, swapped or assigned', async () => {
-  const b = await board({ words: ['A', 'B', 'C'], solved: [{ level: 3, words: four('P') }], marks: { A: 'blue', B: 'blue', C: 'green' } });
-  assert.equal(b.btn('purple').textContent, '✓');
-  await b.tap('blue'); await b.tap('purple');
+test("solved colors show ✓ and cannot be armed, swapped or assigned", async () => {
+  const b = await board({
+    words: ["A", "B", "C"],
+    solved: [{ level: 3, words: four("P") }],
+    marks: { A: "blue", B: "blue", C: "green" },
+  });
+  assert.equal(b.btn("purple").textContent, "✓");
+  await b.tap("blue");
+  await b.tap("purple");
   assert.ok(b.shook());
-  assert.equal(b.store().A, 'blue');
-  b.select(['C']); await b.tap('purple');
+  assert.equal(b.store().A, "blue");
+  b.select(["C"]);
+  await b.tap("purple");
   assert.ok(b.shook());
-  assert.equal(b.store().C, 'green');
+  assert.equal(b.store().C, "green");
   b.close();
 });
 
 test('Go: tinted with the next color, dims when not ready, asks "Sure?" out of order', async () => {
-  const b = await board({ words: [...four('P'), ...four('G'), 'B1'], marks: { ...Object.fromEntries(four('P').map(x => [x, 'purple'])), ...Object.fromEntries(four('G').map(x => [x, 'green'])), B1: 'blue' } });
-  assert.equal(b.btn('go').style.background, RGB.purple);
-  await b.tap('green');
-  await b.tap('go');
-  assert.equal(b.btn('go').textContent, 'Sure?');
+  const b = await board({
+    words: [...four("P"), ...four("G"), "B1"],
+    marks: {
+      ...Object.fromEntries(four("P").map((x) => [x, "purple"])),
+      ...Object.fromEntries(four("G").map((x) => [x, "green"])),
+      B1: "blue",
+    },
+  });
+  assert.equal(b.btn("go").style.background, RGB.purple);
+  await b.tap("green");
+  await b.tap("go");
+  assert.equal(b.btn("go").textContent, "Sure?");
   await sleep(4200);
-  assert.equal(b.btn('go').textContent, 'Go ▶', '"Sure?" expires');
-  assert.ok(!b.btn('green').classList.contains('active'), 'and lets go of the color');
-  await b.tap('go');
-  assert.ok(b.shook(), 'a late tap right after "Sure?" expires does not submit the next color');
+  assert.equal(b.btn("go").textContent, "Go ▶", '"Sure?" expires');
+  assert.ok(
+    !b.btn("green").classList.contains("active"),
+    "and lets go of the color",
+  );
+  await b.tap("go");
+  assert.ok(
+    b.shook(),
+    'a late tap right after "Sure?" expires does not submit the next color',
+  );
   await sleep(1600);
-  await b.tap('blue');
-  assert.ok(b.btn('go').classList.contains('notready'), 'blue has 1 tile');
-  await b.tap('go');
+  await b.tap("blue");
+  assert.ok(b.btn("go").classList.contains("notready"), "blue has 1 tile");
+  await b.tap("go");
   assert.ok(b.shook());
-  assert.ok(!b.btn('blue').classList.contains('active'), 'refusal clears the armed color');
+  assert.ok(
+    !b.btn("blue").classList.contains("active"),
+    "refusal clears the armed color",
+  );
   b.close();
 });
 
 test('"One away" guesses get letter badges; settled guesses drop theirs', async () => {
-  const b = await board({ words: ['A', 'B', 'C', 'D', 'E', 'F'], marks: {}, stored: { 'ccm:settings': { oneAway: true } } });
-  await b.guess(['A', 'B', 'C', 'D'], 'away');
-  await b.guess(['A', 'B', 'E', 'F'], 'away');
-  await b.guess(['A', 'C', 'E', 'F'], 'repeat'); // game says already guessed: no mistake, nothing new
-  assert.equal(b.tile('A').dataset.ccmAway, 'AB');
-  assert.equal(b.tile('D').dataset.ccmAway, 'A');
+  const b = await board({
+    words: ["A", "B", "C", "D", "E", "F"],
+    marks: {},
+    stored: { "ccm:settings": { oneAway: true } },
+  });
+  await b.guess(["A", "B", "C", "D"], "away");
+  await b.guess(["A", "B", "E", "F"], "away");
+  await b.guess(["A", "C", "E", "F"], "repeat"); // game says already guessed: no mistake, nothing new
+  assert.equal(b.tile("A").dataset.ccmAway, "AB");
+  assert.equal(b.tile("D").dataset.ccmAway, "A");
   assert.equal(b.guesses().length, 2);
 
   // pre-0.5 one-away records are migrated; a settled guess (3 words solved) drops its badge
   const s = await board({
-    words: ['EMERALD', 'KELLY', 'LATTE', 'X1'],
-    solved: [{ level: 3, words: ['BEAN', 'CLEAN', 'FOX', 'PEANUT'] }],
-    stored: { 'ccm:settings': { oneAway: true }, 'ccm:1away:2023-07-01': [['BEAN', 'CLEAN', 'EMERALD', 'FOX'], ['EMERALD', 'KELLY', 'LATTE', 'X1']] },
+    words: ["EMERALD", "KELLY", "LATTE", "X1"],
+    solved: [{ level: 3, words: ["BEAN", "CLEAN", "FOX", "PEANUT"] }],
+    stored: {
+      "ccm:settings": { oneAway: true },
+      "ccm:1away:2023-07-01": [
+        ["BEAN", "CLEAN", "EMERALD", "FOX"],
+        ["EMERALD", "KELLY", "LATTE", "X1"],
+      ],
+    },
   });
-  assert.equal(s.tile('EMERALD').dataset.ccmAway, 'B', 'guess A is settled, B keeps its letter');
+  assert.equal(
+    s.tile("EMERALD").dataset.ccmAway,
+    "B",
+    "guess A is settled, B keeps its letter",
+  );
 });
 
-test('guess history: records wrong guesses (one-aways flagged), ignores right ones, reminds on repeats', async () => {
+test("guess history: records wrong guesses (one-aways flagged), ignores right ones, reminds on repeats", async () => {
   const b = await board({
-    words: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
-    stored: { 'ccm:settings': { history: true } },
+    words: ["A", "B", "C", "D", "E", "F", "G", "H"],
+    stored: { "ccm:settings": { history: true } },
   });
-  assert.ok(!b.panel.classList.contains('nohist'), '📜 shown when the setting is on');
-  await b.guess(['A', 'B', 'C', 'E'], 'wrong');
-  await b.guess(['A', 'B', 'C', 'F'], 'away');
-  assert.deepEqual(b.guesses(), [{ w: ['A', 'B', 'C', 'E'], away: false }, { w: ['A', 'B', 'C', 'F'], away: true }]);
-  assert.equal(b.btn('hist').textContent, '📜2');
-  await b.tap('hist');
-  const list = b.root.getElementById('ccm-history');
+  assert.ok(
+    !b.panel.classList.contains("nohist"),
+    "📜 shown when the setting is on",
+  );
+  await b.guess(["A", "B", "C", "E"], "wrong");
+  await b.guess(["A", "B", "C", "F"], "away");
+  assert.deepEqual(b.guesses(), [
+    { w: ["A", "B", "C", "E"], away: false },
+    { w: ["A", "B", "C", "F"], away: true },
+  ]);
+  assert.equal(b.btn("hist").textContent, "📜2");
+  await b.tap("hist");
+  const list = b.root.getElementById("ccm-history");
   assert.ok(!list.hidden);
-  assert.equal(list.querySelectorAll('li').length, 2);
-  assert.match(list.querySelectorAll('li')[1].textContent, /A · B · C · F.*one away/);
+  assert.equal(list.querySelectorAll("li").length, 2);
+  assert.match(
+    list.querySelectorAll("li")[1].textContent,
+    /A · B · C · F.*one away/,
+  );
   // repeat: the game says "Already guessed"; we add that it was one away
-  await b.guess(['A', 'B', 'C', 'F'], 'repeat');
-  const note = b.root.getElementById('ccm-note');
+  await b.guess(["A", "B", "C", "F"], "repeat");
+  const note = b.root.getElementById("ccm-note");
   assert.ok(!note.hidden);
   assert.match(note.textContent, /one away/);
-  assert.equal(b.guesses().length, 2, 'repeats are not recorded twice');
+  assert.equal(b.guesses().length, 2, "repeats are not recorded twice");
 });
 
-test('guess history: off by default, but still recorded quietly', async () => {
-  const b = await board({ words: ['A', 'B', 'C', 'D', 'E'] });
-  assert.ok(b.panel.classList.contains('nohist'));
-  await b.guess(['A', 'B', 'C', 'E'], 'wrong');
+test("guess history: off by default, but still recorded quietly", async () => {
+  const b = await board({ words: ["A", "B", "C", "D", "E"] });
+  assert.ok(b.panel.classList.contains("nohist"));
+  await b.guess(["A", "B", "C", "E"], "wrong");
   assert.equal(b.guesses().length, 1);
 });
 
-test('sort modes cycle reverse rainbow → rainbow → off and remember the choice', async () => {
-  const b = await board({ words: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'], marks: { A: 'yellow', B: 'purple', C: 'green', D: 'blue' }, stored: { 'ccm:sort': '1' } });
-  const seq = () => [...b.d.querySelectorAll('[data-testid=card-label]')].filter(t => t.style.order !== '')
-    .sort((x, y) => x.style.order - y.style.order).map(t => t.dataset.ccm?.[0] || '-').join('');
-  assert.equal(b.btn('sort').textContent, 'P→Y');
-  assert.match(seq(), /^p---b/);
-  await b.tap('sort');
-  assert.equal(b.btn('sort').textContent, 'Y→P');
-  assert.match(seq(), /^y---g/);
-  await b.tap('sort');
-  assert.equal(b.btn('sort').textContent, 'Off');
-  assert.equal(seq(), '');
-  assert.equal(b.w.localStorage.getItem('ccm:sort'), 'off');
-  b.close();
-});
-
-test('palette is tucked away until the board appears, then follows your choice', async () => {
-  const b = await board({ words: [] });
-  assert.ok(b.panel.classList.contains('collapsed'));
-  for (const x of ['A', 'B']) { const l = b.d.createElement('label'); l.dataset.testid = 'card-label'; l.dataset.flipId = x; b.d.getElementById('board').appendChild(l); }
-  await sleep(100);
-  assert.ok(!b.panel.classList.contains('collapsed'));
-  await b.tap('toggle');
-  assert.ok(b.panel.classList.contains('collapsed'));
-  assert.equal(b.w.localStorage.getItem('ccm:collapsed'), 'true');
-  b.close();
-});
-
-test('stale saved keys: old doubled keys migrate, other puzzles\' words are ignored', async () => {
-  const W = ['LITTLE', 'REAL ESTATE', 'COMMON', 'RING', 'INDEX', 'FUND', 'BANKROLL', 'RIB', 'STANDARD', 'MIDDLE', 'STOCK', 'SUPPORT', 'BACK', 'NUMBER', 'ROUTINE', 'TIME'];
-  const b = await board({ words: W, marks: { LITTLELITTLE: 'green', COMMONCOMMON: 'yellow', FOO: 'yellow', BAR: 'yellow', BAZ: 'yellow' } });
-  assert.deepEqual(b.store(), { LITTLE: 'green', COMMON: 'yellow' });
-  b.select(['STANDARD', 'STOCK', 'ROUTINE']); await b.tap('yellow');
-  assert.ok(!b.shook());
-  assert.equal(b.store().STOCK, 'yellow');
-  b.close();
-});
-
-test('words that look doubled (TARTAR) keep their full name', async () => {
-  const b = await board({ words: ['TARTAR', 'TUTU', 'TAR'], marks: { TARTAR: 'green', TUTU: 'blue', TAR: 'yellow' } });
-  assert.equal(b.tile('TARTAR').dataset.ccm, 'green');
-  assert.equal(b.tile('TAR').dataset.ccm, 'yellow');
-  b.close();
-});
-
-test('old puzzles are cleaned up by last use, not puzzle date', async () => {
+test("sort modes cycle reverse rainbow → rainbow → off and remember the choice", async () => {
   const b = await board({
-    words: ['A'],
-    stored: { 'ccm:2025-01-01': {}, 'ccm:2023-06-12': { A: 'blue' }, 'ccm:used': { '2025-01-01': Date.now() - 90 * 864e5 } },
+    words: ["A", "B", "C", "D", "E", "F", "G", "H"],
+    marks: { A: "yellow", B: "purple", C: "green", D: "blue" },
+    stored: { "ccm:sort": "1" },
   });
-  assert.equal(b.w.localStorage.getItem('ccm:2025-01-01'), null);
-  assert.notEqual(b.w.localStorage.getItem('ccm:2023-06-12'), null);
+  const seq = () =>
+    [...b.d.querySelectorAll("[data-testid=card-label]")]
+      .filter((t) => t.style.order !== "")
+      .sort((x, y) => x.style.order - y.style.order)
+      .map((t) => t.dataset.ccm?.[0] || "-")
+      .join("");
+  assert.equal(b.btn("sort").textContent, "P→Y");
+  assert.match(seq(), /^p---b/);
+  await b.tap("sort");
+  assert.equal(b.btn("sort").textContent, "Y→P");
+  assert.match(seq(), /^y---g/);
+  await b.tap("sort");
+  assert.equal(b.btn("sort").textContent, "Off");
+  assert.equal(seq(), "");
+  assert.equal(b.w.localStorage.getItem("ccm:sort"), "off");
   b.close();
 });
 
-test('idle page: no redraw loop', async () => {
-  const b = await board({ words: ['A', 'B'], marks: { A: 'blue' } });
+test("palette is tucked away until the board appears, then follows your choice", async () => {
+  const b = await board({ words: [] });
+  assert.ok(b.panel.classList.contains("collapsed"));
+  for (const x of ["A", "B"]) {
+    const l = b.d.createElement("label");
+    l.dataset.testid = "card-label";
+    l.dataset.flipId = x;
+    b.d.getElementById("board").appendChild(l);
+  }
+  await sleep(100);
+  assert.ok(!b.panel.classList.contains("collapsed"));
+  await b.tap("toggle");
+  assert.ok(b.panel.classList.contains("collapsed"));
+  assert.equal(b.w.localStorage.getItem("ccm:collapsed"), "true");
+  b.close();
+});
+
+test("stale saved keys: old doubled keys migrate, other puzzles' words are ignored", async () => {
+  const W = [
+    "LITTLE",
+    "REAL ESTATE",
+    "COMMON",
+    "RING",
+    "INDEX",
+    "FUND",
+    "BANKROLL",
+    "RIB",
+    "STANDARD",
+    "MIDDLE",
+    "STOCK",
+    "SUPPORT",
+    "BACK",
+    "NUMBER",
+    "ROUTINE",
+    "TIME",
+  ];
+  const b = await board({
+    words: W,
+    marks: {
+      LITTLELITTLE: "green",
+      COMMONCOMMON: "yellow",
+      FOO: "yellow",
+      BAR: "yellow",
+      BAZ: "yellow",
+    },
+  });
+  assert.deepEqual(b.store(), { LITTLE: "green", COMMON: "yellow" });
+  b.select(["STANDARD", "STOCK", "ROUTINE"]);
+  await b.tap("yellow");
+  assert.ok(!b.shook());
+  assert.equal(b.store().STOCK, "yellow");
+  b.close();
+});
+
+test("words that look doubled (TARTAR) keep their full name", async () => {
+  const b = await board({
+    words: ["TARTAR", "TUTU", "TAR"],
+    marks: { TARTAR: "green", TUTU: "blue", TAR: "yellow" },
+  });
+  assert.equal(b.tile("TARTAR").dataset.ccm, "green");
+  assert.equal(b.tile("TAR").dataset.ccm, "yellow");
+  b.close();
+});
+
+test("old puzzles are cleaned up by last use, not puzzle date", async () => {
+  const b = await board({
+    words: ["A"],
+    stored: {
+      "ccm:2025-01-01": {},
+      "ccm:2023-06-12": { A: "blue" },
+      "ccm:used": { "2025-01-01": Date.now() - 90 * 864e5 },
+    },
+  });
+  assert.equal(b.w.localStorage.getItem("ccm:2025-01-01"), null);
+  assert.notEqual(b.w.localStorage.getItem("ccm:2023-06-12"), null);
+  b.close();
+});
+
+test("idle page: no redraw loop", async () => {
+  const b = await board({ words: ["A", "B"], marks: { A: "blue" } });
   let frames = 0;
   const raf = b.w.requestAnimationFrame.bind(b.w);
-  b.w.requestAnimationFrame = cb => { frames++; return raf(cb); };
+  b.w.requestAnimationFrame = (cb) => {
+    frames++;
+    return raf(cb);
+  };
   await sleep(400);
   assert.equal(frames, 0);
   b.close();
 });
 
-test('settings: defaults, saved choices, and each toggle takes effect', async () => {
-  const b = await board({ words: [...four('P'), ...four('B'), ...four('G'), ...four('Y')] });
+test("settings: defaults, saved choices, and each toggle takes effect", async () => {
+  const b = await board({
+    words: [...four("P"), ...four("B"), ...four("G"), ...four("Y")],
+  });
   // defaults: one-away off, everything else on, palette on the right
-  assert.equal(b.box('oneAway').checked, false);
-  for (const k of ['autoFill', 'reconcile', 'goButton', 'orderWarn', 'keys']) assert.equal(b.box(k).checked, true, k);
+  assert.equal(b.box("oneAway").checked, false);
+  for (const k of ["autoFill", "reconcile", "goButton", "orderWarn", "keys"])
+    assert.equal(b.box(k).checked, true, k);
   assert.ok(b.sheet().hidden);
-  await b.tap('gear');
-  assert.ok(!b.sheet().hidden, '⚙ opens the panel');
-  b.d.body.click(); await sleep(20);
-  assert.ok(b.sheet().hidden, 'clicking outside closes it');
+  await b.tap("gear");
+  assert.ok(!b.sheet().hidden, "⚙ opens the panel");
+  b.d.body.click();
+  await sleep(20);
+  assert.ok(b.sheet().hidden, "clicking outside closes it");
 
   // auto-fill off: three full colors leave the last 4 unmarked
-  await b.setOpt('autoFill', false);
-  for (const [c, p] of [['purple', 'P'], ['blue', 'B'], ['green', 'G']]) { b.select(four(p)); await b.tap(c); }
+  await b.setOpt("autoFill", false);
+  for (const [c, p] of [
+    ["purple", "P"],
+    ["blue", "B"],
+    ["green", "G"],
+  ]) {
+    b.select(four(p));
+    await b.tap(c);
+  }
   assert.equal(b.store().Y1, undefined);
-  assert.deepEqual(JSON.parse(b.w.localStorage.getItem('ccm:settings')).autoFill, false);
+  assert.deepEqual(
+    JSON.parse(b.w.localStorage.getItem("ccm:settings")).autoFill,
+    false,
+  );
 
   // Go off: hidden and inert; order warning off: no "Sure?"
-  await b.setOpt('goButton', false);
-  assert.ok(b.panel.classList.contains('nogo'));
-  await b.setOpt('goButton', true);
-  await b.setOpt('orderWarn', false);
-  await b.tap('green'); await b.tap('go');
-  assert.notEqual(b.btn('go').textContent, 'Sure?');
+  await b.setOpt("goButton", false);
+  assert.ok(b.panel.classList.contains("nogo"));
+  await b.setOpt("goButton", true);
+  await b.setOpt("orderWarn", false);
+  await b.tap("green");
+  await b.tap("go");
+  assert.notEqual(b.btn("go").textContent, "Sure?");
 
   // keys off: number keys do nothing
-  await b.setOpt('keys', false);
-  b.w.dispatchEvent(new b.w.KeyboardEvent('keydown', { key: '1' }));
+  await b.setOpt("keys", false);
+  b.w.dispatchEvent(new b.w.KeyboardEvent("keydown", { key: "1" }));
   await sleep(20);
-  assert.ok(!b.btn('yellow').classList.contains('active'));
+  assert.ok(!b.btn("yellow").classList.contains("active"));
 
   // palette side
-  await b.setOpt('left', true);
-  assert.ok(b.panel.classList.contains('left'));
+  await b.setOpt("left", true);
+  assert.ok(b.panel.classList.contains("left"));
 });
 
 test('settings: "Fix my colors" off only corrects the solved tiles', async () => {
   const b = await board({
-    words: four('X'),
-    solved: [{ level: 3, words: four('A') }],
-    marks: { ...Object.fromEntries(four('A').map(x => [x, 'blue'])), ...Object.fromEntries(four('X').map(x => [x, 'purple'])) },
-    stored: { 'ccm:settings': { reconcile: false } },
+    words: four("X"),
+    solved: [{ level: 3, words: four("A") }],
+    marks: {
+      ...Object.fromEntries(four("A").map((x) => [x, "blue"])),
+      ...Object.fromEntries(four("X").map((x) => [x, "purple"])),
+    },
+    stored: { "ccm:settings": { reconcile: false } },
   });
   const s = b.store();
-  assert.ok(four('A').every(x => s[x] === 'purple'), 'solved tiles take the real color');
-  assert.ok(four('X').every(x => s[x] === 'purple'), 'your other marks are left alone');
+  assert.ok(
+    four("A").every((x) => s[x] === "purple"),
+    "solved tiles take the real color",
+  );
+  assert.ok(
+    four("X").every((x) => s[x] === "purple"),
+    "your other marks are left alone",
+  );
 });
 
 test('settings: "One away" marks off by default shows no badges', async () => {
-  const b = await board({ words: ['A', 'B', 'C', 'D', 'E'] });
-  await b.guess(['A', 'B', 'C', 'E'], 'away');
-  assert.equal(b.tile('A').dataset.ccmAway, undefined);
+  const b = await board({ words: ["A", "B", "C", "D", "E"] });
+  await b.guess(["A", "B", "C", "E"], "away");
+  assert.equal(b.tile("A").dataset.ccmAway, undefined);
 });
 
-test('marks are drawn in a sealed overlay inside each tile, and follow the mark', async () => {
-  const b = await board({ words: ['A', 'B'], marks: { A: 'blue' } });
-  const m = b.tile('A').querySelector('ccm-mark');
-  assert.ok(m, 'overlay present');
-  assert.equal(m.shadowRoot, null, 'closed shadow root: page extensions cannot restyle it');
-  assert.equal(b.tile('B').querySelector('ccm-mark'), null);
-  b.select(['A']); await b.tap('erase');
-  assert.equal(b.tile('A').querySelector('ccm-mark'), null, 'erasing removes the overlay');
+test("marks are drawn in a sealed overlay inside each tile, and follow the mark", async () => {
+  const b = await board({ words: ["A", "B"], marks: { A: "blue" } });
+  const m = b.tile("A").querySelector("ccm-mark");
+  assert.ok(m, "overlay present");
+  assert.equal(
+    m.shadowRoot,
+    null,
+    "closed shadow root: page extensions cannot restyle it",
+  );
+  assert.equal(b.tile("B").querySelector("ccm-mark"), null);
+  b.select(["A"]);
+  await b.tap("erase");
+  assert.equal(
+    b.tile("A").querySelector("ccm-mark"),
+    null,
+    "erasing removes the overlay",
+  );
 });
 
-test('undo reverses assign, swap and exchange, and dims when there is nothing to undo', async () => {
-  const b = await board({ words: ['A', 'B', 'C', 'D', 'E'], marks: { A: 'blue', B: 'purple' } });
-  assert.ok(b.btn('undo').classList.contains('off'));
-  b.select(['C']); await b.tap('green');
-  assert.equal(b.store().C, 'green');
-  assert.ok(!b.btn('undo').classList.contains('off'));
+test("undo reverses assign, swap and exchange, and dims when there is nothing to undo", async () => {
+  const b = await board({
+    words: ["A", "B", "C", "D", "E"],
+    marks: { A: "blue", B: "purple" },
+  });
+  assert.ok(b.btn("undo").classList.contains("off"));
+  b.select(["C"]);
+  await b.tap("green");
+  assert.equal(b.store().C, "green");
+  assert.ok(!b.btn("undo").classList.contains("off"));
   b.select([]); // jsdom has no game to deselect for us
-  await b.tap('blue'); await b.tap('purple'); // swap
-  assert.equal(b.store().A, 'purple');
-  await b.tap('undo');
-  assert.equal(b.store().A, 'blue', 'swap undone');
-  await b.tap('undo');
-  assert.equal(b.store().C, undefined, 'assign undone');
-  assert.ok(b.btn('undo').classList.contains('off'));
-  await b.tap('undo');
-  assert.ok(b.shook(), 'nothing left to undo');
-  b.select(['D']);
-  b.w.dispatchEvent(new b.w.KeyboardEvent('keydown', { key: '2' })); await sleep(40);
-  b.w.dispatchEvent(new b.w.KeyboardEvent('keydown', { key: 'z' })); await sleep(40);
-  assert.equal(b.store().D, undefined, 'Z undoes');
-});
-
-test('color letters: swatches and dots show Y/G/B/P when turned on', async () => {
-  const b = await board({ words: ['A', 'B'], marks: { A: 'purple' }, stored: { 'ccm:settings': { letters: true } } });
-  assert.equal(b.btn('purple').textContent, 'P1');
-  assert.equal(b.btn('yellow').textContent, 'Y0');
-  await b.setOpt('letters', false);
-  assert.equal(b.btn('purple').textContent, '1');
-});
-
-test('dark theme follows NYT dark mode or Dark Reader', async () => {
-  const b = await board({ words: ['A'] });
-  const host = b.d.getElementById('ccm-root');
-  assert.equal(host.dataset.theme, 'light');
-  b.d.body.dataset.mode = 'dark'; await sleep(80);
-  assert.equal(host.dataset.theme, 'dark');
-  delete b.d.body.dataset.mode; await sleep(80);
-  assert.equal(host.dataset.theme, 'light');
-  b.d.documentElement.dataset.darkreaderScheme = 'dark'; await sleep(80);
-  assert.equal(host.dataset.theme, 'dark');
-});
-
-test('another tab changing the same puzzle is picked up', async () => {
-  const b = await board({ words: ['A', 'B'], marks: { A: 'blue' } });
-  b.w.localStorage.setItem('ccm:2023-07-01', JSON.stringify({ A: 'green' }));
-  b.w.dispatchEvent(new b.w.StorageEvent('storage', { key: 'ccm:2023-07-01' }));
+  await b.tap("blue");
+  await b.tap("purple"); // swap
+  assert.equal(b.store().A, "purple");
+  await b.tap("undo");
+  assert.equal(b.store().A, "blue", "swap undone");
+  await b.tap("undo");
+  assert.equal(b.store().C, undefined, "assign undone");
+  assert.ok(b.btn("undo").classList.contains("off"));
+  await b.tap("undo");
+  assert.ok(b.shook(), "nothing left to undo");
+  b.select(["D"]);
+  b.w.dispatchEvent(new b.w.KeyboardEvent("keydown", { key: "2" }));
   await sleep(40);
-  assert.equal(b.tile('A').dataset.ccm, 'green');
+  b.w.dispatchEvent(new b.w.KeyboardEvent("keydown", { key: "z" }));
+  await sleep(40);
+  assert.equal(b.store().D, undefined, "Z undoes");
 });
 
-test('today\'s puzzle (no date in the URL) is filed under the day the page opened', async () => {
-  const b = await board({ words: ['A'], date: '' });
-  b.select(['A']); await b.tap('blue');
-  const today = new Date().toLocaleDateString('en-CA');
-  assert.equal(JSON.parse(b.w.localStorage.getItem(`ccm:${today}`)).A, 'blue');
+test("color letters: swatches and dots show Y/G/B/P when turned on", async () => {
+  const b = await board({
+    words: ["A", "B"],
+    marks: { A: "purple" },
+    stored: { "ccm:settings": { letters: true } },
+  });
+  assert.equal(b.btn("purple").textContent, "P1");
+  assert.equal(b.btn("yellow").textContent, "Y0");
+  await b.setOpt("letters", false);
+  assert.equal(b.btn("purple").textContent, "1");
 });
 
-test('tiles show just the outline; the corner letter dot appears only with color letters on', async () => {
+test("dark theme follows NYT dark mode or Dark Reader", async () => {
+  const b = await board({ words: ["A"] });
+  const host = b.d.getElementById("ccm-root");
+  assert.equal(host.dataset.theme, "light");
+  b.d.body.dataset.mode = "dark";
+  await sleep(80);
+  assert.equal(host.dataset.theme, "dark");
+  delete b.d.body.dataset.mode;
+  await sleep(80);
+  assert.equal(host.dataset.theme, "light");
+  b.d.documentElement.dataset.darkreaderScheme = "dark";
+  await sleep(80);
+  assert.equal(host.dataset.theme, "dark");
+});
+
+test("another tab changing the same puzzle is picked up", async () => {
+  const b = await board({ words: ["A", "B"], marks: { A: "blue" } });
+  b.w.localStorage.setItem("ccm:2023-07-01", JSON.stringify({ A: "green" }));
+  b.w.dispatchEvent(new b.w.StorageEvent("storage", { key: "ccm:2023-07-01" }));
+  await sleep(40);
+  assert.equal(b.tile("A").dataset.ccm, "green");
+});
+
+test("today's puzzle (no date in the URL) is filed under the day the page opened", async () => {
+  const b = await board({ words: ["A"], date: "" });
+  b.select(["A"]);
+  await b.tap("blue");
+  const today = new Date().toLocaleDateString("en-CA");
+  assert.equal(JSON.parse(b.w.localStorage.getItem(`ccm:${today}`)).A, "blue");
+});
+
+test("tiles show just the outline; the corner letter dot appears only with color letters on", async () => {
   // the overlay's shadow root is closed, so check what it renders through its cache key
-  const b = await board({ words: ['A'], marks: { A: 'blue' } });
-  assert.equal(b.tile('A').querySelector('ccm-mark').dataset.k, 'blue||0|');
-  await b.setOpt('letters', true);
-  assert.equal(b.tile('A').querySelector('ccm-mark').dataset.k, 'blue||1|');
+  const b = await board({ words: ["A"], marks: { A: "blue" } });
+  assert.equal(b.tile("A").querySelector("ccm-mark").dataset.k, "blue||0|");
+  await b.setOpt("letters", true);
+  assert.equal(b.tile("A").querySelector("ccm-mark").dataset.k, "blue||1|");
 });
 
-const maybesOf = (b, date = '2023-07-01') => JSON.parse(b.w.localStorage.getItem(`ccm:maybe:${date}`) || '{}');
-const markKey = (b, x) => b.tile(x).querySelector('ccm-mark')?.dataset.k;
+const maybesOf = (b, date = "2023-07-01") =>
+  JSON.parse(b.w.localStorage.getItem(`ccm:maybe:${date}`) || "{}");
+const markKey = (b, x) => b.tile(x).querySelector("ccm-mark")?.dataset.k;
 
-test('maybe colors: off by default; ? mode turns tiles into splits of their candidate colors', async () => {
-  const off = await board({ words: ['A'] });
-  assert.ok(off.panel.classList.contains('nomaybe'));
+test("maybe colors: off by default; ? mode turns tiles into splits of their candidate colors", async () => {
+  const off = await board({ words: ["A"] });
+  assert.ok(off.panel.classList.contains("nomaybe"));
 
-  const b = await board({ words: ['A', 'B', 'C', 'D', 'E'], marks: { A: 'blue' }, stored: { 'ccm:settings': { maybes: true } } });
-  assert.ok(!b.panel.classList.contains('nomaybe'));
-  await b.tap('maybe');
-  assert.ok(b.panel.classList.contains('maybemode'));
+  const b = await board({
+    words: ["A", "B", "C", "D", "E"],
+    marks: { A: "blue" },
+    stored: { "ccm:settings": { maybes: true } },
+  });
+  assert.ok(!b.panel.classList.contains("nomaybe"));
+  await b.tap("maybe");
+  assert.ok(b.panel.classList.contains("maybemode"));
   // a decided tile gains a second option: it becomes undecided (no longer counts as blue)
-  b.select(['A']); await b.tap('purple');
-  assert.deepEqual(maybesOf(b), { A: ['blue', 'purple'] }, 'kept in rainbow order');
-  assert.equal(b.store().A, undefined, 'a split tile is not decided');
-  assert.equal(markKey(b, 'A'), '||0|blue,purple');
-  assert.equal(b.tile('A').dataset.ccmSplit, 'blue,purple', 'split tiles are positioned so the outline stays on the tile');
+  b.select(["A"]);
+  await b.tap("purple");
+  assert.deepEqual(
+    maybesOf(b),
+    { A: ["blue", "purple"] },
+    "kept in rainbow order",
+  );
+  assert.equal(b.store().A, undefined, "a split tile is not decided");
+  assert.equal(markKey(b, "A"), "||0|blue,purple");
+  assert.equal(
+    b.tile("A").dataset.ccmSplit,
+    "blue,purple",
+    "split tiles are positioned so the outline stays on the tile",
+  );
   // one option on an unmarked tile is just a plain mark
-  b.select(['B']); await b.tap('green');
-  assert.equal(b.store().B, 'green');
-  assert.deepEqual(maybesOf(b), { A: ['blue', 'purple'] });
+  b.select(["B"]);
+  await b.tap("green");
+  assert.equal(b.store().B, "green");
+  assert.deepEqual(maybesOf(b), { A: ["blue", "purple"] });
   // removing options down to one decides the tile again
-  b.select(['A']); await b.tap('purple');
-  assert.equal(b.store().A, 'blue');
+  b.select(["A"]);
+  await b.tap("purple");
+  assert.equal(b.store().A, "blue");
   assert.deepEqual(maybesOf(b), {});
   // ⌫ clears everything on the tile
-  b.select(['A']); await b.tap('yellow');
-  b.select(['A']); await b.tap('erase');
+  b.select(["A"]);
+  await b.tap("yellow");
+  b.select(["A"]);
+  await b.tap("erase");
   assert.equal(b.store().A, undefined);
   assert.deepEqual(maybesOf(b), {});
 });
 
-test('maybe colors: split tiles never count toward the 4-per-color limit, Go or auto-fill', async () => {
+test("maybe colors: split tiles never count toward the 4-per-color limit, Go or auto-fill", async () => {
   const b = await board({
-    words: ['A', 'B', 'C', 'D', 'E'], marks: { A: 'blue', B: 'blue', C: 'blue', D: 'blue' },
-    stored: { 'ccm:settings': { maybes: true } },
+    words: ["A", "B", "C", "D", "E"],
+    marks: { A: "blue", B: "blue", C: "blue", D: "blue" },
+    stored: { "ccm:settings": { maybes: true } },
   });
-  await b.tap('maybe');
-  b.select(['E']); await b.tap('green');
-  b.select(['E']); await b.tap('blue'); // E: green, then green-or-blue
-  assert.ok(!b.shook(), 'blue is full, but a split option is fine');
-  assert.deepEqual(maybesOf(b), { E: ['green', 'blue'] });
-  assert.equal(b.btn('blue').textContent, '4');
+  await b.tap("maybe");
+  b.select(["E"]);
+  await b.tap("green");
+  b.select(["E"]);
+  await b.tap("blue"); // E: green, then green-or-blue
+  assert.ok(!b.shook(), "blue is full, but a split option is fine");
+  assert.deepEqual(maybesOf(b), { E: ["green", "blue"] });
+  assert.equal(b.btn("blue").textContent, "4");
   // dropping green leaves only blue, which is full: E stays a lone (dashed) candidate
-  b.select(['E']); await b.tap('green');
-  assert.deepEqual(maybesOf(b), { E: ['blue'] });
+  b.select(["E"]);
+  await b.tap("green");
+  assert.deepEqual(maybesOf(b), { E: ["blue"] });
   assert.equal(b.store().E, undefined);
 });
 
-test('maybe colors: undo, swaps and solves carry them along', async () => {
-  const b = await board({ words: ['A', 'B', 'C'], stored: { 'ccm:settings': { maybes: true } } });
-  await b.tap('maybe');
-  b.select(['A']); await b.tap('blue');
-  b.select(['A']); await b.tap('green');
-  assert.deepEqual(maybesOf(b), { A: ['green', 'blue'] });
-  await b.tap('undo');
-  assert.deepEqual(maybesOf(b), {}, 'undo takes back the second option');
-  assert.equal(b.store().A, 'blue');
-  b.select(['A']); await b.tap('green');
-  await b.tap('maybe');
+test("maybe colors: undo, swaps and solves carry them along", async () => {
+  const b = await board({
+    words: ["A", "B", "C"],
+    stored: { "ccm:settings": { maybes: true } },
+  });
+  await b.tap("maybe");
+  b.select(["A"]);
+  await b.tap("blue");
+  b.select(["A"]);
+  await b.tap("green");
+  assert.deepEqual(maybesOf(b), { A: ["green", "blue"] });
+  await b.tap("undo");
+  assert.deepEqual(maybesOf(b), {}, "undo takes back the second option");
+  assert.equal(b.store().A, "blue");
+  b.select(["A"]);
+  await b.tap("green");
+  await b.tap("maybe");
   b.select([]);
-  await b.tap('blue'); await b.tap('yellow'); // swap blue <-> yellow
-  assert.deepEqual(maybesOf(b), { A: ['yellow', 'green'] }, 'swaps carry options');
+  await b.tap("blue");
+  await b.tap("yellow"); // swap blue <-> yellow
+  assert.deepEqual(
+    maybesOf(b),
+    { A: ["yellow", "green"] },
+    "swaps carry options",
+  );
 
   // a solved color drops out; a tile left with one option becomes that color
   const s = await board({
-    words: ['X', 'Y', 'Z'],
-    solved: [{ level: 0, words: ['P1', 'P2', 'P3', 'P4'] }],
-    stored: { 'ccm:settings': { maybes: true }, 'ccm:maybe:2023-07-01': { X: ['yellow', 'green'], Y: ['yellow', 'blue', 'purple'], P1: ['green', 'blue'] } },
+    words: ["X", "Y", "Z"],
+    solved: [{ level: 0, words: ["P1", "P2", "P3", "P4"] }],
+    stored: {
+      "ccm:settings": { maybes: true },
+      "ccm:maybe:2023-07-01": {
+        X: ["yellow", "green"],
+        Y: ["yellow", "blue", "purple"],
+        P1: ["green", "blue"],
+      },
+    },
   });
-  assert.deepEqual(maybesOf(s), { Y: ['blue', 'purple'] }, 'yellow dropped, solved tiles cleared');
-  assert.equal(s.store().X, 'green', 'yellow-or-green became green once yellow was solved');
+  assert.deepEqual(
+    maybesOf(s),
+    { Y: ["blue", "purple"] },
+    "yellow dropped, solved tiles cleared",
+  );
+  assert.equal(
+    s.store().X,
+    "green",
+    "yellow-or-green became green once yellow was solved",
+  );
 });
 
-test('maybe colors: 0.6 data (a mark plus maybe dots) becomes a split', async () => {
+test("maybe colors: 0.6 data (a mark plus maybe dots) becomes a split", async () => {
   const b = await board({
-    words: ['A', 'B'], marks: { A: 'blue' },
-    stored: { 'ccm:settings': { maybes: true }, 'ccm:maybe:2023-07-01': { A: ['purple'], B: ['green'] } },
+    words: ["A", "B"],
+    marks: { A: "blue" },
+    stored: {
+      "ccm:settings": { maybes: true },
+      "ccm:maybe:2023-07-01": { A: ["purple"], B: ["green"] },
+    },
   });
-  assert.deepEqual(maybesOf(b), { A: ['blue', 'purple'] });
+  assert.deepEqual(maybesOf(b), { A: ["blue", "purple"] });
   assert.equal(b.store().A, undefined);
-  assert.equal(b.store().B, 'green', 'a single maybe on an unmarked tile becomes its mark');
+  assert.equal(
+    b.store().B,
+    "green",
+    "a single maybe on an unmarked tile becomes its mark",
+  );
 });
 
-test('maybe colors: Shift+number toggles an option without maybe mode, M toggles the mode', async () => {
-  const b = await board({ words: ['A', 'B'], marks: { A: 'green' }, stored: { 'ccm:settings': { maybes: true } } });
-  b.select(['A']);
-  b.w.dispatchEvent(new b.w.KeyboardEvent('keydown', { key: '#', code: 'Digit3', shiftKey: true })); await sleep(40);
-  assert.deepEqual(maybesOf(b), { A: ['green', 'blue'] });
-  assert.ok(!b.panel.classList.contains('maybemode'));
-  b.w.dispatchEvent(new b.w.KeyboardEvent('keydown', { key: 'm' })); await sleep(20);
-  assert.ok(b.panel.classList.contains('maybemode'));
-});
-
-test('palette: ⋯ is phone-only and toggles the second row', async () => {
-  const b = await board({ words: ['A'] });
-  const more = b.btn('more');
-  assert.equal(more.textContent, '⋯');
-  more.click(); await sleep(20);
-  assert.ok(b.panel.classList.contains('more'));
-  assert.equal(more.textContent, '‹', 'the same button swaps back');
-  more.click(); await sleep(20);
-  assert.ok(!b.panel.classList.contains('more'));
-  assert.equal(more.textContent, '⋯');
-  assert.ok(b.box('keys').closest('label').classList.contains('desk'), 'keyboard setting is marked desktop-only');
-});
-
-test('sorting keeps split tiles together after the decided rows, padding rows with blank tiles first', async () => {
+test("maybe colors: Shift+number toggles an option without maybe mode, M toggles the mode", async () => {
   const b = await board({
-    words: ['S1', 'N1', 'Y1', 'S2', 'Y2', 'N2', 'Y3', 'N3'],
-    marks: { Y1: 'yellow', Y2: 'yellow', Y3: 'yellow' },
-    stored: { 'ccm:sort': '1', 'ccm:settings': { maybes: true }, 'ccm:maybe:2023-07-01': { S1: ['green', 'blue'], S2: ['yellow', 'purple'] } },
+    words: ["A", "B"],
+    marks: { A: "green" },
+    stored: { "ccm:settings": { maybes: true } },
   });
-  const order = [...b.d.querySelectorAll('[data-testid=card-label]')].sort((x, y) => x.style.order - y.style.order).map(t => t.dataset.flipId);
-  assert.deepEqual(order, ['Y1', 'Y2', 'Y3', 'N1', 'S2', 'S1', 'N2', 'N3']);
+  b.select(["A"]);
+  b.w.dispatchEvent(
+    new b.w.KeyboardEvent("keydown", {
+      key: "#",
+      code: "Digit3",
+      shiftKey: true,
+    }),
+  );
+  await sleep(40);
+  assert.deepEqual(maybesOf(b), { A: ["green", "blue"] });
+  assert.ok(!b.panel.classList.contains("maybemode"));
+  b.w.dispatchEvent(new b.w.KeyboardEvent("keydown", { key: "m" }));
+  await sleep(20);
+  assert.ok(b.panel.classList.contains("maybemode"));
+});
+
+test("palette: ⋯ is phone-only and toggles the second row", async () => {
+  const b = await board({ words: ["A"] });
+  const more = b.btn("more");
+  assert.equal(more.textContent, "⋯");
+  more.click();
+  await sleep(20);
+  assert.ok(b.panel.classList.contains("more"));
+  assert.equal(more.textContent, "‹", "the same button swaps back");
+  more.click();
+  await sleep(20);
+  assert.ok(!b.panel.classList.contains("more"));
+  assert.equal(more.textContent, "⋯");
+  assert.ok(
+    b.box("keys").closest("label").classList.contains("desk"),
+    "keyboard setting is marked desktop-only",
+  );
+});
+
+test("sorting keeps split tiles together after the decided rows, padding rows with blank tiles first", async () => {
+  const b = await board({
+    words: ["S1", "N1", "Y1", "S2", "Y2", "N2", "Y3", "N3"],
+    marks: { Y1: "yellow", Y2: "yellow", Y3: "yellow" },
+    stored: {
+      "ccm:sort": "1",
+      "ccm:settings": { maybes: true },
+      "ccm:maybe:2023-07-01": {
+        S1: ["green", "blue"],
+        S2: ["yellow", "purple"],
+      },
+    },
+  });
+  const order = [...b.d.querySelectorAll("[data-testid=card-label]")]
+    .sort((x, y) => x.style.order - y.style.order)
+    .map((t) => t.dataset.flipId);
+  assert.deepEqual(order, ["Y1", "Y2", "Y3", "N1", "S2", "S1", "N2", "N3"]);
   b.close();
 });
 
-test('maybe mode holds tiles still; they re-sort when it goes off', async () => {
+test("maybe mode holds tiles still; they re-sort when it goes off", async () => {
   const b = await board({
-    words: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'], marks: { H: 'purple' },
-    stored: { 'ccm:sort': '1', 'ccm:settings': { maybes: true } },
+    words: ["A", "B", "C", "D", "E", "F", "G", "H"],
+    marks: { H: "purple" },
+    stored: { "ccm:sort": "1", "ccm:settings": { maybes: true } },
   });
-  const order = () => [...b.d.querySelectorAll('[data-testid=card-label]')].sort((x, y) => x.style.order - y.style.order).map(t => t.dataset.flipId).join('');
-  assert.equal(order(), 'HABCDEFG');
-  await b.tap('maybe');
-  b.select(['G']); await b.tap('blue');
-  b.select(['G']); await b.tap('green');
-  assert.equal(order(), 'HABCDEFG', 'G stays put while maybe mode is on');
-  await b.tap('maybe');
-  assert.equal(order(), 'HABCGDEF', 'G joins the split tiles once maybe mode is off');
+  const order = () =>
+    [...b.d.querySelectorAll("[data-testid=card-label]")]
+      .sort((x, y) => x.style.order - y.style.order)
+      .map((t) => t.dataset.flipId)
+      .join("");
+  assert.equal(order(), "HABCDEFG");
+  await b.tap("maybe");
+  b.select(["G"]);
+  await b.tap("blue");
+  b.select(["G"]);
+  await b.tap("green");
+  assert.equal(order(), "HABCDEFG", "G stays put while maybe mode is on");
+  await b.tap("maybe");
+  assert.equal(
+    order(),
+    "HABCGDEF",
+    "G joins the split tiles once maybe mode is off",
+  );
   b.close();
 });
 
-test('split tiles with the same combination sit side by side', async () => {
+test("split tiles with the same combination sit side by side", async () => {
   const b = await board({
-    words: ['GB1', 'PG', 'YG', 'GB2', 'PB', 'GB3'],
-    stored: { 'ccm:sort': '1', 'ccm:settings': { maybes: true },
-      'ccm:maybe:2023-07-01': { GB1: ['green', 'blue'], PG: ['green', 'purple'], YG: ['yellow', 'green'], GB2: ['green', 'blue'], PB: ['blue', 'purple'], GB3: ['green', 'blue'] } },
+    words: ["GB1", "PG", "YG", "GB2", "PB", "GB3"],
+    stored: {
+      "ccm:sort": "1",
+      "ccm:settings": { maybes: true },
+      "ccm:maybe:2023-07-01": {
+        GB1: ["green", "blue"],
+        PG: ["green", "purple"],
+        YG: ["yellow", "green"],
+        GB2: ["green", "blue"],
+        PB: ["blue", "purple"],
+        GB3: ["green", "blue"],
+      },
+    },
   });
-  const order = [...b.d.querySelectorAll('[data-testid=card-label]')].sort((x, y) => x.style.order - y.style.order).map(t => t.dataset.flipId);
+  const order = [...b.d.querySelectorAll("[data-testid=card-label]")]
+    .sort((x, y) => x.style.order - y.style.order)
+    .map((t) => t.dataset.flipId);
   // P→Y: purple-or-blue, purple-or-green, then the three blue-or-greens together, then green-or-yellow
-  assert.deepEqual(order, ['PB', 'PG', 'GB1', 'GB2', 'GB3', 'YG']);
+  assert.deepEqual(order, ["PB", "PG", "GB1", "GB2", "GB3", "YG"]);
   b.close();
 });
 
-test('auto-fill also completes a last color that already has some tiles or splits', async () => {
+test("auto-fill also completes a last color that already has some tiles or splits", async () => {
   const b = await board({
-    words: [...four('P'), ...four('G'), ...four('Y'), 'B1', 'B2', 'B3', 'B4'],
-    marks: { ...Object.fromEntries(four('P').map(x => [x, 'purple'])), ...Object.fromEntries(four('G').map(x => [x, 'green'])), B1: 'blue' },
-    stored: { 'ccm:settings': { maybes: true }, 'ccm:maybe:2023-07-01': { B2: ['yellow', 'blue'] } },
+    words: [...four("P"), ...four("G"), ...four("Y"), "B1", "B2", "B3", "B4"],
+    marks: {
+      ...Object.fromEntries(four("P").map((x) => [x, "purple"])),
+      ...Object.fromEntries(four("G").map((x) => [x, "green"])),
+      B1: "blue",
+    },
+    stored: {
+      "ccm:settings": { maybes: true },
+      "ccm:maybe:2023-07-01": { B2: ["yellow", "blue"] },
+    },
   });
-  b.select(four('Y')); await b.tap('yellow');
-  for (const w of ['B1', 'B2', 'B3', 'B4']) assert.equal(b.store()[w], 'blue', w);
-  assert.deepEqual(maybesOf(b), {}, 'the split was decided');
+  b.select(four("Y"));
+  await b.tap("yellow");
+  for (const w of ["B1", "B2", "B3", "B4"])
+    assert.equal(b.store()[w], "blue", w);
+  assert.deepEqual(maybesOf(b), {}, "the split was decided");
   b.close();
 });
 
-test('another tab turning a split into a mark comes through intact (both keys arrive as separate events)', async () => {
+test("another tab turning a split into a mark comes through intact (both keys arrive as separate events)", async () => {
   const b = await board({
-    words: ['A', 'B'],
-    stored: { 'ccm:settings': { maybes: true }, 'ccm:maybe:2023-07-01': { A: ['yellow', 'green'] } },
+    words: ["A", "B"],
+    stored: {
+      "ccm:settings": { maybes: true },
+      "ccm:maybe:2023-07-01": { A: ["yellow", "green"] },
+    },
   });
   // the other tab writes both keys, then this tab hears about them one at a time
-  b.w.localStorage.setItem('ccm:2023-07-01', JSON.stringify({ A: 'yellow' }));
-  b.w.localStorage.setItem('ccm:maybe:2023-07-01', JSON.stringify({}));
-  b.w.dispatchEvent(new b.w.StorageEvent('storage', { key: 'ccm:2023-07-01' })); await sleep(40);
-  b.w.dispatchEvent(new b.w.StorageEvent('storage', { key: 'ccm:maybe:2023-07-01' })); await sleep(40);
-  assert.equal(b.store().A, 'yellow');
+  b.w.localStorage.setItem("ccm:2023-07-01", JSON.stringify({ A: "yellow" }));
+  b.w.localStorage.setItem("ccm:maybe:2023-07-01", JSON.stringify({}));
+  b.w.dispatchEvent(new b.w.StorageEvent("storage", { key: "ccm:2023-07-01" }));
+  await sleep(40);
+  b.w.dispatchEvent(
+    new b.w.StorageEvent("storage", { key: "ccm:maybe:2023-07-01" }),
+  );
+  await sleep(40);
+  assert.equal(b.store().A, "yellow");
   assert.deepEqual(maybesOf(b), {});
   b.close();
 });
 
-test('moving to another date in the same page keeps that puzzle\'s marks while the old board is still showing', async () => {
-  const words = 'ABCDEFGHIJKLMNOP'.split('');
-  const b = await board({ words, marks: { A: 'blue' } });
-  const next = 'QRSTUVWXYZabcdef'.split('');
-  b.w.localStorage.setItem('ccm:2023-07-02', JSON.stringify({ Q: 'purple' }));
-  b.w.history.pushState({}, '', '/games/connections/2023-07-02');
-  b.d.body.appendChild(b.d.createElement('i')); await sleep(80); // a re-render before the new board arrives
-  assert.deepEqual(JSON.parse(b.w.localStorage.getItem('ccm:2023-07-02')), { Q: 'purple' }, 'not wiped as leftovers');
+test("moving to another date in the same page keeps that puzzle's marks while the old board is still showing", async () => {
+  const words = "ABCDEFGHIJKLMNOP".split("");
+  const b = await board({ words, marks: { A: "blue" } });
+  const next = "QRSTUVWXYZabcdef".split("");
+  b.w.localStorage.setItem("ccm:2023-07-02", JSON.stringify({ Q: "purple" }));
+  b.w.history.pushState({}, "", "/games/connections/2023-07-02");
+  b.d.body.appendChild(b.d.createElement("i"));
+  await sleep(80); // a re-render before the new board arrives
+  assert.deepEqual(
+    JSON.parse(b.w.localStorage.getItem("ccm:2023-07-02")),
+    { Q: "purple" },
+    "not wiped as leftovers",
+  );
   // now the new board renders
-  for (const [i, t] of [...b.d.querySelectorAll('[data-testid=card-label]')].entries()) { t.dataset.flipId = next[i]; t.textContent = next[i]; }
+  for (const [i, t] of [
+    ...b.d.querySelectorAll("[data-testid=card-label]"),
+  ].entries()) {
+    t.dataset.flipId = next[i];
+    t.textContent = next[i];
+  }
   await sleep(80);
-  assert.equal(b.tile('Q').querySelector('ccm-mark')?.dataset.k?.split('|')[0], 'purple');
+  assert.equal(
+    b.tile("Q").querySelector("ccm-mark")?.dataset.k?.split("|")[0],
+    "purple",
+  );
   b.close();
 });
 
-test('setting tooltips with quotes in them survive', async () => {
-  const b = await board({ words: ['A'] });
-  assert.match(b.box('orderWarn').closest('label').title, /"Sure\?" before submitting/);
+test("setting tooltips with quotes in them survive", async () => {
+  const b = await board({ words: ["A"] });
+  assert.match(
+    b.box("orderWarn").closest("label").title,
+    /"Sure\?" before submitting/,
+  );
   b.close();
 });
 
-test('auto-fill also runs when a split settles into the third full color', async () => {
+test("auto-fill also runs when a split settles into the third full color", async () => {
   const b = await board({
-    words: [...four('P'), ...four('G'), 'Y1', 'Y2', 'Y3', 'Y4', ...four('B')],
-    marks: { ...Object.fromEntries(four('P').map(x => [x, 'purple'])), ...Object.fromEntries(four('G').map(x => [x, 'green'])), Y1: 'yellow', Y2: 'yellow', Y3: 'yellow' },
-    stored: { 'ccm:settings': { maybes: true }, 'ccm:maybe:2023-07-01': { Y4: ['yellow', 'blue'] } },
+    words: [...four("P"), ...four("G"), "Y1", "Y2", "Y3", "Y4", ...four("B")],
+    marks: {
+      ...Object.fromEntries(four("P").map((x) => [x, "purple"])),
+      ...Object.fromEntries(four("G").map((x) => [x, "green"])),
+      Y1: "yellow",
+      Y2: "yellow",
+      Y3: "yellow",
+    },
+    stored: {
+      "ccm:settings": { maybes: true },
+      "ccm:maybe:2023-07-01": { Y4: ["yellow", "blue"] },
+    },
   });
-  await b.tap('maybe');
-  b.select(['Y4']); await b.tap('blue'); // Y4 is down to yellow: yellow is full, so blue goes to the last 4
-  assert.equal(b.store().Y4, 'yellow');
-  for (const w of four('B')) assert.equal(b.store()[w], 'blue', w);
+  await b.tap("maybe");
+  b.select(["Y4"]);
+  await b.tap("blue"); // Y4 is down to yellow: yellow is full, so blue goes to the last 4
+  assert.equal(b.store().Y4, "yellow");
+  for (const w of four("B")) assert.equal(b.store()[w], "blue", w);
   b.close();
 });
 
-test('Go presses tiles again if the game drops presses (as it does mid-animation)', async () => {
-  const b = await board({ words: [...four('P'), 'X1'], marks: Object.fromEntries(four('P').map(x => [x, 'purple'])) });
+test("Go presses tiles again if the game drops presses (as it does mid-animation)", async () => {
+  const b = await board({
+    words: [...four("P"), "X1"],
+    marks: Object.fromEntries(four("P").map((x) => [x, "purple"])),
+  });
   // a game that ignores the first two presses, then toggles selection and enables Submit at 4
-  let ignore = 2, submitted = null;
-  const submit = b.d.querySelector('[data-testid=submit-btn]');
-  b.d.addEventListener('pointerdown', e => {
-    const t = e.target.closest?.('[data-testid=card-label]');
-    if (!t) return;
-    if (ignore-- > 0) return;
-    t.classList.toggle('Card-module_selected');
-    submit.disabled = b.d.querySelectorAll('.Card-module_selected').length !== 4;
-  }, true);
-  submit.addEventListener('click', () => { submitted = [...b.d.querySelectorAll('.Card-module_selected')].map(t => t.dataset.flipId).sort(); });
-  await b.tap('go');
+  let ignore = 2,
+    submitted = null;
+  const submit = b.d.querySelector("[data-testid=submit-btn]");
+  b.d.addEventListener(
+    "pointerdown",
+    (e) => {
+      const t = e.target.closest?.("[data-testid=card-label]");
+      if (!t) return;
+      if (ignore-- > 0) return;
+      t.classList.toggle("Card-module_selected");
+      submit.disabled =
+        b.d.querySelectorAll(".Card-module_selected").length !== 4;
+    },
+    true,
+  );
+  submit.addEventListener("click", () => {
+    submitted = [...b.d.querySelectorAll(".Card-module_selected")]
+      .map((t) => t.dataset.flipId)
+      .sort();
+  });
+  await b.tap("go");
   await sleep(1500);
-  assert.deepEqual(submitted, four('P'));
+  assert.deepEqual(submitted, four("P"));
   b.close();
 });
 
-test('number and letter keys are ignored while typing in any field', async () => {
-  const b = await board({ words: ['A', 'B', 'C', 'D'] });
-  for (const type of [null, 'search', 'email']) {
-    const input = b.d.createElement('input');
+test("number and letter keys are ignored while typing in any field", async () => {
+  const b = await board({ words: ["A", "B", "C", "D"] });
+  for (const type of [null, "search", "email"]) {
+    const input = b.d.createElement("input");
     if (type) input.type = type;
     b.d.body.appendChild(input);
-    b.select(['A']);
-    input.dispatchEvent(new b.w.KeyboardEvent('keydown', { key: '4', bubbles: true, composed: true }));
+    b.select(["A"]);
+    input.dispatchEvent(
+      new b.w.KeyboardEvent("keydown", {
+        key: "4",
+        bubbles: true,
+        composed: true,
+      }),
+    );
     await sleep(30);
-    assert.equal(b.store().A, undefined, `typing 4 in an ${type || 'untyped'} input doesn't mark a tile`);
+    assert.equal(
+      b.store().A,
+      undefined,
+      `typing 4 in an ${type || "untyped"} input doesn't mark a tile`,
+    );
     input.remove();
   }
-  b.d.body.dispatchEvent(new b.w.KeyboardEvent('keydown', { key: '4', bubbles: true }));
+  b.d.body.dispatchEvent(
+    new b.w.KeyboardEvent("keydown", { key: "4", bubbles: true }),
+  );
   await sleep(30);
-  assert.equal(b.store().A, 'purple', 'outside a field the key still works');
+  assert.equal(b.store().A, "purple", "outside a field the key still works");
   b.close();
 });
 
-test('guess history keeps & and < in words', async () => {
-  const b = await board({ words: ['R&B', 'AT&T', 'A<B', 'X', 'Y'], stored: { 'ccm:settings': { history: true } } });
-  await b.guess(['R&B', 'AT&T', 'A<B', 'X'], 'wrong');
-  await b.tap('hist');
-  assert.match(b.root.getElementById('ccm-history').textContent, /A<B · AT&T · R&B · X/);
+test("guess history keeps & and < in words", async () => {
+  const b = await board({
+    words: ["R&B", "AT&T", "A<B", "X", "Y"],
+    stored: { "ccm:settings": { history: true } },
+  });
+  await b.guess(["R&B", "AT&T", "A<B", "X"], "wrong");
+  await b.tap("hist");
+  assert.match(
+    b.root.getElementById("ccm-history").textContent,
+    /A<B · AT&T · R&B · X/,
+  );
   b.close();
 });
 
-test('a change from another tab clears undo, so undo cannot revert it', async () => {
-  const b = await board({ words: ['A', 'B', 'C', 'D'] });
-  b.select(['A']); await b.tap('green');
-  assert.ok(!b.btn('undo').classList.contains('off'));
-  b.w.localStorage.setItem('ccm:2023-07-01', JSON.stringify({ A: 'green', B: 'blue' }));
-  b.w.dispatchEvent(new b.w.StorageEvent('storage', { key: 'ccm:2023-07-01' })); await sleep(40);
-  assert.ok(b.btn('undo').classList.contains('off'));
+test("a change from another tab clears undo, so undo cannot revert it", async () => {
+  const b = await board({ words: ["A", "B", "C", "D"] });
+  b.select(["A"]);
+  await b.tap("green");
+  assert.ok(!b.btn("undo").classList.contains("off"));
+  b.w.localStorage.setItem(
+    "ccm:2023-07-01",
+    JSON.stringify({ A: "green", B: "blue" }),
+  );
+  b.w.dispatchEvent(new b.w.StorageEvent("storage", { key: "ccm:2023-07-01" }));
+  await sleep(40);
+  assert.ok(b.btn("undo").classList.contains("off"));
   b.close();
 });
 
-test('color buttons have names for screen readers and say which is armed', async () => {
-  const b = await board({ words: ['A', 'B', 'C', 'D'], marks: { A: 'purple' } });
-  assert.equal(b.btn('purple').getAttribute('aria-label'), 'Purple, 1 marked');
-  assert.equal(b.btn('erase').getAttribute('aria-label'), 'Remove color');
-  assert.equal(b.btn('yellow').getAttribute('aria-label'), 'Yellow, 0 marked', 'named from the start, not only after a change');
-  await b.tap('blue');
-  assert.equal(b.btn('blue').getAttribute('aria-pressed'), 'true');
-  assert.equal(b.btn('purple').getAttribute('aria-pressed'), 'false');
+test("color buttons have names for screen readers and say which is armed", async () => {
+  const b = await board({
+    words: ["A", "B", "C", "D"],
+    marks: { A: "purple" },
+  });
+  assert.equal(b.btn("purple").getAttribute("aria-label"), "Purple, 1 marked");
+  assert.equal(b.btn("erase").getAttribute("aria-label"), "Remove color");
+  assert.equal(
+    b.btn("yellow").getAttribute("aria-label"),
+    "Yellow, 0 marked",
+    "named from the start, not only after a change",
+  );
+  await b.tap("blue");
+  assert.equal(b.btn("blue").getAttribute("aria-pressed"), "true");
+  assert.equal(b.btn("purple").getAttribute("aria-pressed"), "false");
   b.close();
 });
 
-const LASH = { en: [
-  { partOfSpeech: 'Noun', definitions: [
-    { definition: 'The thong or braided cord of a <a rel="mw:WikiLink" href="/wiki/whip#English">whip</a>.' },
-    { definition: '(<span>obsolete</span>) A leash in which an animal is held.' },
-    { definition: 'A stroke with a whip. <span class="maintenance-line">(Can we add an example for this sense?)</span>' },
-    { definition: 'A hair growing from the edge of the eyelid; an <a rel="mw:WikiLink" href="/wiki/eyelash">eyelash</a>.<sup>[1]</sup>' },
-  ] },
-  { partOfSpeech: 'Verb', definitions: [{ definition: 'To strike with a lash.' }] },
-  { partOfSpeech: 'Verb', definitions: [{ definition: 'To bind with a rope, so as to fasten.' }] },
-  { partOfSpeech: 'Noun', definitions: [{ definition: '<span class="form-of-definition">plural of <span class="form-of-definition-link"><a rel="mw:WikiLink" href="/wiki/whip#English">whip</a></span></span>' }] },
-] };
+const LASH = {
+  en: [
+    {
+      partOfSpeech: "Noun",
+      definitions: [
+        {
+          definition:
+            'The thong or braided cord of a <a rel="mw:WikiLink" href="/wiki/whip#English">whip</a>.',
+        },
+        {
+          definition:
+            "(<span>obsolete</span>) A leash in which an animal is held.",
+        },
+        {
+          definition:
+            'A stroke with a whip. <span class="maintenance-line">(Can we add an example for this sense?)</span>',
+        },
+        {
+          definition:
+            'A hair growing from the edge of the eyelid; an <a rel="mw:WikiLink" href="/wiki/eyelash">eyelash</a>.<sup>[1]</sup>',
+        },
+      ],
+    },
+    {
+      partOfSpeech: "Verb",
+      definitions: [{ definition: "To strike with a lash." }],
+    },
+    {
+      partOfSpeech: "Verb",
+      definitions: [{ definition: "To bind with a rope, so as to fasten." }],
+    },
+    {
+      partOfSpeech: "Noun",
+      definitions: [
+        {
+          definition:
+            '<span class="form-of-definition">plural of <span class="form-of-definition-link"><a rel="mw:WikiLink" href="/wiki/whip#English">whip</a></span></span>',
+        },
+      ],
+    },
+  ],
+};
 
-test('Definition: shows before Shuffle with one tile selected, looks the word up, and lists its meanings', async () => {
-  dictionary = { lash: LASH, whip: { en: [{ partOfSpeech: 'Noun', definitions: [{ definition: 'A lash.' }] }] } };
-  const b = await board({ words: ['LASH', 'EYE', 'LIPS', 'SENSE'] });
-  const def = () => b.d.getElementById('ccm-define-btn');
-  const shuffle = b.d.querySelector('[data-testid=shuffle-btn]');
-  assert.equal(def().nextElementSibling, shuffle, 'sits right before Shuffle');
-  assert.equal(def().className, shuffle.className, 'styled like the game\'s buttons');
-  assert.equal(def().style.display, 'none', 'hidden with nothing selected');
-  b.select(['LASH']); await sleep(40);
-  assert.equal(def().style.display, '', 'shown with one tile selected');
-  b.select(['LASH', 'EYE']); await sleep(40);
-  assert.equal(def().style.display, 'none', 'hidden again with two');
-  b.select(['LASH']); await sleep(40);
-  def().click(); await sleep(40);
-  const sheet = b.root.getElementById('ccm-define');
+test("Definition: shows before Shuffle with one tile selected, looks the word up, and lists its meanings", async () => {
+  dictionary = {
+    lash: LASH,
+    whip: {
+      en: [{ partOfSpeech: "Noun", definitions: [{ definition: "A lash." }] }],
+    },
+  };
+  const b = await board({ words: ["LASH", "EYE", "LIPS", "SENSE"] });
+  const def = () => b.d.getElementById("ccm-define-btn");
+  const shuffle = b.d.querySelector("[data-testid=shuffle-btn]");
+  assert.equal(def().nextElementSibling, shuffle, "sits right before Shuffle");
+  assert.equal(
+    def().className,
+    shuffle.className,
+    "styled like the game's buttons",
+  );
+  assert.equal(def().style.display, "none", "hidden with nothing selected");
+  b.select(["LASH"]);
+  await sleep(40);
+  assert.equal(def().style.display, "", "shown with one tile selected");
+  b.select(["LASH", "EYE"]);
+  await sleep(40);
+  assert.equal(def().style.display, "none", "hidden again with two");
+  b.select(["LASH"]);
+  await sleep(40);
+  def().click();
+  await sleep(40);
+  const sheet = b.root.getElementById("ccm-define");
   assert.ok(!sheet.hidden);
-  assert.equal(sheet.querySelector('h4').textContent, 'LASH');
-  assert.deepEqual([...sheet.querySelectorAll('h5')].map(h => h.textContent), ['Noun', 'Verb'], 'one list per part of speech');
-  const shown = [...sheet.querySelectorAll('li:not([hidden])')].map(li => li.textContent);
-  assert.equal(shown.length, 6, 'the common meanings: four nouns, two verbs');
-  assert.equal(sheet.querySelectorAll('button.w').length, 1, 'only a "plural of" target is a link');
-  assert.ok(shown.some(t => /eyelash\.$/.test(t)), 'footnote markers dropped');
-  assert.ok(!shown.some(t => /Can we add/.test(t)), 'Wiktionary\'s editor notes dropped');
-  assert.ok(!shown.some(t => /obsolete/.test(t)), 'the obsolete one waits behind Show all');
-  const all = [...sheet.querySelectorAll('.foot button')].find(x => /Show all/.test(x.textContent));
+  assert.equal(sheet.querySelector("h4").textContent, "LASH");
+  assert.deepEqual(
+    [...sheet.querySelectorAll("h5")].map((h) => h.textContent),
+    ["Noun", "Verb"],
+    "one list per part of speech",
+  );
+  const shown = [...sheet.querySelectorAll("li:not([hidden])")].map(
+    (li) => li.textContent,
+  );
+  assert.equal(shown.length, 6, "the common meanings: four nouns, two verbs");
+  assert.equal(
+    sheet.querySelectorAll("button.w").length,
+    1,
+    'only a "plural of" target is a link',
+  );
+  assert.ok(
+    shown.some((t) => /eyelash\.$/.test(t)),
+    "footnote markers dropped",
+  );
+  assert.ok(
+    !shown.some((t) => /Can we add/.test(t)),
+    "Wiktionary's editor notes dropped",
+  );
+  assert.ok(
+    !shown.some((t) => /obsolete/.test(t)),
+    "the obsolete one waits behind Show all",
+  );
+  const all = [...sheet.querySelectorAll(".foot button")].find((x) =>
+    /Show all/.test(x.textContent),
+  );
   assert.match(all.textContent, /1 more/);
   all.click();
-  assert.equal(sheet.querySelectorAll('li[hidden]').length, 0);
-  assert.equal(sheet.querySelector('script, [onclick]'), null, 'Wiktionary\'s HTML is never inserted as HTML');
-  sheet.querySelector('button.w').click(); await sleep(40); // the word a "plural of" points to
-  assert.equal(sheet.querySelector('h4').textContent, 'WHIP', 'tapping a linked word looks it up');
-  b.w.document.dispatchEvent(new b.w.KeyboardEvent('keydown', { key: 'Escape' }));
-  assert.ok(sheet.hidden, 'Escape closes it');
+  assert.equal(sheet.querySelectorAll("li[hidden]").length, 0);
+  assert.equal(
+    sheet.querySelector("script, [onclick]"),
+    null,
+    "Wiktionary's HTML is never inserted as HTML",
+  );
+  sheet.querySelector("button.w").click();
+  await sleep(40); // the word a "plural of" points to
+  assert.equal(
+    sheet.querySelector("h4").textContent,
+    "WHIP",
+    "tapping a linked word looks it up",
+  );
+  b.w.document.dispatchEvent(
+    new b.w.KeyboardEvent("keydown", { key: "Escape" }),
+  );
+  assert.ok(sheet.hidden, "Escape closes it");
 });
 
-test('Definition: merges the word\'s lowercase, Capitalized and ALL-CAPS pages, and adds names from Wikidata', async () => {
+test("Definition: merges the word's lowercase, Capitalized and ALL-CAPS pages, and adds names from Wikidata", async () => {
   dictionary = {
-    mars: { en: [{ partOfSpeech: 'Verb', definitions: [{ definition: 'third-person singular of mar' }] }] },
-    Mars: { en: [{ partOfSpeech: 'Proper noun', definitions: [{ definition: 'The fourth planet.' }] },
-      { partOfSpeech: 'Verb', definitions: [{ definition: 'third-person singular of mar' }] }] },
-    MARS: { en: [{ partOfSpeech: 'Proper noun', definitions: [{ definition: 'Initialism of something.' }] }] },
+    mars: {
+      en: [
+        {
+          partOfSpeech: "Verb",
+          definitions: [{ definition: "third-person singular of mar" }],
+        },
+      ],
+    },
+    Mars: {
+      en: [
+        {
+          partOfSpeech: "Proper noun",
+          definitions: [{ definition: "The fourth planet." }],
+        },
+        {
+          partOfSpeech: "Verb",
+          definitions: [{ definition: "third-person singular of mar" }],
+        },
+      ],
+    },
+    MARS: {
+      en: [
+        {
+          partOfSpeech: "Proper noun",
+          definitions: [{ definition: "Initialism of something." }],
+        },
+      ],
+    },
   };
-  wikidata = { MARS: [
-    { id: 'Q2', label: 'Mars', description: 'fourth planet from the Sun' },
-    { id: 'Q3', label: 'Mars', description: 'Wikimedia disambiguation page' },
-    { id: 'Q4', label: 'Mars', description: 'family name' },
-    { id: 'Q5', label: 'Marseille', description: 'city in France' },
-    { id: 'Q6', label: 'Mars', description: 'American candy company' },
-    { id: 'Q7', label: 'Bruno Mars', description: 'American singer', match: { text: 'Mars' } },
-    { id: 'Q8', label: 'Mars', description: 'Roman god of war' },
-  ], SLIGHT: [
-    { id: 'Q9', label: 'snub', description: 'a refusal to socially recognise', match: { text: 'slight' } },
-    { id: 'Q10', label: 'slight', description: '' },
-  ] };
-  const b = await board({ words: ['MARS', 'SLIGHT', 'C', 'D'] });
+  wikidata = {
+    MARS: [
+      { id: "Q2", label: "Mars", description: "fourth planet from the Sun" },
+      { id: "Q3", label: "Mars", description: "Wikimedia disambiguation page" },
+      { id: "Q4", label: "Mars", description: "family name" },
+      { id: "Q5", label: "Marseille", description: "city in France" },
+      { id: "Q6", label: "Mars", description: "American candy company" },
+      {
+        id: "Q7",
+        label: "Bruno Mars",
+        description: "American singer",
+        match: { text: "Mars" },
+      },
+      { id: "Q8", label: "Mars", description: "Roman god of war" },
+    ],
+    SLIGHT: [
+      {
+        id: "Q9",
+        label: "snub",
+        description: "a refusal to socially recognise",
+        match: { text: "slight" },
+      },
+      { id: "Q10", label: "slight", description: "" },
+    ],
+  };
+  const b = await board({ words: ["MARS", "SLIGHT", "C", "D"] });
   lookedUp.length = 0;
-  b.select(['MARS']); await sleep(40);
-  assert.deepEqual(lookedUp, [], 'nothing is looked up until the button is tapped');
-  b.d.getElementById('ccm-define-btn').click(); await sleep(40);
-  assert.deepEqual(lookedUp, ['mars', 'Mars', 'MARS', 'wikidata:MARS']);
-  assert.deepEqual([...agents], ['ConnectionsPalette/1 (https://github.com/dividedby/games-scripts)'], 'every request names the script to Wikimedia');
-  const sheet = b.root.getElementById('ccm-define');
-  assert.deepEqual([...sheet.querySelectorAll('h5')].map(h => h.textContent), ['Verb', 'Proper noun', 'Names and titles']);
-  assert.equal(sheet.querySelectorAll('ol')[0].children.length, 1, 'the same definition on two pages is listed once');
-  assert.equal(sheet.querySelectorAll('ol')[1].children.length, 2);
-  const names = [...sheet.querySelectorAll('ul.names li')].map(li => li.textContent);
-  assert.deepEqual(names, ['Mars — fourth planet from the Sun', 'Mars — American candy company', 'Mars — Roman god of war'],
-    'exact matches only, no disambiguation pages, alias matches and a bare family name only to fill up, top three');
-  assert.equal(sheet.querySelector('ul.names a').href, 'https://www.wikidata.org/wiki/Q2');
-  assert.match(sheet.querySelector('.foot a').href, /wiktionary\.org\/wiki\/mars#English$/);
-  assert.match(sheet.querySelector('.foot').textContent, /CC BY-SA/);
-  b.select(['SLIGHT']); await sleep(40); b.d.getElementById('ccm-define-btn').click(); await sleep(40);
-  assert.match(sheet.textContent, /No dictionary entry/, 'no names matched only by another name, none without a description');
+  b.select(["MARS"]);
+  await sleep(40);
+  assert.deepEqual(
+    lookedUp,
+    [],
+    "nothing is looked up until the button is tapped",
+  );
+  b.d.getElementById("ccm-define-btn").click();
+  await sleep(40);
+  assert.deepEqual(lookedUp, ["mars", "Mars", "MARS", "wikidata:MARS"]);
+  assert.deepEqual(
+    [...agents],
+    ["ConnectionsPalette/1 (https://github.com/dividedby/games-scripts)"],
+    "every request names the script to Wikimedia",
+  );
+  const sheet = b.root.getElementById("ccm-define");
+  assert.deepEqual(
+    [...sheet.querySelectorAll("h5")].map((h) => h.textContent),
+    ["Verb", "Proper noun", "Names and titles"],
+  );
+  assert.equal(
+    sheet.querySelectorAll("ol")[0].children.length,
+    1,
+    "the same definition on two pages is listed once",
+  );
+  assert.equal(sheet.querySelectorAll("ol")[1].children.length, 2);
+  const names = [...sheet.querySelectorAll("ul.names li")].map(
+    (li) => li.textContent,
+  );
+  assert.deepEqual(
+    names,
+    [
+      "Mars — fourth planet from the Sun",
+      "Mars — American candy company",
+      "Mars — Roman god of war",
+    ],
+    "exact matches only, no disambiguation pages, alias matches and a bare family name only to fill up, top three",
+  );
+  assert.equal(
+    sheet.querySelector("ul.names a").href,
+    "https://www.wikidata.org/wiki/Q2",
+  );
+  assert.match(
+    sheet.querySelector(".foot a").href,
+    /wiktionary\.org\/wiki\/mars#English$/,
+  );
+  assert.match(sheet.querySelector(".foot").textContent, /CC BY-SA/);
+  b.select(["SLIGHT"]);
+  await sleep(40);
+  b.d.getElementById("ccm-define-btn").click();
+  await sleep(40);
+  assert.match(
+    sheet.textContent,
+    /No dictionary entry/,
+    "no names matched only by another name, none without a description",
+  );
   b.close();
 });
 
-test('Definition: keeps answers on the device for 60 days, and never keeps an incomplete one', async () => {
-  dictionary = { lash: LASH, cannon: 'error' };
+test("Definition: keeps answers on the device for 60 days, and never keeps an incomplete one", async () => {
+  dictionary = { lash: LASH, cannon: "error" };
   wikidata = {};
   const old = Date.now() - 61 * 864e5;
-  const stored = { 'ccm:defs': { STALE: { u: old, e: { title: 'stale', parts: [], names: [] } } } };
-  let b = await board({ words: ['LASH', 'CANNON', 'C', 'D'], stored });
-  const lookUp = async w => { b.select([w]); await sleep(40); b.d.getElementById('ccm-define-btn').click(); await sleep(40); };
-  await lookUp('LASH');
-  await lookUp('CANNON');
-  const kept = JSON.parse(b.w.localStorage.getItem('ccm:defs'));
-  assert.deepEqual(Object.keys(kept), ['LASH'], 'kept: the complete one; gone: the 61-day-old one and the failed one');
-  assert.equal(kept.LASH.e.parts[0].p, 'Noun');
+  const stored = {
+    "ccm:defs": {
+      STALE: { u: old, e: { title: "stale", parts: [], names: [] } },
+    },
+  };
+  let b = await board({ words: ["LASH", "CANNON", "C", "D"], stored });
+  const lookUp = async (w) => {
+    b.select([w]);
+    await sleep(40);
+    b.d.getElementById("ccm-define-btn").click();
+    await sleep(40);
+  };
+  await lookUp("LASH");
+  await lookUp("CANNON");
+  const kept = JSON.parse(b.w.localStorage.getItem("ccm:defs"));
+  assert.deepEqual(
+    Object.keys(kept),
+    ["LASH"],
+    "kept: the complete one; gone: the 61-day-old one and the failed one",
+  );
+  assert.equal(kept.LASH.e.parts[0].p, "Noun");
   b.close();
   // a new page load reads it back without asking Wiktionary again
   lookedUp.length = 0;
-  b = await board({ words: ['LASH', 'CANNON', 'C', 'D'], stored: { 'ccm:defs': kept } });
-  await lookUp('LASH');
+  b = await board({
+    words: ["LASH", "CANNON", "C", "D"],
+    stored: { "ccm:defs": kept },
+  });
+  await lookUp("LASH");
   assert.deepEqual(lookedUp, []);
-  const sheet = b.root.getElementById('ccm-define');
-  assert.equal(sheet.querySelector('h5').textContent, 'Noun');
-  assert.equal(sheet.querySelectorAll('button.w').length, 1, 'the "plural of" link survives storage');
-  await lookUp('CANNON');
-  assert.ok(lookedUp.includes('cannon'), 'a failed word is tried again');
+  const sheet = b.root.getElementById("ccm-define");
+  assert.equal(sheet.querySelector("h5").textContent, "Noun");
+  assert.equal(
+    sheet.querySelectorAll("button.w").length,
+    1,
+    'the "plural of" link survives storage',
+  );
+  await lookUp("CANNON");
+  assert.ok(lookedUp.includes("cannon"), "a failed word is tried again");
   b.close();
 });
 
-test('Definition: the stored answers stay under their size limit, dropping the oldest', async () => {
-  const big = { title: 'x', parts: [{ p: 'Noun', d: [['y'.repeat(5000)]] }], names: [] };
+test("Definition: the stored answers stay under their size limit, dropping the oldest", async () => {
+  const big = {
+    title: "x",
+    parts: [{ p: "Noun", d: [["y".repeat(5000)]] }],
+    names: [],
+  };
   const many = {};
-  for (let i = 0; i < 120; i++) many['W' + i] = { u: Date.now() - (120 - i) * 1000, v: 3, e: big }; // W0 is the oldest
-  dictionary = { lash: LASH }; wikidata = {};
-  const b = await board({ words: ['LASH', 'B', 'C', 'D'], stored: { 'ccm:defs': many } });
-  b.select(['LASH']); await sleep(40); b.d.getElementById('ccm-define-btn').click(); await sleep(40);
-  const raw = b.w.localStorage.getItem('ccm:defs');
-  assert.ok(raw.length <= 400e3, 'under the cap');
-  const kept = JSON.parse(raw);
-  assert.ok(kept.LASH && kept.W119, 'the newest stay');
-  assert.ok(!kept.W0, 'the oldest go');
-  b.close();
-});
-
-test('Definition: says so when there is no entry or no connection, shows what one source has, and can be turned off', async () => {
-  dictionary = { Saturn: { en: [{ partOfSpeech: 'Proper noun', definitions: [{ definition: 'The sixth planet.' }] }] }, cannon: 'error', beyonce: 'error', Beyonce: 'error', BEYONCE: 'error' };
-  wikidata = { CANNON: 'error', BEYONCE: [{ id: 'Q36153', label: 'Beyoncé', description: 'American singer' }] };
-  const b = await board({ words: ['SATURN', 'QZXW', 'CANNON', 'BEYONCE'] });
-  const sheet = b.root.getElementById('ccm-define');
-  const lookUp = async w => { b.select([w]); await sleep(40); b.d.getElementById('ccm-define-btn').click(); await sleep(40); };
-  await lookUp('SATURN');
-  assert.equal(sheet.querySelector('h5').textContent, 'Proper noun');
-  await lookUp('QZXW');
-  assert.match(sheet.textContent, /No dictionary entry/);
-  await lookUp('CANNON');
-  assert.match(sheet.textContent, /Couldn't reach Wiktionary or Wikidata/);
-  await lookUp('BEYONCE');
-  assert.match(sheet.querySelector('ul.names').textContent, /Beyoncé — American singer/, 'accents don\'t stop a match');
-  assert.match(sheet.textContent, /Couldn't reach Wiktionary, so this may be missing some/);
-  await b.setOpt('define', false);
-  assert.ok(sheet.hidden, 'turning it off closes the sheet');
-  assert.equal(b.d.getElementById('ccm-define-btn').style.display, 'none');
-});
-
-test('Definition: the sheet covers the board down to just above the game\'s buttons, and follows it as the page scrolls', async () => {
-  dictionary = { tether: { en: [{ partOfSpeech: 'Verb', definitions: [{ definition: 'To restrict with a tether.' }] }] } };
+  for (let i = 0; i < 120; i++)
+    many["W" + i] = { u: Date.now() - (120 - i) * 1000, v: 3, e: big }; // W0 is the oldest
+  dictionary = { lash: LASH };
   wikidata = {};
-  const b = await board({ words: ['TETHER', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] });
-  let shift = 0; // how far the page has scrolled
-  const rect = (top, left, width, height) => () => ({ top: top - shift, bottom: top - shift + height, left, right: left + width, width, height });
-  b.d.querySelector('.Game-module_boardActionGroup').getBoundingClientRect = rect(500, 0, 400, 48);
-  b.d.querySelectorAll('[data-testid=card-label]').forEach((t, i) => { t.getBoundingClientRect = rect(100 + 70 * Math.floor(i / 4), 20 + 150 * (i % 4), 140, 60); });
-  b.select(['TETHER']); await sleep(40);
-  b.d.getElementById('ccm-define-btn').click(); await sleep(40);
-  const sheet = b.root.getElementById('ccm-define');
-  const h = b.w.innerHeight;
-  assert.equal(sheet.style.bottom, `${h - 500 + 8}px`, 'its bottom edge is 8px above the button row');
-  assert.equal(sheet.style.height, '392px', 'its top is the board\'s top');
-  assert.equal(sheet.style.width, '590px', 'as wide as the board');
-  assert.equal(sheet.style.left, '20px');
-  shift = 200; b.w.dispatchEvent(new b.w.Event('scroll')); await sleep(40); // the board's top is now off screen (placed on the next frame)
-  assert.equal(sheet.style.bottom, `${h - 300 + 8}px`, 'it follows the row');
-  assert.equal(sheet.style.height, '284px', 'and stops at the top of the screen');
+  const b = await board({
+    words: ["LASH", "B", "C", "D"],
+    stored: { "ccm:defs": many },
+  });
+  b.select(["LASH"]);
+  await sleep(40);
+  b.d.getElementById("ccm-define-btn").click();
+  await sleep(40);
+  const raw = b.w.localStorage.getItem("ccm:defs");
+  assert.ok(raw.length <= 400e3, "under the cap");
+  const kept = JSON.parse(raw);
+  assert.ok(kept.LASH && kept.W119, "the newest stay");
+  assert.ok(!kept.W0, "the oldest go");
   b.close();
 });
 
-test('Definition: a sense with sub-senses doesn\'t repeat them, and fractions keep their 1', async () => {
-  dictionary = { cup: { en: [{ partOfSpeech: 'Noun', definitions: [
-    { definition: 'A customary unit of measure<ol><li>A US unit equal to 8 fluid ounces (<small><big>⁄</big><sub>16</sub></small> of a US gallon).</li><li>A Canadian unit.</li></ol>' },
-    { definition: 'A US unit equal to 8 fluid ounces (<small><big>⁄</big><sub>16</sub></small> of a US gallon).' },
-    { definition: 'A Canadian unit.' },
-  ] }] } };
+test("Definition: says so when there is no entry or no connection, shows what one source has, and can be turned off", async () => {
+  dictionary = {
+    Saturn: {
+      en: [
+        {
+          partOfSpeech: "Proper noun",
+          definitions: [{ definition: "The sixth planet." }],
+        },
+      ],
+    },
+    cannon: "error",
+    beyonce: "error",
+    Beyonce: "error",
+    BEYONCE: "error",
+  };
+  wikidata = {
+    CANNON: "error",
+    BEYONCE: [
+      { id: "Q36153", label: "Beyoncé", description: "American singer" },
+    ],
+  };
+  const b = await board({ words: ["SATURN", "QZXW", "CANNON", "BEYONCE"] });
+  const sheet = b.root.getElementById("ccm-define");
+  const lookUp = async (w) => {
+    b.select([w]);
+    await sleep(40);
+    b.d.getElementById("ccm-define-btn").click();
+    await sleep(40);
+  };
+  await lookUp("SATURN");
+  assert.equal(sheet.querySelector("h5").textContent, "Proper noun");
+  await lookUp("QZXW");
+  assert.match(sheet.textContent, /No dictionary entry/);
+  await lookUp("CANNON");
+  assert.match(sheet.textContent, /Couldn't reach Wiktionary or Wikidata/);
+  await lookUp("BEYONCE");
+  assert.match(
+    sheet.querySelector("ul.names").textContent,
+    /Beyoncé — American singer/,
+    "accents don't stop a match",
+  );
+  assert.match(
+    sheet.textContent,
+    /Couldn't reach Wiktionary, so this may be missing some/,
+  );
+  await b.setOpt("define", false);
+  assert.ok(sheet.hidden, "turning it off closes the sheet");
+  assert.equal(b.d.getElementById("ccm-define-btn").style.display, "none");
+});
+
+test("Definition: the sheet covers the board down to just above the game's buttons, and follows it as the page scrolls", async () => {
+  dictionary = {
+    tether: {
+      en: [
+        {
+          partOfSpeech: "Verb",
+          definitions: [{ definition: "To restrict with a tether." }],
+        },
+      ],
+    },
+  };
+  wikidata = {};
+  const b = await board({
+    words: ["TETHER", "B", "C", "D", "E", "F", "G", "H"],
+  });
+  let shift = 0; // how far the page has scrolled
+  const rect = (top, left, width, height) => () => ({
+    top: top - shift,
+    bottom: top - shift + height,
+    left,
+    right: left + width,
+    width,
+    height,
+  });
+  b.d.querySelector(".Game-module_boardActionGroup").getBoundingClientRect =
+    rect(500, 0, 400, 48);
+  b.d.querySelectorAll("[data-testid=card-label]").forEach((t, i) => {
+    t.getBoundingClientRect = rect(
+      100 + 70 * Math.floor(i / 4),
+      20 + 150 * (i % 4),
+      140,
+      60,
+    );
+  });
+  b.select(["TETHER"]);
+  await sleep(40);
+  b.d.getElementById("ccm-define-btn").click();
+  await sleep(40);
+  const sheet = b.root.getElementById("ccm-define");
+  const h = b.w.innerHeight;
+  assert.equal(
+    sheet.style.bottom,
+    `${h - 500 + 8}px`,
+    "its bottom edge is 8px above the button row",
+  );
+  assert.equal(sheet.style.height, "392px", "its top is the board's top");
+  assert.equal(sheet.style.width, "590px", "as wide as the board");
+  assert.equal(sheet.style.left, "20px");
+  shift = 200;
+  b.w.dispatchEvent(new b.w.Event("scroll"));
+  await sleep(40); // the board's top is now off screen (placed on the next frame)
+  assert.equal(sheet.style.bottom, `${h - 300 + 8}px`, "it follows the row");
+  assert.equal(
+    sheet.style.height,
+    "284px",
+    "and stops at the top of the screen",
+  );
+  b.close();
+});
+
+test("Definition: a sense with sub-senses doesn't repeat them, and fractions keep their 1", async () => {
+  dictionary = {
+    cup: {
+      en: [
+        {
+          partOfSpeech: "Noun",
+          definitions: [
+            {
+              definition:
+                "A customary unit of measure<ol><li>A US unit equal to 8 fluid ounces (<small><big>⁄</big><sub>16</sub></small> of a US gallon).</li><li>A Canadian unit.</li></ol>",
+            },
+            {
+              definition:
+                "A US unit equal to 8 fluid ounces (<small><big>⁄</big><sub>16</sub></small> of a US gallon).",
+            },
+            { definition: "A Canadian unit." },
+          ],
+        },
+      ],
+    },
+  };
   wikidata = {};
   // and an answer 1.1.0 kept with the sub-senses run together: looked up again
-  dictionary.tether = { en: [{ partOfSpeech: 'Verb', definitions: [{ definition: 'To connect to something else.<ol><li>To share a connection.</li></ol>' }, { definition: 'To share a connection.' }] }] };
-  const stored = { 'ccm:defs': { TETHER: { u: Date.now(), e: { title: 'tether', names: [], parts: [{ p: 'Verb', d: [
-    ['To connect to something else. To share a connection.'], ['To share a connection.']] }] } } } };
-  const b = await board({ words: ['CUP', 'TETHER', 'C', 'D'], stored });
-  const sheet = b.root.getElementById('ccm-define');
-  const lookUp = async w => { b.select([w]); await sleep(40); b.d.getElementById('ccm-define-btn').click(); await sleep(40); };
-  await lookUp('CUP');
-  assert.deepEqual([...sheet.querySelectorAll('li')].map(li => li.textContent),
-    ['A customary unit of measure', 'A US unit equal to 8 fluid ounces (1⁄16 of a US gallon).', 'A Canadian unit.']);
-  await lookUp('TETHER');
-  assert.deepEqual([...sheet.querySelectorAll('li')].map(li => li.textContent),
-    ['To connect to something else.', 'To share a connection.']);
+  dictionary.tether = {
+    en: [
+      {
+        partOfSpeech: "Verb",
+        definitions: [
+          {
+            definition:
+              "To connect to something else.<ol><li>To share a connection.</li></ol>",
+          },
+          { definition: "To share a connection." },
+        ],
+      },
+    ],
+  };
+  const stored = {
+    "ccm:defs": {
+      TETHER: {
+        u: Date.now(),
+        e: {
+          title: "tether",
+          names: [],
+          parts: [
+            {
+              p: "Verb",
+              d: [
+                ["To connect to something else. To share a connection."],
+                ["To share a connection."],
+              ],
+            },
+          ],
+        },
+      },
+    },
+  };
+  const b = await board({ words: ["CUP", "TETHER", "C", "D"], stored });
+  const sheet = b.root.getElementById("ccm-define");
+  const lookUp = async (w) => {
+    b.select([w]);
+    await sleep(40);
+    b.d.getElementById("ccm-define-btn").click();
+    await sleep(40);
+  };
+  await lookUp("CUP");
+  assert.deepEqual(
+    [...sheet.querySelectorAll("li")].map((li) => li.textContent),
+    [
+      "A customary unit of measure",
+      "A US unit equal to 8 fluid ounces (1⁄16 of a US gallon).",
+      "A Canadian unit.",
+    ],
+  );
+  await lookUp("TETHER");
+  assert.deepEqual(
+    [...sheet.querySelectorAll("li")].map((li) => li.textContent),
+    ["To connect to something else.", "To share a connection."],
+  );
   b.close();
 });
 
 test('Definition: the first sense of each origin is shown, even past the first five (LASH: "to bind")', async () => {
-  const whip = ['To strike with a lash.', 'To beat upon.', 'To throw out quickly.', 'To scold.', 'To ply the whip.', 'To dash against.'];
-  dictionary = { lash: { en: [
-    { partOfSpeech: 'Verb', definitions: whip.map(definition => ({ definition })) },
-    { partOfSpeech: 'Verb', definitions: [{ definition: 'To bind with a rope, so as to fasten.' }] },
-  ] } };
+  const whip = [
+    "To strike with a lash.",
+    "To beat upon.",
+    "To throw out quickly.",
+    "To scold.",
+    "To ply the whip.",
+    "To dash against.",
+  ];
+  dictionary = {
+    lash: {
+      en: [
+        {
+          partOfSpeech: "Verb",
+          definitions: whip.map((definition) => ({ definition })),
+        },
+        {
+          partOfSpeech: "Verb",
+          definitions: [
+            { definition: "To bind with a rope, so as to fasten." },
+          ],
+        },
+      ],
+    },
+  };
   wikidata = {};
-  const b = await board({ words: ['LASH', 'B', 'C', 'D'] });
-  b.select(['LASH']); await sleep(40); b.d.getElementById('ccm-define-btn').click(); await sleep(40);
-  const sheet = b.root.getElementById('ccm-define');
-  const shown = [...sheet.querySelectorAll('li:not([hidden])')].map(li => li.textContent);
-  assert.deepEqual(shown, [...whip.slice(0, 4), 'To bind with a rope, so as to fasten.'], 'four whip senses, then the second origin\'s first');
-  assert.match(sheet.querySelector('.foot').textContent, /Show all \(2 more\)/);
+  const b = await board({ words: ["LASH", "B", "C", "D"] });
+  b.select(["LASH"]);
+  await sleep(40);
+  b.d.getElementById("ccm-define-btn").click();
+  await sleep(40);
+  const sheet = b.root.getElementById("ccm-define");
+  const shown = [...sheet.querySelectorAll("li:not([hidden])")].map(
+    (li) => li.textContent,
+  );
+  assert.deepEqual(
+    shown,
+    [...whip.slice(0, 4), "To bind with a rope, so as to fasten."],
+    "four whip senses, then the second origin's first",
+  );
+  assert.match(sheet.querySelector(".foot").textContent, /Show all \(2 more\)/);
   b.close();
 });
 
-test('color guide: a Guide button after Submit opens what each color tends to be, toggles, and can be turned off', async () => {
-  const b = await board({ words: ['A', 'B', 'C', 'D'] });
-  const btn = b.d.getElementById('ccm-guide-btn');
-  const submit = b.d.querySelector('[data-testid=submit-btn]');
-  assert.equal(submit.nextElementSibling, btn, 'right after Submit');
-  assert.equal(btn.style.display, '', 'shown without selecting anything');
-  const deselect = b.d.querySelector('[data-testid=deselect-btn]');
-  assert.equal(deselect.textContent, 'Deselect', 'the game\'s Deselect All is shortened to make room');
-  assert.equal(btn.className, b.d.querySelector('[data-testid=shuffle-btn]').className, 'styled like the game\'s buttons');
-  const sheet = b.root.getElementById('ccm-define');
-  btn.click(); await sleep(20);
+test("color guide: a Guide button after Submit opens what each color tends to be, toggles, and can be turned off", async () => {
+  const b = await board({ words: ["A", "B", "C", "D"] });
+  const btn = b.d.getElementById("ccm-guide-btn");
+  const submit = b.d.querySelector("[data-testid=submit-btn]");
+  assert.equal(submit.nextElementSibling, btn, "right after Submit");
+  assert.equal(btn.style.display, "", "shown without selecting anything");
+  const deselect = b.d.querySelector("[data-testid=deselect-btn]");
+  assert.equal(
+    deselect.textContent,
+    "Deselect",
+    "the game's Deselect All is shortened to make room",
+  );
+  assert.equal(
+    btn.className,
+    b.d.querySelector("[data-testid=shuffle-btn]").className,
+    "styled like the game's buttons",
+  );
+  const sheet = b.root.getElementById("ccm-define");
+  btn.click();
+  await sleep(20);
   assert.ok(!sheet.hidden);
-  assert.equal(sheet.querySelector('h4').textContent, 'Color guide');
-  assert.deepEqual([...sheet.querySelectorAll('.guide b')].map(x => x.textContent), ['Yellow', 'Green', 'Blue', 'Purple']);
+  assert.equal(sheet.querySelector("h4").textContent, "Color guide");
+  assert.deepEqual(
+    [...sheet.querySelectorAll(".guide b")].map((x) => x.textContent),
+    ["Yellow", "Green", "Blue", "Purple"],
+  );
   assert.match(sheet.textContent, /wordplay/);
-  btn.click(); await sleep(20);
-  assert.ok(sheet.hidden, 'a second tap closes it');
-  btn.click(); await sleep(20);
-  b.w.document.dispatchEvent(new b.w.KeyboardEvent('keydown', { key: 'Escape' }));
-  assert.ok(sheet.hidden, 'Escape closes it');
-  btn.click(); await sleep(20);
-  await b.setOpt('guide', false);
-  assert.ok(sheet.hidden, 'turning it off closes it');
-  assert.equal(btn.style.display, 'none', 'and hides the button');
-  assert.equal(deselect.textContent, 'Deselect All', 'and puts Deselect All back');
+  btn.click();
+  await sleep(20);
+  assert.ok(sheet.hidden, "a second tap closes it");
+  btn.click();
+  await sleep(20);
+  b.w.document.dispatchEvent(
+    new b.w.KeyboardEvent("keydown", { key: "Escape" }),
+  );
+  assert.ok(sheet.hidden, "Escape closes it");
+  btn.click();
+  await sleep(20);
+  await b.setOpt("guide", false);
+  assert.ok(sheet.hidden, "turning it off closes it");
+  assert.equal(btn.style.display, "none", "and hides the button");
+  assert.equal(
+    deselect.textContent,
+    "Deselect All",
+    "and puts Deselect All back",
+  );
   b.close();
 });
 
-test('bad saved values (null, wrong types) are ignored instead of breaking the palette', async () => {
+test("bad saved values (null, wrong types) are ignored instead of breaking the palette", async () => {
   const b = await board({
-    words: ['A', 'B', 'C', 'D'],
+    words: ["A", "B", "C", "D"],
     marks: null,
     stored: {
-      'ccm:maybe:2023-07-01': { A: 'green', B: ['yellow', 'nope'], C: ['blue', 'purple'] },
-      'ccm:guesses:2023-07-01': [null, { w: 'ABCD' }, { w: ['A', 'B', 'C', 'X'], away: true }],
-      'ccm:used': 'oops',
-      'ccm:defs': { A: { u: Date.now(), v: 3, e: null } },
+      "ccm:maybe:2023-07-01": {
+        A: "green",
+        B: ["yellow", "nope"],
+        C: ["blue", "purple"],
+      },
+      "ccm:guesses:2023-07-01": [
+        null,
+        { w: "ABCD" },
+        { w: ["A", "B", "C", "X"], away: true },
+      ],
+      "ccm:used": "oops",
+      "ccm:defs": { A: { u: Date.now(), v: 3, e: null } },
     },
   });
-  b.select(['A']); await b.tap('yellow');
-  assert.equal(b.store().A, 'yellow', 'marks still work');
-  assert.deepEqual(JSON.parse(b.w.localStorage.getItem('ccm:maybe:2023-07-01')), { C: ['blue', 'purple'] }, 'only well-formed maybes kept');
-  assert.equal(b.btn('hist').textContent, '📜1', 'only the well-formed guess counts');
+  b.select(["A"]);
+  await b.tap("yellow");
+  assert.equal(b.store().A, "yellow", "marks still work");
+  assert.deepEqual(
+    JSON.parse(b.w.localStorage.getItem("ccm:maybe:2023-07-01")),
+    { C: ["blue", "purple"] },
+    "only well-formed maybes kept",
+  );
+  assert.equal(
+    b.btn("hist").textContent,
+    "📜1",
+    "only the well-formed guess counts",
+  );
   // another tab writing junk is ignored too
-  b.w.localStorage.setItem('ccm:2023-07-01', '[1,2]');
-  b.w.dispatchEvent(new b.w.StorageEvent('storage', { key: 'ccm:2023-07-01' }));
-  b.w.localStorage.setItem('ccm:guesses:2023-07-01', '"x"');
-  b.w.dispatchEvent(new b.w.StorageEvent('storage', { key: 'ccm:guesses:2023-07-01' }));
+  b.w.localStorage.setItem("ccm:2023-07-01", "[1,2]");
+  b.w.dispatchEvent(new b.w.StorageEvent("storage", { key: "ccm:2023-07-01" }));
+  b.w.localStorage.setItem("ccm:guesses:2023-07-01", '"x"');
+  b.w.dispatchEvent(
+    new b.w.StorageEvent("storage", { key: "ccm:guesses:2023-07-01" }),
+  );
   await sleep(40);
-  assert.equal(b.btn('yellow').textContent, '0');
+  assert.equal(b.btn("yellow").textContent, "0");
   b.close();
 });
 
 test('a broken saved definition is looked up again instead of sticking on "Looking it up…"', async () => {
-  dictionary = { word: { en: [{ partOfSpeech: 'Noun', definitions: [{ definition: 'A unit of language.' }] }] } };
-  const b = await board({ words: ['WORD', 'B', 'C', 'D'], stored: { 'ccm:defs': { WORD: { u: Date.now(), v: 3, e: { parts: null } } } } });
-  b.select(['WORD']); await sleep(40);
-  b.d.getElementById('ccm-define-btn').click(); await sleep(60);
-  const sheet = b.root.getElementById('ccm-define');
-  assert.deepEqual([...sheet.querySelectorAll('h5')].map(h => h.textContent), ['Noun']);
+  dictionary = {
+    word: {
+      en: [
+        {
+          partOfSpeech: "Noun",
+          definitions: [{ definition: "A unit of language." }],
+        },
+      ],
+    },
+  };
+  const b = await board({
+    words: ["WORD", "B", "C", "D"],
+    stored: {
+      "ccm:defs": { WORD: { u: Date.now(), v: 3, e: { parts: null } } },
+    },
+  });
+  b.select(["WORD"]);
+  await sleep(40);
+  b.d.getElementById("ccm-define-btn").click();
+  await sleep(60);
+  const sheet = b.root.getElementById("ccm-define");
+  assert.deepEqual(
+    [...sheet.querySelectorAll("h5")].map((h) => h.textContent),
+    ["Noun"],
+  );
   b.close();
 });
 
 test('only the game\'s _selected class counts as selected, not "unselected"', async () => {
-  const b = await board({ words: ['A', 'B', 'C', 'D'] });
-  b.tile('A').classList.add('Card-module_unselected');
-  b.tile('B').classList.add('Card-module_selected__x1y2z');
+  const b = await board({ words: ["A", "B", "C", "D"] });
+  b.tile("A").classList.add("Card-module_unselected");
+  b.tile("B").classList.add("Card-module_selected__x1y2z");
   await sleep(40);
-  assert.equal(b.d.getElementById('ccm-define-btn').style.display, '', 'one tile (B) selected: Definition shows');
+  assert.equal(
+    b.d.getElementById("ccm-define-btn").style.display,
+    "",
+    "one tile (B) selected: Definition shows",
+  );
   b.close();
 });
 
-test('a second copy of the script does nothing', async () => {
-  const b = await board({ words: ['A', 'B', 'C', 'D'] });
-  b.w.eval(SRC); await sleep(40);
-  assert.equal(b.d.querySelectorAll('#ccm-root').length, 1);
-  assert.equal(b.d.querySelectorAll('#ccm-define-btn').length, 1);
+test("a second copy of the script does nothing", async () => {
+  const b = await board({ words: ["A", "B", "C", "D"] });
+  b.w.eval(SRC);
+  await sleep(40);
+  assert.equal(b.d.querySelectorAll("#ccm-root").length, 1);
+  assert.equal(b.d.querySelectorAll("#ccm-define-btn").length, 1);
   b.close();
 });
 
@@ -980,56 +1813,80 @@ test('a second copy of the script does nothing', async () => {
 // its padding (20px a side unless set), at least 110px wide unless its min-width is cleared;
 // buttons sit left to right with the row's gap (12px unless set) and wrap past `rowWidth`.
 function fakeRowLayout(w, rowWidth) {
-  const width = b => {
+  const width = (b) => {
     const pad = parseInt(b.style.paddingLeft, 10);
     const own = b.textContent.length * 9 + 2 * (Number.isNaN(pad) ? 20 : pad);
-    return b.style.minWidth === '0' ? own : Math.max(110, own);
+    return b.style.minWidth === "0" ? own : Math.max(110, own);
   };
-  const shown = b => b.style.display !== 'none';
-  Object.defineProperty(w.HTMLElement.prototype, 'offsetParent', { configurable: true, get() { return shown(this) ? this.ownerDocument.body : null; } });
-  Object.defineProperty(w.HTMLElement.prototype, 'offsetTop', { configurable: true, get() {
-    const row = this.parentElement;
-    if (!row || this.localName !== 'button') return 0;
-    const gap = parseInt(row.style.gap, 10) || 12;
-    let x = 0, line = 0;
-    for (const b of row.children) {
-      if (!shown(b)) continue;
-      const bw = width(b);
-      if (x && x + gap + bw > rowWidth) { line++; x = bw; } else x += (x ? gap : 0) + bw;
-      if (b === this) return line * 50;
-    }
-    return 0;
-  } });
+  const shown = (b) => b.style.display !== "none";
+  Object.defineProperty(w.HTMLElement.prototype, "offsetParent", {
+    configurable: true,
+    get() {
+      return shown(this) ? this.ownerDocument.body : null;
+    },
+  });
+  Object.defineProperty(w.HTMLElement.prototype, "offsetTop", {
+    configurable: true,
+    get() {
+      const row = this.parentElement;
+      if (!row || this.localName !== "button") return 0;
+      const gap = parseInt(row.style.gap, 10) || 12;
+      let x = 0,
+        line = 0;
+      for (const b of row.children) {
+        if (!shown(b)) continue;
+        const bw = width(b);
+        if (x && x + gap + bw > rowWidth) {
+          line++;
+          x = bw;
+        } else x += (x ? gap : 0) + bw;
+        if (b === this) return line * 50;
+      }
+      return 0;
+    },
+  });
 }
 
-test('Definition: with Define and Guide in the row, buttons shrink only as far as the row needs', async () => {
-  const fit = async rowWidth => {
-    const b = await board({ words: ['LASH', 'EYE', 'LIPS', 'SENSE'] });
+test("Definition: with Define and Guide in the row, buttons shrink only as far as the row needs", async () => {
+  const fit = async (rowWidth) => {
+    const b = await board({ words: ["LASH", "EYE", "LIPS", "SENSE"] });
     fakeRowLayout(b.w, rowWidth);
-    b.select(['LASH']); await sleep(60);
-    const q = s => b.d.querySelector(s);
-    return { b, def: q('#ccm-define-btn'), guide: q('#ccm-guide-btn'), shuffle: q('[data-testid=shuffle-btn]'), row: q('[data-testid=shuffle-btn]').parentElement };
+    b.select(["LASH"]);
+    await sleep(60);
+    const q = (s) => b.d.querySelector(s);
+    return {
+      b,
+      def: q("#ccm-define-btn"),
+      guide: q("#ccm-guide-btn"),
+      shuffle: q("[data-testid=shuffle-btn]"),
+      row: q("[data-testid=shuffle-btn]").parentElement,
+    };
   };
   let r = await fit(520); // fits once every button is its text plus padding
-  assert.equal(r.def.textContent, 'Define');
-  assert.equal(r.shuffle.style.minWidth, '0', 'the game\'s fixed widths let go');
-  assert.equal(r.shuffle.style.flex, '1 1 auto', 'and the buttons share the row');
-  assert.equal(r.shuffle.style.paddingLeft, '14px');
-  assert.equal(r.guide.style.flex, '1 1 auto');
-  assert.equal(r.guide.textContent, 'Guide');
-  r.b.select(['LASH', 'EYE']); await sleep(60); // Define goes and the other four fit: the game's buttons are put back
-  assert.equal(r.shuffle.style.flex, '');
-  assert.equal(r.shuffle.style.minWidth, '');
-  assert.equal(r.shuffle.style.paddingLeft, '');
+  assert.equal(r.def.textContent, "Define");
+  assert.equal(r.shuffle.style.minWidth, "0", "the game's fixed widths let go");
+  assert.equal(
+    r.shuffle.style.flex,
+    "1 1 auto",
+    "and the buttons share the row",
+  );
+  assert.equal(r.shuffle.style.paddingLeft, "14px");
+  assert.equal(r.guide.style.flex, "1 1 auto");
+  assert.equal(r.guide.textContent, "Guide");
+  r.b.select(["LASH", "EYE"]);
+  await sleep(60); // Define goes and the other four fit: the game's buttons are put back
+  assert.equal(r.shuffle.style.flex, "");
+  assert.equal(r.shuffle.style.minWidth, "");
+  assert.equal(r.shuffle.style.paddingLeft, "");
   r = await fit(430); // a big phone: a little less padding
-  assert.equal(r.shuffle.style.paddingLeft, '10px');
-  assert.equal(r.guide.textContent, 'Guide');
+  assert.equal(r.shuffle.style.paddingLeft, "10px");
+  assert.equal(r.guide.textContent, "Guide");
   r = await fit(300); // very narrow: the least padding, then the ⓘ
-  assert.equal(r.shuffle.style.paddingLeft, '6px');
-  assert.equal(r.guide.textContent, 'ⓘ');
+  assert.equal(r.shuffle.style.paddingLeft, "6px");
+  assert.equal(r.guide.textContent, "ⓘ");
   r = await fit(2000); // a desktop: nothing changes
-  assert.equal(r.def.textContent, 'Definition');
-  assert.equal(r.shuffle.style.minWidth, '');
-  assert.equal(r.shuffle.style.flex, '');
-  assert.equal(r.row.style.gap, '');
+  assert.equal(r.def.textContent, "Definition");
+  assert.equal(r.shuffle.style.minWidth, "");
+  assert.equal(r.shuffle.style.flex, "");
+  assert.equal(r.row.style.gap, "");
 });

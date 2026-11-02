@@ -18,83 +18,128 @@
 // ==/UserScript==
 
 (() => {
-  'use strict';
-  if (document.getElementById('ccm-root')) return; // already running (a second install)
+  "use strict";
+  if (document.getElementById("ccm-root")) return; // already running (a second install)
 
   // ORDER index matches the game's data-level on solved groups (0 yellow … 3 purple)
   const COLORS = [
-    { key: 'yellow', hex: '#f9df6d', hotkey: '1' },
-    { key: 'green',  hex: '#a0c35a', hotkey: '2' },
-    { key: 'blue',   hex: '#b0c4ef', hotkey: '3' },
-    { key: 'purple', hex: '#ba81c5', hotkey: '4' },
+    { key: "yellow", hex: "#f9df6d", hotkey: "1" },
+    { key: "green", hex: "#a0c35a", hotkey: "2" },
+    { key: "blue", hex: "#b0c4ef", hotkey: "3" },
+    { key: "purple", hex: "#ba81c5", hotkey: "4" },
   ];
-  const HEX = Object.fromEntries(COLORS.map(c => [c.key, c.hex]));
-  const ORDER = COLORS.map(c => c.key);
+  const HEX = Object.fromEntries(COLORS.map((c) => [c.key, c.hex]));
+  const ORDER = COLORS.map((c) => c.key);
   // sort modes, cycled by the Sort button: rows top-to-bottom in this color order, or off.
   // The same order decides what Go submits next and when Go asks "Sure?".
   const SORT_MODES = {
-    reverse: { label: 'P→Y', title: 'Reverse rainbow: purple, blue, green, yellow', order: [...ORDER].reverse() },
-    rainbow: { label: 'Y→P', title: 'Rainbow: yellow, green, blue, purple', order: ORDER },
-    off:     { label: 'Off', title: 'Off: tiles stay in the game\'s order (Go still goes purple first)', order: null },
+    reverse: {
+      label: "P→Y",
+      title: "Reverse rainbow: purple, blue, green, yellow",
+      order: [...ORDER].reverse(),
+    },
+    rainbow: {
+      label: "Y→P",
+      title: "Rainbow: yellow, green, blue, purple",
+      order: ORDER,
+    },
+    off: {
+      label: "Off",
+      title: "Off: tiles stay in the game's order (Go still goes purple first)",
+      order: null,
+    },
   };
-  const SORT_CYCLE = ['reverse', 'rainbow', 'off'];
+  const SORT_CYCLE = ["reverse", "rainbow", "off"];
   const MAX_PER_COLOR = 4;
   const KEEP_DAYS = 60;
   const CONFIRM_MS = 4000;
   const GRACE_MS = 1500; // after "Sure?" expires, Go ignores taps this long so a late tap can't submit a different color
 
   let ready = false; // true once the first setup has run
-  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const ls = {
-    get(k, fallback) { try { const v = localStorage.getItem(k); return v === null ? fallback : JSON.parse(v); } catch { return fallback; } }, // storage off or not JSON: use the default
+    get(k, fallback) {
+      try {
+        const v = localStorage.getItem(k);
+        return v === null ? fallback : JSON.parse(v);
+      } catch {
+        return fallback;
+      }
+    }, // storage off or not JSON: use the default
     // a failed write (private mode, storage full) only loses saving, so it's logged, not thrown
-    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { console.warn('[Connections Palette] could not save', k, e); } },
-    del(k) { try { localStorage.removeItem(k); } catch {} }, // nothing to do if storage is off
+    set(k, v) {
+      try {
+        localStorage.setItem(k, JSON.stringify(v));
+      } catch (e) {
+        console.warn("[Connections Palette] could not save", k, e);
+      }
+    },
+    del(k) {
+      try {
+        localStorage.removeItem(k);
+      } catch {}
+    }, // nothing to do if storage is off
   };
   // saved values come back from storage as anything (another version, another script, a hand
   // edit): keep only the shapes the script writes
-  const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
-  const isColor = c => typeof c === 'string' && ORDER.includes(c);
+  const isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+  const isColor = (c) => typeof c === "string" && ORDER.includes(c);
   const loadMarks = () => {
     const v = ls.get(marksKey(), {});
-    return isObj(v) ? Object.fromEntries(Object.entries(v).filter(([, c]) => isColor(c))) : {};
+    return isObj(v)
+      ? Object.fromEntries(Object.entries(v).filter(([, c]) => isColor(c)))
+      : {};
   };
   const loadMaybes = () => {
     const v = ls.get(maybeKey(), {});
     if (!isObj(v)) return {};
     const out = {};
-    for (const [w, cs] of Object.entries(v)) if (Array.isArray(cs) && cs.length && cs.every(isColor)) out[w] = cs;
+    for (const [w, cs] of Object.entries(v))
+      if (Array.isArray(cs) && cs.length && cs.every(isColor)) out[w] = cs;
     return out;
   };
 
   // ---------- storage (per puzzle date, keyed by word so shuffles don't matter) ----------
   // Today's puzzle has no date in its URL, so it's filed under the day the page was opened:
   // left open past midnight, it still shows (and saves to) that day's puzzle.
-  const openedOn = new Date().toLocaleDateString('en-CA');
-  const puzzleId = () => location.pathname.match(/\d{4}-\d{2}-\d{2}/)?.[0] || openedOn;
-  const marksKey = () => 'ccm:' + puzzleId();
-  const maybeKey = () => 'ccm:maybe:' + puzzleId();
-  const guessKey = () => 'ccm:guesses:' + puzzleId();
-  const oldAwayKey = () => 'ccm:1away:' + puzzleId(); // before 0.5: one-away guesses only
-  const USED_KEY = 'ccm:used';
+  const openedOn = new Date().toLocaleDateString("en-CA");
+  const puzzleId = () =>
+    location.pathname.match(/\d{4}-\d{2}-\d{2}/)?.[0] || openedOn;
+  const marksKey = () => "ccm:" + puzzleId();
+  const maybeKey = () => "ccm:maybe:" + puzzleId();
+  const guessKey = () => "ccm:guesses:" + puzzleId();
+  const oldAwayKey = () => "ccm:1away:" + puzzleId(); // before 0.5: one-away guesses only
+  const USED_KEY = "ccm:used";
 
-  const up = s => String(s).trim().toUpperCase();
+  const up = (s) => String(s).trim().toUpperCase();
   // a tile's text holds the word twice (visible + screen-reader copy); only used when
   // the tile has no data-flip-id. Words like TARTAR are safe because flip ids come first.
-  const undouble = s => {
+  const undouble = (s) => {
     s = up(s);
     const h = s.length / 2;
-    return s.length % 2 === 0 && s.slice(0, h) === s.slice(h) ? s.slice(0, h) : s;
+    return s.length % 2 === 0 && s.slice(0, h) === s.slice(h)
+      ? s.slice(0, h)
+      : s;
   };
 
-  const loadUsed = () => { const v = ls.get(USED_KEY, {}); return isObj(v) ? v : {}; };
+  const loadUsed = () => {
+    const v = ls.get(USED_KEY, {});
+    return isObj(v) ? v : {};
+  };
   function touch() {
     const used = loadUsed();
     used[puzzleId()] = Date.now();
     ls.set(USED_KEY, used);
   }
-  const save = () => { ls.set(marksKey(), marks); ls.set(maybeKey(), maybes); touch(); };
-  const saveGuesses = () => { ls.set(guessKey(), guesses); touch(); };
+  const save = () => {
+    ls.set(marksKey(), marks);
+    ls.set(maybeKey(), maybes);
+    touch();
+  };
+  const saveGuesses = () => {
+    ls.set(guessKey(), guesses);
+    touch();
+  };
 
   // drop data for puzzles not touched in KEEP_DAYS (by last use, not puzzle date,
   // so archive puzzles you're playing now are kept)
@@ -102,9 +147,12 @@
     const used = loadUsed();
     const cutoff = Date.now() - KEEP_DAYS * 864e5;
     for (const k of Object.keys(localStorage)) {
-      const d = k.match(/^ccm:(?:1away:|guesses:|maybe:)?(\d{4}-\d{2}-\d{2})$/)?.[1];
+      const d = k.match(
+        /^ccm:(?:1away:|guesses:|maybe:)?(\d{4}-\d{2}-\d{2})$/,
+      )?.[1];
       if (!d) continue;
-      if (!used[d]) used[d] = Date.now(); // first seen: start its clock now
+      if (!used[d])
+        used[d] = Date.now(); // first seen: start its clock now
       else if (used[d] < cutoff) ls.del(k);
     }
     for (const d of Object.keys(used)) if (used[d] < cutoff) delete used[d];
@@ -117,106 +165,205 @@
   // only decided tiles count toward Go, auto-fill and the 4-per-color limit.
   let maybes = loadMaybes();
   // wrong guesses for this puzzle, oldest first: { w: [4 words, sorted], away: was it "One away" }
-  const isWords = w => Array.isArray(w) && w.every(x => typeof x === 'string');
+  const isWords = (w) =>
+    Array.isArray(w) && w.every((x) => typeof x === "string");
   const loadGuesses = () => {
     const g = ls.get(guessKey(), null);
-    if (g != null) return Array.isArray(g) ? g.filter(x => isObj(x) && isWords(x.w)).map(x => ({ w: x.w, away: !!x.away })) : [];
+    if (g != null)
+      return Array.isArray(g)
+        ? g
+            .filter((x) => isObj(x) && isWords(x.w))
+            .map((x) => ({ w: x.w, away: !!x.away }))
+        : [];
     const old = ls.get(oldAwayKey(), []);
-    return Array.isArray(old) ? old.filter(isWords).map(w => ({ w, away: true })) : []; // migrate
+    return Array.isArray(old)
+      ? old.filter(isWords).map((w) => ({ w, away: true }))
+      : []; // migrate
   };
   let guesses = loadGuesses();
   let lastId = puzzleId();
 
-  const SORT_KEY = 'ccm:sort';
+  const SORT_KEY = "ccm:sort";
   let sortMode = (() => {
-    let v; try { v = localStorage.getItem(SORT_KEY); } catch {}
-    return SORT_MODES[v] ? v : v === '0' ? 'off' : 'reverse'; // '1'/'0' from older versions
+    let v;
+    try {
+      v = localStorage.getItem(SORT_KEY);
+    } catch {}
+    return SORT_MODES[v] ? v : v === "0" ? "off" : "reverse"; // '1'/'0' from older versions
   })();
-  const COLLAPSE_KEY = 'ccm:collapsed';
+  const COLLAPSE_KEY = "ccm:collapsed";
 
   // ---------- settings (⚙ on the palette), saved per browser ----------
-  const SETTINGS_KEY = 'ccm:settings';
+  const SETTINGS_KEY = "ccm:settings";
   // help: one line shown in the panel; tip: the longer explanation, shown on hover
   const SETTINGS = [
-    { key: 'oneAway',   def: false, label: 'Mark "One away" guesses', help: 'Red letters on tiles from one-away guesses' },
-    { key: 'history',   def: false, label: 'Guess history', help: '📜 lists your wrong guesses',
-      tip: '📜 on the palette lists your wrong guesses, with one-aways flagged. Repeating one reminds you whether it was one away' },
-    { key: 'maybes',    def: false, label: 'Maybe colors', help: '? lets a tile be several colors at once',
-      tip: 'With ? on, colors you tap are added to the selected tiles\' options, splitting the outline between them (yellow or green: half each). Tap a color again to remove it. Split tiles don\'t count toward Go, auto-fill or the 4-per-color limit until one color is left' },
-    { key: 'autoFill',  def: true,  label: 'Auto-fill the last group', help: 'The last 4 tiles get the last color',
-      tip: 'Once three colors have 4 tiles, the last 4 get the remaining color' },
-    { key: 'reconcile', def: true,  label: 'Fix my colors after a solve', help: 'Swap colors to match solved groups',
-      tip: 'If your purple turns out to be blue, swap purple and blue everywhere. Off: only the solved tiles change' },
-    { key: 'goButton',  def: true,  label: 'Go button', help: 'Submits a color\'s 4 tiles for you' },
-    { key: 'orderWarn', def: true,  label: 'Ask before going out of order', help: '"Sure?" before submitting out of order' },
-    { key: 'letters',   def: false, label: 'Show color letters', help: 'Y/G/B/P letters, for colorblind players' },
-    { key: 'keys',      def: true,  label: 'Keyboard shortcuts', help: '1–4 colors, 0 clear, Z undo, G go',
-      tip: '1–4 colors, 0 clear, Z undo, G go, Esc lets go of a tapped color; with maybe colors on, M maybe mode and Shift+1–4 add or remove an option' },
-    { key: 'left',      def: false, label: 'Palette on the left', help: 'Move the palette to the bottom-left' },
-    { key: 'guide',     def: true,  label: 'Color guide button', help: 'Guide, next to Submit: what kinds of groups each color tends to be' },
-    { key: 'define',    def: true,  label: 'Definition button', help: 'Look up the meanings of one selected word',
-      tip: 'With one tile selected, a Definition button appears next to Shuffle. Tapping it looks the word up on Wiktionary and Wikidata (only the word and the script name are sent) and keeps the answer on this device for 60 days' },
+    {
+      key: "oneAway",
+      def: false,
+      label: 'Mark "One away" guesses',
+      help: "Red letters on tiles from one-away guesses",
+    },
+    {
+      key: "history",
+      def: false,
+      label: "Guess history",
+      help: "📜 lists your wrong guesses",
+      tip: "📜 on the palette lists your wrong guesses, with one-aways flagged. Repeating one reminds you whether it was one away",
+    },
+    {
+      key: "maybes",
+      def: false,
+      label: "Maybe colors",
+      help: "? lets a tile be several colors at once",
+      tip: "With ? on, colors you tap are added to the selected tiles' options, splitting the outline between them (yellow or green: half each). Tap a color again to remove it. Split tiles don't count toward Go, auto-fill or the 4-per-color limit until one color is left",
+    },
+    {
+      key: "autoFill",
+      def: true,
+      label: "Auto-fill the last group",
+      help: "The last 4 tiles get the last color",
+      tip: "Once three colors have 4 tiles, the last 4 get the remaining color",
+    },
+    {
+      key: "reconcile",
+      def: true,
+      label: "Fix my colors after a solve",
+      help: "Swap colors to match solved groups",
+      tip: "If your purple turns out to be blue, swap purple and blue everywhere. Off: only the solved tiles change",
+    },
+    {
+      key: "goButton",
+      def: true,
+      label: "Go button",
+      help: "Submits a color's 4 tiles for you",
+    },
+    {
+      key: "orderWarn",
+      def: true,
+      label: "Ask before going out of order",
+      help: '"Sure?" before submitting out of order',
+    },
+    {
+      key: "letters",
+      def: false,
+      label: "Show color letters",
+      help: "Y/G/B/P letters, for colorblind players",
+    },
+    {
+      key: "keys",
+      def: true,
+      label: "Keyboard shortcuts",
+      help: "1–4 colors, 0 clear, Z undo, G go",
+      tip: "1–4 colors, 0 clear, Z undo, G go, Esc lets go of a tapped color; with maybe colors on, M maybe mode and Shift+1–4 add or remove an option",
+    },
+    {
+      key: "left",
+      def: false,
+      label: "Palette on the left",
+      help: "Move the palette to the bottom-left",
+    },
+    {
+      key: "guide",
+      def: true,
+      label: "Color guide button",
+      help: "Guide, next to Submit: what kinds of groups each color tends to be",
+    },
+    {
+      key: "define",
+      def: true,
+      label: "Definition button",
+      help: "Look up the meanings of one selected word",
+      tip: "With one tile selected, a Definition button appears next to Shuffle. Tapping it looks the word up on Wiktionary and Wikidata (only the word and the script name are sent) and keeps the answer on this device for 60 days",
+    },
   ];
-  const DEFAULTS = Object.fromEntries(SETTINGS.map(o => [o.key, o.def]));
+  const DEFAULTS = Object.fromEntries(SETTINGS.map((o) => [o.key, o.def]));
   let settings = { ...DEFAULTS, ...ls.get(SETTINGS_KEY, {}) };
-  const opt = k => settings[k];
+  const opt = (k) => settings[k];
 
   // ---------- reading the board ----------
-  const tiles = () => [...document.querySelectorAll('[data-testid="card-label"]')];
-  const wordOf = el => el.dataset.flipId ? up(el.dataset.flipId) : undouble(el.textContent);
+  const tiles = () => [
+    ...document.querySelectorAll('[data-testid="card-label"]'),
+  ];
+  const wordOf = (el) =>
+    el.dataset.flipId ? up(el.dataset.flipId) : undouble(el.textContent);
   // the game's Card-module_selected__xyz class (a whole class token, so "unselected" doesn't count)
-  const isSelected = el => /(^|\s)[\w-]*_selected(__[\w-]*)?(\s|$)/.test(el.className);
+  const isSelected = (el) =>
+    /(^|\s)[\w-]*_selected(__[\w-]*)?(\s|$)/.test(el.className);
   const selectedTiles = () => tiles().filter(isSelected);
   // the puzzle's 16 words once the board is fully known; counts ignore anything else
   let puzzleWords = null;
-  const countOf = color => Object.entries(marks)
-    .filter(([w, c]) => c === color && (!puzzleWords || puzzleWords.has(w))).length;
+  const countOf = (color) =>
+    Object.entries(marks).filter(
+      ([w, c]) => c === color && (!puzzleWords || puzzleWords.has(w)),
+    ).length;
 
-  const submitButton = () => document.querySelector('[data-testid="submit-btn"]') || gameButton(/^submit$/i);
-  const attr = t => t.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-  const gameButton = re => [...document.querySelectorAll('button')]
-    .find(b => re.test(b.textContent.trim()) && !panel.contains(b));
+  const submitButton = () =>
+    document.querySelector('[data-testid="submit-btn"]') ||
+    gameButton(/^submit$/i);
+  const attr = (t) => t.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+  const gameButton = (re) =>
+    [...document.querySelectorAll("button")].find(
+      (b) => re.test(b.textContent.trim()) && !panel.contains(b),
+    );
 
   // The game reacts to pointerdown, not click, so a plain el.click() only flips the
   // hidden checkbox without telling the game. Send the full sequence a real tap makes.
   function press(el) {
     const r = el.getBoundingClientRect();
-    const o = { bubbles: true, cancelable: true, composed: true, button: 0,
-      clientX: r.x + r.width / 2, clientY: r.y + r.height / 2,
-      pointerId: 1, pointerType: 'mouse', isPrimary: true };
-    el.dispatchEvent(new PointerEvent('pointerdown', o));
-    el.dispatchEvent(new MouseEvent('mousedown', o));
-    el.dispatchEvent(new PointerEvent('pointerup', o));
-    el.dispatchEvent(new MouseEvent('mouseup', o));
+    const o = {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      button: 0,
+      clientX: r.x + r.width / 2,
+      clientY: r.y + r.height / 2,
+      pointerId: 1,
+      pointerType: "mouse",
+      isPrimary: true,
+    };
+    el.dispatchEvent(new PointerEvent("pointerdown", o));
+    el.dispatchEvent(new MouseEvent("mousedown", o));
+    el.dispatchEvent(new PointerEvent("pointerup", o));
+    el.dispatchEvent(new MouseEvent("mouseup", o));
     el.click();
   }
 
   // solved groups: their real color (data-level, or background as a fallback) and words
   function solvedGroups() {
-    return [...document.querySelectorAll('[data-testid="solved-category-container"]')].map(s => {
-      let color = ORDER[+s.dataset.level];
-      if (!color) {
-        const bg = getComputedStyle(s).backgroundColor;
-        color = COLORS.find(c => {
-          const n = parseInt(c.hex.slice(1), 16);
-          return bg === `rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})`;
-        })?.key;
-      }
-      const words = [...s.querySelectorAll('ol li')].map(li => up(li.textContent)).filter(Boolean);
-      return { color, words };
-    }).filter(g => g.color && g.words.length === 4);
+    return [
+      ...document.querySelectorAll('[data-testid="solved-category-container"]'),
+    ]
+      .map((s) => {
+        let color = ORDER[+s.dataset.level];
+        if (!color) {
+          const bg = getComputedStyle(s).backgroundColor;
+          color = COLORS.find((c) => {
+            const n = parseInt(c.hex.slice(1), 16);
+            return bg === `rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})`;
+          })?.key;
+        }
+        const words = [...s.querySelectorAll("ol li")]
+          .map((li) => up(li.textContent))
+          .filter(Boolean);
+        return { color, words };
+      })
+      .filter((g) => g.color && g.words.length === 4);
   }
-  const solvedColors = () => new Set(solvedGroups().map(g => g.color));
+  const solvedColors = () => new Set(solvedGroups().map((g) => g.color));
 
   // the next color to submit: first unsolved one in the sort order (reverse rainbow when sort is off)
-  const playOrder = () => SORT_MODES[sortMode].order || SORT_MODES.reverse.order;
-  const nextColor = () => { const s = solvedColors(); return playOrder().find(c => !s.has(c)) || null; };
+  const playOrder = () =>
+    SORT_MODES[sortMode].order || SORT_MODES.reverse.order;
+  const nextColor = () => {
+    const s = solvedColors();
+    return playOrder().find((c) => !s.has(c)) || null;
+  };
 
   // ---------- styles ----------
   // Everything with a color lives inside closed shadow roots (the palette, and a <ccm-mark>
   // overlay inside each tile), so page-darkening extensions like Dark Reader can't recolor
   // the marks. The page-level CSS below only positions things.
-  const pageCss = document.createElement('style');
+  const pageCss = document.createElement("style");
   pageCss.textContent = `
     [data-ccm], [data-ccm-away], [data-ccm-split] { position: relative; }
     ccm-mark { position: absolute; inset: 0; display: block; pointer-events: none; border-radius: inherit; z-index: 1; }
@@ -373,126 +520,151 @@
   `;
 
   // dark when NYT's own dark mode or Dark Reader is on
-  const isDark = () => document.body?.dataset.mode === 'dark' || document.body?.classList.contains('dark') ||
-    document.documentElement.dataset.darkreaderScheme === 'dark';
+  const isDark = () =>
+    document.body?.dataset.mode === "dark" ||
+    document.body?.classList.contains("dark") ||
+    document.documentElement.dataset.darkreaderScheme === "dark";
 
   // ---------- panel ----------
-  const host = document.createElement('div');
-  host.id = 'ccm-root';
-  const shadow = host.attachShadow({ mode: 'closed' });
+  const host = document.createElement("div");
+  host.id = "ccm-root";
+  const shadow = host.attachShadow({ mode: "closed" });
   // tests, or localStorage 'ccm:debug' = 'true' for live testing: lets page scripts reach the palette
-  if (window.__CCM_TEST__ || ls.get('ccm:debug', false) === true) window.__ccmRoot = shadow;
-  const shadowCss = document.createElement('style');
+  if (window.__CCM_TEST__ || ls.get("ccm:debug", false) === true)
+    window.__ccmRoot = shadow;
+  const shadowCss = document.createElement("style");
   shadowCss.textContent = PANEL_CSS;
   shadow.appendChild(shadowCss);
-  const panel = document.createElement('div');
-  panel.id = 'ccm-panel';
-  panel.title = 'Select tiles, then tap a color to mark them (⌫ removes marks). With nothing selected: tap two colors to swap them, or a color then Go to submit it; Go alone submits the next color. ⚙ for settings.';
+  const panel = document.createElement("div");
+  panel.id = "ccm-panel";
+  panel.title =
+    "Select tiles, then tap a color to mark them (⌫ removes marks). With nothing selected: tap two colors to swap them, or a color then Go to submit it; Go alone submits the next color. ⚙ for settings.";
   const addButton = (label, onClick, bg) => {
-    const b = document.createElement('button');
+    const b = document.createElement("button");
     b.textContent = label;
     if (bg) b.style.background = bg;
-    b.addEventListener('mousedown', e => e.preventDefault()); // keep focus on the board
-    b.addEventListener('click', e => { e.stopPropagation(); onClick(); });
+    b.addEventListener("mousedown", (e) => e.preventDefault()); // keep focus on the board
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      onClick();
+    });
     panel.appendChild(b);
     return b;
   };
   const btns = {};
-  for (const c of COLORS) { btns[c.key] = addButton('0', () => assign(c.key), c.hex); btns[c.key].classList.add('swatch'); }
-  const eraseBtn = addButton('⌫', () => assign('erase'));
-  eraseBtn.classList.add('ccm-erase');
-  eraseBtn.title = 'Remove the color from the selected tiles';
-  eraseBtn.setAttribute('aria-label', 'Remove color');
-  const undoBtn = addButton('↶', () => undo());
-  undoBtn.classList.add('ccm-undo');
-  undoBtn.title = 'Undo your last color change';
-  const sortBtn = addButton('', () => {
-    sortMode = SORT_CYCLE[(SORT_CYCLE.indexOf(sortMode) + 1) % SORT_CYCLE.length];
-    try { localStorage.setItem(SORT_KEY, sortMode); } catch {} // storage off: the choice lasts this visit
+  for (const c of COLORS) {
+    btns[c.key] = addButton("0", () => assign(c.key), c.hex);
+    btns[c.key].classList.add("swatch");
+  }
+  const eraseBtn = addButton("⌫", () => assign("erase"));
+  eraseBtn.classList.add("ccm-erase");
+  eraseBtn.title = "Remove the color from the selected tiles";
+  eraseBtn.setAttribute("aria-label", "Remove color");
+  const undoBtn = addButton("↶", () => undo());
+  undoBtn.classList.add("ccm-undo");
+  undoBtn.title = "Undo your last color change";
+  const sortBtn = addButton("", () => {
+    sortMode =
+      SORT_CYCLE[(SORT_CYCLE.indexOf(sortMode) + 1) % SORT_CYCLE.length];
+    try {
+      localStorage.setItem(SORT_KEY, sortMode);
+    } catch {} // storage off: the choice lasts this visit
     showSort();
     apply();
   });
   function showSort() {
     const m = SORT_MODES[sortMode];
     sortBtn.textContent = m.label;
-    sortBtn.title = m.title + ' (tap to change)';
-    sortBtn.classList.toggle('active', !!m.order);
+    sortBtn.title = m.title + " (tap to change)";
+    sortBtn.classList.toggle("active", !!m.order);
   }
-  sortBtn.classList.add('ccm-sort');
+  sortBtn.classList.add("ccm-sort");
   showSort();
-  const goBtn = addButton('Go ▶', () => onGo());
-  goBtn.classList.add('ccm-go');
-  const maybeBtn = addButton('?', () => setMaybeMode(!maybeMode));
-  maybeBtn.classList.add('ccm-maybe');
-  maybeBtn.title = 'Maybe mode: colors you tap are added to the tiles\' options instead of replacing their color';
+  const goBtn = addButton("Go ▶", () => onGo());
+  goBtn.classList.add("ccm-go");
+  const maybeBtn = addButton("?", () => setMaybeMode(!maybeMode));
+  maybeBtn.classList.add("ccm-maybe");
+  maybeBtn.title =
+    "Maybe mode: colors you tap are added to the tiles' options instead of replacing their color";
   let maybeMode = false;
   function setMaybeMode(on) {
     const was = maybeMode;
-    maybeMode = !!on && opt('maybes');
-    maybeBtn.classList.toggle('active', maybeMode);
-    maybeBtn.setAttribute('aria-pressed', String(maybeMode));
-    panel.classList.toggle('maybemode', maybeMode);
+    maybeMode = !!on && opt("maybes");
+    maybeBtn.classList.toggle("active", maybeMode);
+    maybeBtn.setAttribute("aria-pressed", String(maybeMode));
+    panel.classList.toggle("maybemode", maybeMode);
     if (maybeMode) arm(null);
     else if (was && ready) apply(); // catch up on the sorting held back during maybe mode
   }
-  const histBtn = addButton('📜', () => toggleHistory());
-  histBtn.classList.add('ccm-hist');
-  histBtn.title = 'Your wrong guesses on this puzzle';
-  const gearBtn = addButton('⚙', () => toggleSettings());
-  gearBtn.title = 'Settings';
-  gearBtn.classList.add('ccm-gear');
+  const histBtn = addButton("📜", () => toggleHistory());
+  histBtn.classList.add("ccm-hist");
+  histBtn.title = "Your wrong guesses on this puzzle";
+  const gearBtn = addButton("⚙", () => toggleSettings());
+  gearBtn.title = "Settings";
+  gearBtn.classList.add("ccm-gear");
 
   // settings popover
-  const sheet = document.createElement('div');
-  sheet.id = 'ccm-settings';
+  const sheet = document.createElement("div");
+  sheet.id = "ccm-settings";
   sheet.hidden = true;
-  sheet.innerHTML = '<h4>Palette settings</h4>' +
-    SETTINGS.map(o => `<label${o.key === 'keys' ? ' class="desk"' : ''} title="${attr(o.tip || o.help)}"><input type="checkbox" data-k="${o.key}"><span>${o.label}<small>${o.help}</small></span></label>`).join('') +
+  sheet.innerHTML =
+    "<h4>Palette settings</h4>" +
+    SETTINGS.map(
+      (o) =>
+        `<label${o.key === "keys" ? ' class="desk"' : ""} title="${attr(o.tip || o.help)}"><input type="checkbox" data-k="${o.key}"><span>${o.label}<small>${o.help}</small></span></label>`,
+    ).join("") +
     '<div class="row"><button type="button" data-act="clear">Clear this puzzle</button><button type="button" data-act="reset">Reset settings</button></div>';
-  sheet.addEventListener('click', e => e.stopPropagation());
-  sheet.addEventListener('change', e => {
+  sheet.addEventListener("click", (e) => e.stopPropagation());
+  sheet.addEventListener("change", (e) => {
     const k = e.target.dataset?.k;
     if (!k) return;
     settings[k] = e.target.checked;
     ls.set(SETTINGS_KEY, settings);
     applySettings();
   });
-  sheet.querySelector('[data-act=clear]').addEventListener('click', () => {
-    if (confirm('Clear all color marks for this puzzle?')) { remember(); marks = {}; maybes = {}; save(); apply(); }
+  sheet.querySelector("[data-act=clear]").addEventListener("click", () => {
+    if (confirm("Clear all color marks for this puzzle?")) {
+      remember();
+      marks = {};
+      maybes = {};
+      save();
+      apply();
+    }
   });
-  sheet.querySelector('[data-act=reset]').addEventListener('click', () => {
+  sheet.querySelector("[data-act=reset]").addEventListener("click", () => {
     settings = { ...DEFAULTS };
     ls.set(SETTINGS_KEY, settings);
     applySettings();
   });
   panel.appendChild(sheet);
-  const histSheet = document.createElement('div');
-  histSheet.id = 'ccm-history';
+  const histSheet = document.createElement("div");
+  histSheet.id = "ccm-history";
   histSheet.hidden = true;
-  histSheet.addEventListener('click', e => e.stopPropagation());
+  histSheet.addEventListener("click", (e) => e.stopPropagation());
   panel.appendChild(histSheet);
-  const noteEl = document.createElement('div');
-  noteEl.id = 'ccm-note';
+  const noteEl = document.createElement("div");
+  noteEl.id = "ccm-note";
   noteEl.hidden = true;
   panel.appendChild(noteEl);
   function toggleSettings(open = sheet.hidden) {
     sheet.hidden = !open;
-    gearBtn.classList.toggle('active', open);
+    gearBtn.classList.toggle("active", open);
     if (open) toggleHistory(false);
   }
-  document.addEventListener('click', e => {
+  document.addEventListener("click", (e) => {
     if (e.composedPath().includes(host)) return;
     if (!sheet.hidden) toggleSettings(false);
     if (!histSheet.hidden) toggleHistory(false);
   });
   function applySettings() {
-    for (const box of sheet.querySelectorAll('input[data-k]')) box.checked = !!settings[box.dataset.k];
-    panel.classList.toggle('left', opt('left'));
-    panel.classList.toggle('nogo', !opt('goButton'));
-    panel.classList.toggle('nohist', !opt('history'));
-    panel.classList.toggle('nomaybe', !opt('maybes'));
-    if (!opt('maybes')) setMaybeMode(false);
-    if (!opt('history')) toggleHistory(false);
+    for (const box of sheet.querySelectorAll("input[data-k]"))
+      box.checked = !!settings[box.dataset.k];
+    panel.classList.toggle("left", opt("left"));
+    panel.classList.toggle("nogo", !opt("goButton"));
+    panel.classList.toggle("nohist", !opt("history"));
+    panel.classList.toggle("nomaybe", !opt("maybes"));
+    if (!opt("maybes")) setMaybeMode(false);
+    if (!opt("history")) toggleHistory(false);
     if (ready) apply();
   }
   // The palette stays tucked away until a puzzle board is on screen (not on the Play splash
@@ -500,35 +672,47 @@
   let userCollapsed = ls.get(COLLAPSE_KEY, false);
   let onBoard = false;
   let peek = false; // 🎨 tapped while no board is showing
-  const toggleBtn = addButton('▾', () => {
-    if (!onBoard) { peek = !peek; showCollapsed(); return; }
+  const toggleBtn = addButton("▾", () => {
+    if (!onBoard) {
+      peek = !peek;
+      showCollapsed();
+      return;
+    }
     userCollapsed = !userCollapsed;
     ls.set(COLLAPSE_KEY, userCollapsed);
     showCollapsed();
   });
-  toggleBtn.classList.add('ccm-toggle');
+  toggleBtn.classList.add("ccm-toggle");
   // phones only: ⋯ swaps the row to the less-used tools; ‹ swaps back
-  const moreBtn = addButton('⋯', () => showMore(!panel.classList.contains('more')));
-  moreBtn.classList.add('ccm-more');
+  const moreBtn = addButton("⋯", () =>
+    showMore(!panel.classList.contains("more")),
+  );
+  moreBtn.classList.add("ccm-more");
   function showMore(on) {
-    panel.classList.toggle('more', on);
-    moreBtn.textContent = on ? '‹' : '⋯';
-    moreBtn.title = on ? 'Back to the colors' : 'More: sort, history, settings, hide';
+    panel.classList.toggle("more", on);
+    moreBtn.textContent = on ? "‹" : "⋯";
+    moreBtn.title = on
+      ? "Back to the colors"
+      : "More: sort, history, settings, hide";
   }
   showMore(false);
   function showCollapsed() {
     const on = onBoard ? userCollapsed : !peek;
-    panel.classList.toggle('collapsed', on);
-    panel.classList.toggle('offboard', !onBoard);
-    if (on) { toggleSettings(false); toggleHistory(false); showMore(false); }
-    toggleBtn.textContent = on ? '🎨' : '▾';
-    toggleBtn.title = on ? 'Show the color palette' : 'Hide the palette';
+    panel.classList.toggle("collapsed", on);
+    panel.classList.toggle("offboard", !onBoard);
+    if (on) {
+      toggleSettings(false);
+      toggleHistory(false);
+      showMore(false);
+    }
+    toggleBtn.textContent = on ? "🎨" : "▾";
+    toggleBtn.title = on ? "Show the color palette" : "Hide the palette";
   }
   showCollapsed();
   shadow.appendChild(panel);
   document.body.appendChild(host);
   function showTheme() {
-    const t = isDark() ? 'dark' : 'light';
+    const t = isDark() ? "dark" : "light";
     if (host.dataset.theme !== t) host.dataset.theme = t;
   }
 
@@ -536,42 +720,47 @@
   // With exactly one tile selected, a Definition button sits before the game's Shuffle button.
   // Tapping it looks the word up on Wiktionary and Wikidata and lists its meanings by part of
   // speech (the usual ones first, rare and old ones behind "Show all"), then names and titles.
-  const defineBtn = document.createElement('button');
-  defineBtn.id = 'ccm-define-btn';
-  defineBtn.type = 'button';
-  defineBtn.textContent = 'Definition';
-  defineBtn.style.display = 'none';
-  defineBtn.addEventListener('mousedown', e => e.preventDefault());
-  defineBtn.addEventListener('click', e => {
-    e.preventDefault(); e.stopPropagation();
+  const defineBtn = document.createElement("button");
+  defineBtn.id = "ccm-define-btn";
+  defineBtn.type = "button";
+  defineBtn.textContent = "Definition";
+  defineBtn.style.display = "none";
+  defineBtn.addEventListener("mousedown", (e) => e.preventDefault());
+  defineBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     const t = selectedTiles();
     if (t.length === 1) define(wordOf(t[0]));
   });
   // and a Guide button after Submit, for what kinds of groups each color tends to be, shown in
   // the same panel
-  const guideBtn = document.createElement('button');
-  guideBtn.id = 'ccm-guide-btn';
-  guideBtn.type = 'button';
-  guideBtn.textContent = 'Guide';
-  guideBtn.title = 'Color guide: what kinds of groups each color tends to be';
-  guideBtn.style.display = 'none';
-  guideBtn.addEventListener('mousedown', e => e.preventDefault());
-  guideBtn.addEventListener('click', e => {
-    e.preventDefault(); e.stopPropagation();
-    if (!defSheet.hidden && defSheet.dataset.view === 'guide') closeDefine(); else showGuide();
+  const guideBtn = document.createElement("button");
+  guideBtn.id = "ccm-guide-btn";
+  guideBtn.type = "button";
+  guideBtn.textContent = "Guide";
+  guideBtn.title = "Color guide: what kinds of groups each color tends to be";
+  guideBtn.style.display = "none";
+  guideBtn.addEventListener("mousedown", (e) => e.preventDefault());
+  guideBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!defSheet.hidden && defSheet.dataset.view === "guide") closeDefine();
+    else showGuide();
   });
-  const defSheet = document.createElement('div');
-  defSheet.id = 'ccm-define';
+  const defSheet = document.createElement("div");
+  defSheet.id = "ccm-define";
   defSheet.hidden = true;
-  defSheet.setAttribute('role', 'dialog');
-  defSheet.addEventListener('click', e => e.stopPropagation());
+  defSheet.setAttribute("role", "dialog");
+  defSheet.addEventListener("click", (e) => e.stopPropagation());
   shadow.appendChild(defSheet);
   const el = (tag, props = {}, kids = []) => {
     const n = Object.assign(document.createElement(tag), props);
     for (const k of [].concat(kids)) n.append(k);
     return n;
   };
-  const closeDefine = () => { defSheet.hidden = true; };
+  const closeDefine = () => {
+    defSheet.hidden = true;
+  };
   // The sheet covers the board: from the top of the board (solved groups and tiles) down to
   // just above the game's button row (Definition, Shuffle…), so the buttons stay in view. It
   // follows the board as the page scrolls, staying below NYT's top bar and above the palette.
@@ -579,31 +768,69 @@
     if (defSheet.hidden) return;
     const row = defineBtn.parentElement;
     const h = window.innerHeight;
-    const board = [...document.querySelectorAll('[data-testid="card-label"], [data-testid="solved-category-container"]')]
-      .map(n => n.getBoundingClientRect()).filter(r => r.height);
-    const left = Math.min(...board.map(r => r.left)), right = Math.max(...board.map(r => r.right));
+    const board = [
+      ...document.querySelectorAll(
+        '[data-testid="card-label"], [data-testid="solved-category-container"]',
+      ),
+    ]
+      .map((n) => n.getBoundingClientRect())
+      .filter((r) => r.height);
+    const left = Math.min(...board.map((r) => r.left)),
+      right = Math.max(...board.map((r) => r.right));
     // the palette's top, if it's under the board (on a phone; on a desktop it sits off to the side)
     const p = panel.getBoundingClientRect();
-    const floor = p.height && (!board.length || (p.left < right && p.right > left)) ? p.top - 8 : h - 12;
+    const floor =
+      p.height && (!board.length || (p.left < right && p.right > left))
+        ? p.top - 8
+        : h - 12;
     const rr = row?.getBoundingClientRect();
     const rowTop = rr?.height ? rr.top : floor; // (the row is gone on the results screen)
     const at = Math.min(Math.max(rowTop, 180), floor); // never off the top, never under the palette
-    const bar = Math.max(0, document.querySelector('.pz-nav')?.getBoundingClientRect().bottom || 0); // NYT's top bar
-    const top = Math.max(bar + 8, board.length ? Math.min(...board.map(r => r.top)) : at - h * 0.6);
+    const bar = Math.max(
+      0,
+      document.querySelector(".pz-nav")?.getBoundingClientRect().bottom || 0,
+    ); // NYT's top bar
+    const top = Math.max(
+      bar + 8,
+      board.length ? Math.min(...board.map((r) => r.top)) : at - h * 0.6,
+    );
     // as wide as the board too (at least 320px, never past the screen's edges)
     const w = Math.min(window.innerWidth - 24, Math.max(320, right - left));
-    if (board.length) { defSheet.style.width = w + 'px'; defSheet.style.left = Math.max(12, Math.min((left + right - w) / 2, window.innerWidth - 12 - w)) + 'px'; defSheet.style.transform = 'none'; }
-    defSheet.style.bottom = (h - at + 8) + 'px';
-    defSheet.style.height = defSheet.style.maxHeight = Math.max(120, at - 8 - top) + 'px';
+    if (board.length) {
+      defSheet.style.width = w + "px";
+      defSheet.style.left =
+        Math.max(
+          12,
+          Math.min((left + right - w) / 2, window.innerWidth - 12 - w),
+        ) + "px";
+      defSheet.style.transform = "none";
+    }
+    defSheet.style.bottom = h - at + 8 + "px";
+    defSheet.style.height = defSheet.style.maxHeight =
+      Math.max(120, at - 8 - top) + "px";
   }
   // (once per frame however many scroll events arrive, and only while it's open)
   let placing = 0;
-  const placeSoon = () => { if (!defSheet.hidden && !placing) placing = requestAnimationFrame(() => { placing = 0; placeDefine(); }); };
-  window.addEventListener('scroll', placeSoon, { passive: true });
-  window.addEventListener('resize', placeSoon, { passive: true });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !defSheet.hidden) closeDefine(); });
-  document.addEventListener('pointerdown', e => {
-    if (!defSheet.hidden && !e.composedPath().includes(host) && e.target !== defineBtn && e.target !== guideBtn) closeDefine();
+  const placeSoon = () => {
+    if (!defSheet.hidden && !placing)
+      placing = requestAnimationFrame(() => {
+        placing = 0;
+        placeDefine();
+      });
+  };
+  window.addEventListener("scroll", placeSoon, { passive: true });
+  window.addEventListener("resize", placeSoon, { passive: true });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !defSheet.hidden) closeDefine();
+  });
+  document.addEventListener("pointerdown", (e) => {
+    if (
+      !defSheet.hidden &&
+      !e.composedPath().includes(host) &&
+      e.target !== defineBtn &&
+      e.target !== guideBtn
+    )
+      closeDefine();
   });
 
   // Sources (only the word and the script name are sent):
@@ -620,11 +847,12 @@
   //   l: indexes in d where each of Wiktionary's same-named sections starts }],
   //   names: [{ id, l: label, d: description }] }. A def is a list of text pieces and, for the
   //   word a "plural of …"-style definition points to, [text, target] pairs.
-  const DEF_KEY = 'ccm:defs';
+  const DEF_KEY = "ccm:defs";
   // entries saved by an older version are looked up again (2: 1.1.0 ran sub-senses together;
   // 3: before l, so LASH's "to bind" sense stayed hidden)
   const DEF_V = 3;
-  const DEF_MAX = 300, DEF_BYTES = 400e3; // localStorage is ~5 MB per site, shared with NYT
+  const DEF_MAX = 300,
+    DEF_BYTES = 400e3; // localStorage is ~5 MB per site, shared with NYT
   const defCache = new Map(); // WORD -> promise of { entry, failed: [source names] }
   // { WORD: { u: last used, v, e: entry } }, read from localStorage once, on the first lookup
   let defStore = null;
@@ -633,8 +861,14 @@
       const v = ls.get(DEF_KEY, {});
       defStore = isObj(v) ? v : {};
       const cutoff = Date.now() - KEEP_DAYS * 864e5;
-      const usable = d => d?.u >= cutoff && d.v === DEF_V && isObj(d.e) && Array.isArray(d.e.parts) && Array.isArray(d.e.names);
-      for (const k of Object.keys(defStore)) if (!usable(defStore[k])) delete defStore[k];
+      const usable = (d) =>
+        d?.u >= cutoff &&
+        d.v === DEF_V &&
+        isObj(d.e) &&
+        Array.isArray(d.e.parts) &&
+        Array.isArray(d.e.names);
+      for (const k of Object.keys(defStore))
+        if (!usable(defStore[k])) delete defStore[k];
     }
     return defStore;
   }
@@ -643,96 +877,187 @@
     const all = storedDefs();
     all[word] = { u: Date.now(), v: DEF_V, e: entry };
     // newest first; drop the oldest past the word or size limit
-    let keys = Object.keys(all).sort((a, b) => all[b].u - all[a].u).slice(0, DEF_MAX);
-    const pick = () => Object.fromEntries(keys.map(k => [k, all[k]]));
+    let keys = Object.keys(all)
+      .sort((a, b) => all[b].u - all[a].u)
+      .slice(0, DEF_MAX);
+    const pick = () => Object.fromEntries(keys.map((k) => [k, all[k]]));
     let json = JSON.stringify(pick());
-    while (keys.length > 1 && json.length > DEF_BYTES) { keys = keys.slice(0, Math.ceil(keys.length * 0.9)); json = JSON.stringify(pick()); }
+    while (keys.length > 1 && json.length > DEF_BYTES) {
+      keys = keys.slice(0, Math.ceil(keys.length * 0.9));
+      json = JSON.stringify(pick());
+    }
     for (let tries = 0; tries < 3; tries++) {
-      try { localStorage.setItem(DEF_KEY, json); break; }
-      catch { keys = keys.slice(0, Math.floor(keys.length / 2)); json = JSON.stringify(pick()); } // full: make room
+      try {
+        localStorage.setItem(DEF_KEY, json);
+        break;
+      } catch {
+        keys = keys.slice(0, Math.floor(keys.length / 2));
+        json = JSON.stringify(pick());
+      } // full: make room
     }
     defStore = pick();
   }
-  const defText = d => d.map(s => typeof s === 'string' ? s : s[0]).join('');
+  const defText = (d) =>
+    d.map((s) => (typeof s === "string" ? s : s[0])).join("");
   // a definition's HTML as text pieces (never inserted as HTML): footnotes, styles and
   // Wiktionary's editor notes ("Can we add an example for this sense?") are dropped
   function defPieces(html) {
     const out = [];
-    const add = s => { if (typeof out[out.length - 1] === 'string') out[out.length - 1] += s; else out.push(s); };
-    const walk = node => {
+    const add = (s) => {
+      if (typeof out[out.length - 1] === "string") out[out.length - 1] += s;
+      else out.push(s);
+    };
+    const walk = (node) => {
       for (const n of node.childNodes) {
         if (n.nodeType === 3) add(n.textContent);
         // (sub-senses come again as definitions of their own, so a sense's nested list is skipped)
-        else if (n.nodeType !== 1 || /^(sup|style|script|ol|ul)$/i.test(n.localName) || n.classList.contains('maintenance-line')) continue;
-        else if (n.localName === 'a' && n.closest('.form-of-definition-link') && /^\/wiki\/[^:#]+(#English)?$/.test(n.getAttribute('href') || ''))
-          out.push([n.textContent, decodeURIComponent(n.getAttribute('href').slice(6).replace(/#.*/, '')).replace(/_/g, ' ')]);
+        else if (
+          n.nodeType !== 1 ||
+          /^(sup|style|script|ol|ul)$/i.test(n.localName) ||
+          n.classList.contains("maintenance-line")
+        )
+          continue;
+        else if (
+          n.localName === "a" &&
+          n.closest(".form-of-definition-link") &&
+          /^\/wiki\/[^:#]+(#English)?$/.test(n.getAttribute("href") || "")
+        )
+          out.push([
+            n.textContent,
+            decodeURIComponent(
+              n.getAttribute("href").slice(6).replace(/#.*/, ""),
+            ).replace(/_/g, " "),
+          ]);
         else walk(n);
       }
     };
-    walk(new DOMParser().parseFromString(html, 'text/html').body);
+    walk(new DOMParser().parseFromString(html, "text/html").body);
     // fractions like 1⁄16 arrive without their 1
-    for (let i = 0; i < out.length; i++) if (typeof out[i] === 'string') out[i] = out[i].replace(/(^|[^\d])⁄/g, '$11⁄');
-    if (typeof out[0] === 'string') out[0] = out[0].trimStart();
-    if (typeof out[out.length - 1] === 'string') out[out.length - 1] = out[out.length - 1].trimEnd();
-    return out.filter(s => s !== '');
+    for (let i = 0; i < out.length; i++)
+      if (typeof out[i] === "string")
+        out[i] = out[i].replace(/(^|[^\d])⁄/g, "$11⁄");
+    if (typeof out[0] === "string") out[0] = out[0].trimStart();
+    if (typeof out[out.length - 1] === "string")
+      out[out.length - 1] = out[out.length - 1].trimEnd();
+    return out.filter((s) => s !== "");
   }
   // Wikimedia asks scripts in a browser, which can't set User-Agent, to name themselves in
   // Api-User-Agent (it costs one CORS preflight per request). A request still hanging after
   // 15 s counts as failed (and is tried again next time).
-  let version = '';
-  try { version = GM_info.script.version; } catch {} // eslint-disable-line no-undef
-  const WM_AGENT = `ConnectionsPalette/${version || '1'} (https://github.com/dividedby/games-scripts)`;
-  const wmFetch = url => fetch(url, { headers: { 'Api-User-Agent': WM_AGENT }, signal: AbortSignal.timeout?.(15e3) });
+  let version = "";
+  try {
+    version = GM_info.script.version;
+  } catch {} // eslint-disable-line no-undef
+  const WM_AGENT = `ConnectionsPalette/${version || "1"} (https://github.com/dividedby/games-scripts)`;
+  const wmFetch = (url) =>
+    fetch(url, {
+      headers: { "Api-User-Agent": WM_AGENT },
+      signal: AbortSignal.timeout?.(15e3),
+    });
   // one Wiktionary page: [{ p, d }], or [] when there's no page
   async function fetchPage(t) {
-    const r = await wmFetch('https://en.wiktionary.org/api/rest_v1/page/definition/' + encodeURIComponent(t.replace(/ /g, '_')));
+    const r = await wmFetch(
+      "https://en.wiktionary.org/api/rest_v1/page/definition/" +
+        encodeURIComponent(t.replace(/ /g, "_")),
+    );
     if (r.status === 404) return [];
-    if (!r.ok) throw new Error('lookup failed');
+    if (!r.ok) throw new Error("lookup failed");
     // (codes like ISO language codes are listed as "Symbol": no help in a word puzzle)
-    return ((await r.json()).en || []).filter(p => p.partOfSpeech !== 'Symbol')
-      .map(p => ({ p: p.partOfSpeech, d: (p.definitions || []).map(d => defPieces(d.definition || '')).filter(d => defText(d).trim()) }))
-      .filter(p => p.d.length);
+    return ((await r.json()).en || [])
+      .filter((p) => p.partOfSpeech !== "Symbol")
+      .map((p) => ({
+        p: p.partOfSpeech,
+        d: (p.definitions || [])
+          .map((d) => defPieces(d.definition || ""))
+          .filter((d) => defText(d).trim()),
+      }))
+      .filter((p) => p.d.length);
   }
-  const plain = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const plain = (s) =>
+    String(s || "")
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
   // Wikidata's top names for the word: exact matches only (the search also matches prefixes),
   // nothing without a description, no disambiguation or list pages. A match by another name
   // counts only when the word is in its label (MARS: Bruno Mars, but not SLIGHT: "snub"), and
   // those and bare "family name"/"given name" entries come after the rest.
   async function fetchNames(word) {
-    const r = await wmFetch('https://www.wikidata.org/w/api.php?action=wbsearchentities&format=json&origin=*&language=en&uselang=en&type=item&limit=10&search=' + encodeURIComponent(word));
-    if (!r.ok) throw new Error('lookup failed');
+    const r = await wmFetch(
+      "https://www.wikidata.org/w/api.php?action=wbsearchentities&format=json&origin=*&language=en&uselang=en&type=item&limit=10&search=" +
+        encodeURIComponent(word),
+    );
+    if (!r.ok) throw new Error("lookup failed");
     const want = plain(word);
-    const inLabel = s => plain(s.label) === want || String(s.label || '').split(/[\s,()-]+/).some(p => plain(p) === want);
-    const hits = ((await r.json()).search || []).filter(s => s?.id && s.description?.trim() && inLabel(s)
-      && (plain(s.label) === want || plain(s.match?.text) === want) && !/disambiguation|^Wikimedia /i.test(s.description));
-    const rank = s => (/\b(family name|given name|surname|first name)\b/i.test(s.description || '') ? 2 : 0) + (plain(s.label) === want ? 0 : 1);
-    return hits.map((s, i) => [rank(s), i, s]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map(x => x[2]).slice(0, 3)
-      .map(s => ({ id: s.id, l: s.label || word, d: s.description || '' }));
+    const inLabel = (s) =>
+      plain(s.label) === want ||
+      String(s.label || "")
+        .split(/[\s,()-]+/)
+        .some((p) => plain(p) === want);
+    const hits = ((await r.json()).search || []).filter(
+      (s) =>
+        s?.id &&
+        s.description?.trim() &&
+        inLabel(s) &&
+        (plain(s.label) === want || plain(s.match?.text) === want) &&
+        !/disambiguation|^Wikimedia /i.test(s.description),
+    );
+    const rank = (s) =>
+      (/\b(family name|given name|surname|first name)\b/i.test(
+        s.description || "",
+      )
+        ? 2
+        : 0) + (plain(s.label) === want ? 0 : 1);
+    return hits
+      .map((s, i) => [rank(s), i, s])
+      .sort((a, b) => a[0] - b[0] || a[1] - b[1])
+      .map((x) => x[2])
+      .slice(0, 3)
+      .map((s) => ({ id: s.id, l: s.label || word, d: s.description || "" }));
   }
   async function fetchDef(word) {
     const lower = word.toLowerCase();
-    const forms = [...new Set([lower, lower[0].toUpperCase() + lower.slice(1), word.toUpperCase()])];
+    const forms = [
+      ...new Set([
+        lower,
+        lower[0].toUpperCase() + lower.slice(1),
+        word.toUpperCase(),
+      ]),
+    ];
     const pages = forms.map(fetchPage);
-    const names = Promise.race(pages.map(p => p.catch(() => {}))).then(() => fetchNames(word));
-    const [got, n] = await Promise.all([Promise.allSettled(pages), names.then(v => ({ v }), () => ({ v: null }))]);
+    const names = Promise.race(pages.map((p) => p.catch(() => {}))).then(() =>
+      fetchNames(word),
+    );
+    const [got, n] = await Promise.all([
+      Promise.allSettled(pages),
+      names.then(
+        (v) => ({ v }),
+        () => ({ v: null }),
+      ),
+    ]);
     const failed = [];
-    if (got.some(g => g.status === 'rejected')) failed.push('Wiktionary');
-    if (!n.v) failed.push('Wikidata');
+    if (got.some((g) => g.status === "rejected")) failed.push("Wiktionary");
+    if (!n.v) failed.push("Wikidata");
     // merge the pages, lowercase first: one list per part of speech (Wiktionary also splits
     // them by word origin, e.g. two "Verb"s for LASH), each definition once
     const parts = [];
     let title = null;
     got.forEach((g, i) => {
-      if (g.status !== 'fulfilled') return;
+      if (g.status !== "fulfilled") return;
       if (g.value.length && !title) title = forms[i];
       for (const p of g.value) {
-        let into = parts.find(q => q.p === p.p);
-        if (!into) parts.push(into = { p: p.p, d: [], l: [] });
+        let into = parts.find((q) => q.p === p.p);
+        if (!into) parts.push((into = { p: p.p, d: [], l: [] }));
         let lead = true;
-        for (const d of p.d) if (!into.d.some(e => defText(e) === defText(d))) {
-          if (lead) { into.l.push(into.d.length); lead = false; }
-          into.d.push(d);
-        }
+        for (const d of p.d)
+          if (!into.d.some((e) => defText(e) === defText(d))) {
+            if (lead) {
+              into.l.push(into.d.length);
+              lead = false;
+            }
+            into.d.push(d);
+          }
       }
     });
     return { entry: { title, parts, names: n.v || [] }, failed };
@@ -745,50 +1070,101 @@
       if (kept) {
         p = Promise.resolve({ entry: kept.e, failed: [] });
         if (Date.now() - kept.u > 864e5) storeDef(key, kept.e); // restart its 60 days (at most once a day)
-      }
-      else {
-        p = fetchDef(word.trim()).then(r => {
-          if (r.failed.length) defCache.delete(key); // incomplete: kept for nothing, tried again next time
-          else storeDef(key, r.entry); // (a word with no entry anywhere is complete too)
-          return r;
-        }).catch(e => { // something unexpected: show it as both sources failing, try again next time
-          console.warn('[Connections Palette] lookup failed', e);
-          defCache.delete(key);
-          return { entry: { title: null, parts: [], names: [] }, failed: ['Wiktionary', 'Wikidata'] };
-        });
+      } else {
+        p = fetchDef(word.trim())
+          .then((r) => {
+            if (r.failed.length)
+              defCache.delete(key); // incomplete: kept for nothing, tried again next time
+            else storeDef(key, r.entry); // (a word with no entry anywhere is complete too)
+            return r;
+          })
+          .catch((e) => {
+            // something unexpected: show it as both sources failing, try again next time
+            console.warn("[Connections Palette] lookup failed", e);
+            defCache.delete(key);
+            return {
+              entry: { title: null, parts: [], names: [] },
+              failed: ["Wiktionary", "Wikidata"],
+            };
+          });
       }
       defCache.set(key, p);
     }
     return defCache.get(key);
   }
   // rare, old or regional senses go behind "Show all"
-  const RARE = /^\s*\([^)]*\b(obsolete|archaic|dated|rare|historical|dialect(al)?|nonstandard|uncommon|obscure)\b/i;
+  const RARE =
+    /^\s*\([^)]*\b(obsolete|archaic|dated|rare|historical|dialect(al)?|nonstandard|uncommon|obscure)\b/i;
   const PER_PART = 5; // Wiktionary lists senses by history, not by how common they are
   // the one link kept in a definition is the word a "plural of …" points to: tap to look it up
-  const defNode = d => el('li', {}, d.map(s => typeof s === 'string' ? s
-    : el('button', { className: 'w', type: 'button', textContent: s[0], onclick: () => define(s[1]) })));
+  const defNode = (d) =>
+    el(
+      "li",
+      {},
+      d.map((s) =>
+        typeof s === "string"
+          ? s
+          : el("button", {
+              className: "w",
+              type: "button",
+              textContent: s[0],
+              onclick: () => define(s[1]),
+            }),
+      ),
+    );
   // The colors run from easiest (yellow) to trickiest (purple); beyond that NYT says nothing,
   // so these are tendencies people who track the puzzles see, not rules. Nothing here looks at
   // the day's puzzle.
   const GUIDE = [
-    ['yellow', 'The most straightforward: plain synonyms or an obvious set (fish, car makers), each word in its everyday sense.'],
-    ['green', 'Still about meaning, but a narrower set, or a less obvious sense of the words.'],
-    ['blue', 'Trivia or specialist knowledge (sports, pop culture, jargon), or words that each go with the same word.'],
-    ['purple', 'The trickiest, usually wordplay: words that complete a phrase ("___ OFFICE"), a word hidden in each, a letter added or dropped, sound-alikes. Sometimes just a very narrow set.'],
+    [
+      "yellow",
+      "The most straightforward: plain synonyms or an obvious set (fish, car makers), each word in its everyday sense.",
+    ],
+    [
+      "green",
+      "Still about meaning, but a narrower set, or a less obvious sense of the words.",
+    ],
+    [
+      "blue",
+      "Trivia or specialist knowledge (sports, pop culture, jargon), or words that each go with the same word.",
+    ],
+    [
+      "purple",
+      'The trickiest, usually wordplay: words that complete a phrase ("___ OFFICE"), a word hidden in each, a letter added or dropped, sound-alikes. Sometimes just a very narrow set.',
+    ],
   ];
-  const sheetHeader = text => {
-    const x = el('button', { className: 'x', type: 'button', textContent: '✕', title: 'Close', onclick: closeDefine });
-    x.setAttribute('aria-label', 'Close');
-    return el('header', {}, [el('h4', { textContent: text }), x]);
+  const sheetHeader = (text) => {
+    const x = el("button", {
+      className: "x",
+      type: "button",
+      textContent: "✕",
+      title: "Close",
+      onclick: closeDefine,
+    });
+    x.setAttribute("aria-label", "Close");
+    return el("header", {}, [el("h4", { textContent: text }), x]);
   };
   function showGuide() {
     ++defineToken; // a lookup still loading won't replace it
-    defSheet.dataset.view = 'guide';
-    defSheet.replaceChildren(sheetHeader('Color guide'), el('div', { className: 'guide' }, [
-      ...GUIDE.map(([k, t]) => el('p', {}, [
-        el('b', { textContent: k[0].toUpperCase() + k.slice(1), style: `background:${COLORS.find(c => c.key === k).hex}` }), ' ' + t])),
-      el('small', { textContent: 'Tendencies, not rules: NYT only says the colors run from easiest to trickiest.' }),
-    ]));
+    defSheet.dataset.view = "guide";
+    defSheet.replaceChildren(
+      sheetHeader("Color guide"),
+      el("div", { className: "guide" }, [
+        ...GUIDE.map(([k, t]) =>
+          el("p", {}, [
+            el("b", {
+              textContent: k[0].toUpperCase() + k.slice(1),
+              style: `background:${COLORS.find((c) => c.key === k).hex}`,
+            }),
+            " " + t,
+          ]),
+        ),
+        el("small", {
+          textContent:
+            "Tendencies, not rules: NYT only says the colors run from easiest to trickiest.",
+        }),
+      ]),
+    );
     defSheet.hidden = false;
     defSheet.scrollTop = 0;
     placeDefine();
@@ -796,12 +1172,22 @@
   let defineToken = 0;
   async function define(word) {
     const token = ++defineToken;
-    defSheet.dataset.view = 'define';
-    const title = el('h4', { textContent: up(word) });
-    const x = el('button', { className: 'x', type: 'button', textContent: '✕', title: 'Close', onclick: closeDefine });
-    x.setAttribute('aria-label', 'Close');
-    const status = text => el('p', { className: 'status', textContent: text });
-    defSheet.replaceChildren(el('header', {}, [title, x]), status('Looking it up…'));
+    defSheet.dataset.view = "define";
+    const title = el("h4", { textContent: up(word) });
+    const x = el("button", {
+      className: "x",
+      type: "button",
+      textContent: "✕",
+      title: "Close",
+      onclick: closeDefine,
+    });
+    x.setAttribute("aria-label", "Close");
+    const status = (text) =>
+      el("p", { className: "status", textContent: text });
+    defSheet.replaceChildren(
+      el("header", {}, [title, x]),
+      status("Looking it up…"),
+    );
     defSheet.hidden = false;
     placeDefine();
     const { entry, failed } = await lookup(word.trim());
@@ -811,48 +1197,117 @@
     for (const part of entry.parts) {
       // Wiktionary splits a word by origin (LASH: the whip word, then a separate word meaning
       // "to bind"), so the first sense of each origin gets a place before the rest fill up
-      const common = part.d.filter(d => !RARE.test(defText(d)));
+      const common = part.d.filter((d) => !RARE.test(defText(d)));
       const pool = common.length ? common : part.d;
-      const shown = new Set((part.l || []).map(i => part.d[i]).filter(d => pool.includes(d)).slice(0, PER_PART));
+      const shown = new Set(
+        (part.l || [])
+          .map((i) => part.d[i])
+          .filter((d) => pool.includes(d))
+          .slice(0, PER_PART),
+      );
       for (const d of pool) if (shown.size < PER_PART) shown.add(d);
-      const ol = el('ol');
+      const ol = el("ol");
       for (const d of part.d) {
         const li = defNode(d);
-        if (!shown.has(d)) { li.classList.add('rare'); li.hidden = true; hidden++; }
+        if (!shown.has(d)) {
+          li.classList.add("rare");
+          li.hidden = true;
+          hidden++;
+        }
         ol.append(li);
       }
-      body.push(el('h5', { textContent: part.p }), ol);
+      body.push(el("h5", { textContent: part.p }), ol);
     }
     if (entry.names.length) {
-      body.push(el('h5', { textContent: 'Names and titles' }), el('ul', { className: 'names' }, entry.names.map(n => el('li', {}, [
-        el('a', { textContent: n.l, target: '_blank', rel: 'noopener', href: 'https://www.wikidata.org/wiki/' + encodeURIComponent(n.id) }),
-        ...(n.d ? [el('span', { textContent: ' — ' + n.d })] : []),
-      ]))));
+      body.push(
+        el("h5", { textContent: "Names and titles" }),
+        el(
+          "ul",
+          { className: "names" },
+          entry.names.map((n) =>
+            el("li", {}, [
+              el("a", {
+                textContent: n.l,
+                target: "_blank",
+                rel: "noopener",
+                href:
+                  "https://www.wikidata.org/wiki/" + encodeURIComponent(n.id),
+              }),
+              ...(n.d ? [el("span", { textContent: " — " + n.d })] : []),
+            ]),
+          ),
+        ),
+      );
     }
-    const missing = failed.length ? `Couldn't reach ${failed.join(' or ')}. Check your connection and try again.` : '';
+    const missing = failed.length
+      ? `Couldn't reach ${failed.join(" or ")}. Check your connection and try again.`
+      : "";
     if (!body.length) {
-      defSheet.lastChild.textContent = missing || 'No dictionary entry for this one. It may be a phrase or part of a longer word.';
+      defSheet.lastChild.textContent =
+        missing ||
+        "No dictionary entry for this one. It may be a phrase or part of a longer word.";
       return;
     }
-    if (missing) body.push(status(missing.replace('. Check', ', so this may be missing some. Check')));
-    const all = el('button', { type: 'button', textContent: `Show all (${hidden} more)`, hidden: !hidden });
-    all.onclick = () => { defSheet.querySelectorAll('li[hidden]').forEach(li => { li.hidden = false; }); all.hidden = true; };
-    const src = el('span', { className: 'src' }, entry.title ? [
-      el('a', { textContent: 'Wiktionary ↗', target: '_blank', rel: 'noopener',
-        href: 'https://en.wiktionary.org/wiki/' + encodeURIComponent(entry.title.replace(/ /g, '_')) + '#English' }),
-      el('a', { className: 'lic', textContent: 'CC BY-SA', target: '_blank', rel: 'noopener', href: 'https://creativecommons.org/licenses/by-sa/4.0/' }),
-    ] : []);
-    defSheet.replaceChildren(el('header', {}, [title, x]), ...body, el('div', { className: 'foot' }, [all, src]));
+    if (missing)
+      body.push(
+        status(
+          missing.replace(". Check", ", so this may be missing some. Check"),
+        ),
+      );
+    const all = el("button", {
+      type: "button",
+      textContent: `Show all (${hidden} more)`,
+      hidden: !hidden,
+    });
+    all.onclick = () => {
+      defSheet.querySelectorAll("li[hidden]").forEach((li) => {
+        li.hidden = false;
+      });
+      all.hidden = true;
+    };
+    const src = el(
+      "span",
+      { className: "src" },
+      entry.title
+        ? [
+            el("a", {
+              textContent: "Wiktionary ↗",
+              target: "_blank",
+              rel: "noopener",
+              href:
+                "https://en.wiktionary.org/wiki/" +
+                encodeURIComponent(entry.title.replace(/ /g, "_")) +
+                "#English",
+            }),
+            el("a", {
+              className: "lic",
+              textContent: "CC BY-SA",
+              target: "_blank",
+              rel: "noopener",
+              href: "https://creativecommons.org/licenses/by-sa/4.0/",
+            }),
+          ]
+        : [],
+    );
+    defSheet.replaceChildren(
+      el("header", {}, [title, x]),
+      ...body,
+      el("div", { className: "foot" }, [all, src]),
+    );
     defSheet.scrollTop = 0;
     placeDefine();
   }
   // show the button only with one tile selected (and the setting on), right before Shuffle
   function showDefine() {
-    const shuffle = document.querySelector('[data-testid="shuffle-btn"]') || gameButton(/^shuffle$/i);
-    const submit = document.querySelector('[data-testid="submit-btn"]') || gameButton(/^submit$/i);
+    const shuffle =
+      document.querySelector('[data-testid="shuffle-btn"]') ||
+      gameButton(/^shuffle$/i);
+    const submit =
+      document.querySelector('[data-testid="submit-btn"]') ||
+      gameButton(/^submit$/i);
     for (const b of squeezed) if (!b.isConnected) squeezed.delete(b); // the game replaced it
-    const on = !!shuffle && opt('define') && selectedTiles().length === 1;
-    const guideOn = !!submit && opt('guide');
+    const on = !!shuffle && opt("define") && selectedTiles().length === 1;
+    const guideOn = !!submit && opt("guide");
     if (shuffle && defineBtn.nextElementSibling !== shuffle) {
       shuffle.before(defineBtn);
       defineBtn.className = shuffle.className; // look like the game's own buttons
@@ -863,18 +1318,29 @@
     }
     // with Guide in the row, the game's "Deselect All" becomes "Deselect" to make room (its one
     // text node is changed in place, which React leaves alone since it never changes that text)
-    const deselect = document.querySelector('[data-testid="deselect-btn"]') || gameButton(/^deselect( all)?$/i);
-    const label = deselect && [...deselect.childNodes].find(n => n.nodeType === 3 && /^Deselect( All)?$/.test(n.nodeValue));
-    const want = guideOn ? 'Deselect' : 'Deselect All';
+    const deselect =
+      document.querySelector('[data-testid="deselect-btn"]') ||
+      gameButton(/^deselect( all)?$/i);
+    const label =
+      deselect &&
+      [...deselect.childNodes].find(
+        (n) => n.nodeType === 3 && /^Deselect( All)?$/.test(n.nodeValue),
+      );
+    const want = guideOn ? "Deselect" : "Deselect All";
     if (label && label.nodeValue !== want) label.nodeValue = want;
     // (style, not the hidden attribute: the game's button class sets display itself)
-    const display = on ? '' : 'none', guideDisplay = guideOn ? '' : 'none';
+    const display = on ? "" : "none",
+      guideDisplay = guideOn ? "" : "none";
     if (defineBtn.style.display !== display) defineBtn.style.display = display;
-    if (guideBtn.style.display !== guideDisplay) guideBtn.style.display = guideDisplay;
+    if (guideBtn.style.display !== guideDisplay)
+      guideBtn.style.display = guideDisplay;
     const shown = `${on}|${guideOn}`;
-    if (shown !== rowShown) { rowShown = shown; fitDefine(); }
-    if (!opt('define') && defSheet.dataset.view === 'define') closeDefine();
-    if (!opt('guide') && defSheet.dataset.view === 'guide') closeDefine();
+    if (shown !== rowShown) {
+      rowShown = shown;
+      fitDefine();
+    }
+    if (!opt("define") && defSheet.dataset.view === "define") closeDefine();
+    if (!opt("guide") && defSheet.dataset.view === "guide") closeDefine();
   }
   // Up to five buttons are a squeeze on a phone. The game sizes its buttons by fixed minimum
   // widths, so with ours in the row every button instead takes its text plus some padding and
@@ -882,39 +1348,51 @@
   // gaps shrink a step at a time, and last Guide becomes "ⓘ". Only then do they wrap.
   // Each step: [short labels (1) or Guide as ⓘ (2), padding, gap]
   const FIT = [
-    [0, '', ''],
-    [1, '14px', '6px'],
-    [1, '10px', '5px'],
-    [1, '6px', '4px'],
-    [2, '6px', '4px'],
+    [0, "", ""],
+    [1, "14px", "6px"],
+    [1, "10px", "5px"],
+    [1, "6px", "4px"],
+    [2, "6px", "4px"],
   ];
-  let rowShown = '';
+  let rowShown = "";
   const squeezed = new Set(); // the game's buttons we've resized, to put back
   function fitDefine() {
     const row = defineBtn.parentElement || guideBtn.parentElement;
     if (!row) return;
-    const ours = [defineBtn, guideBtn].filter(b => b.style.display !== 'none');
+    const ours = [defineBtn, guideBtn].filter(
+      (b) => b.style.display !== "none",
+    );
     const size = (b, pad) => {
-      b.style.minWidth = pad ? '0' : '';
-      b.style.flex = pad ? '1 1 auto' : '';
+      b.style.minWidth = pad ? "0" : "";
+      b.style.flex = pad ? "1 1 auto" : "";
       b.style.paddingLeft = b.style.paddingRight = pad;
     };
-    const compact = step => {
+    const compact = (step) => {
       const [short, pad, gap] = FIT[step];
-      const setText = (b, t) => { if (b.textContent !== t) b.textContent = t; }; // unchanged: no mutation to redraw for
-      setText(defineBtn, short ? 'Define' : 'Definition');
-      setText(guideBtn, short > 1 ? 'ⓘ' : 'Guide');
+      const setText = (b, t) => {
+        if (b.textContent !== t) b.textContent = t;
+      }; // unchanged: no mutation to redraw for
+      setText(defineBtn, short ? "Define" : "Definition");
+      setText(guideBtn, short > 1 ? "ⓘ" : "Guide");
       for (const b of [defineBtn, guideBtn]) size(b, pad);
-      for (const b of squeezed) if (b.isConnected) size(b, '');
+      for (const b of squeezed) if (b.isConnected) size(b, "");
       squeezed.clear();
-      if (pad) for (const b of row.children) if (b.localName === 'button' && !ours.includes(b)) { size(b, pad); squeezed.add(b); }
+      if (pad)
+        for (const b of row.children)
+          if (b.localName === "button" && !ours.includes(b)) {
+            size(b, pad);
+            squeezed.add(b);
+          }
       row.style.gap = gap;
     };
     compact(0);
-    row.style.flexWrap = ours.length ? 'wrap' : '';
+    row.style.flexWrap = ours.length ? "wrap" : "";
     if (!ours.length) return;
-    const first = [...row.children].find(c => c.offsetParent);
-    const wraps = () => [...row.children].some(c => c.offsetParent && c.offsetTop !== first.offsetTop);
+    const first = [...row.children].find((c) => c.offsetParent);
+    const wraps = () =>
+      [...row.children].some(
+        (c) => c.offsetParent && c.offsetTop !== first.offsetTop,
+      );
     for (let step = 1; step < FIT.length && wraps(); step++) compact(step);
   }
   // tiles being selected only changes their class, which the redraw observer doesn't watch
@@ -924,51 +1402,71 @@
   let armed = null;
   function arm(c) {
     armed = c;
-    for (const k of ORDER) { btns[k].classList.toggle('active', k === c); btns[k].setAttribute('aria-pressed', String(k === c)); }
+    for (const k of ORDER) {
+      btns[k].classList.toggle("active", k === c);
+      btns[k].setAttribute("aria-pressed", String(k === c));
+    }
     clearConfirm();
     showGo();
   }
   function shake() {
-    panel.classList.remove('shake'); void panel.offsetWidth; panel.classList.add('shake');
+    panel.classList.remove("shake");
+    void panel.offsetWidth;
+    panel.classList.add("shake");
   }
-  panel.addEventListener('animationend', () => panel.classList.remove('shake'));
+  panel.addEventListener("animationend", () => panel.classList.remove("shake"));
 
   // Go is tinted with the color it will submit
   function showGo() {
     if (confirmFor) return;
     const c = armed || nextColor();
-    goBtn.textContent = 'Go ▶';
-    goBtn.style.background = c ? HEX[c] : '';
-    const n = c ? tiles().filter(t => marks[wordOf(t)] === c).length : 0;
+    goBtn.textContent = "Go ▶";
+    goBtn.style.background = c ? HEX[c] : "";
+    const n = c ? tiles().filter((t) => marks[wordOf(t)] === c).length : 0;
     const full = n === 4;
-    goBtn.classList.toggle('notready', !full); // dimmed: Go would just shake
-    goBtn.title = !c ? 'Nothing left to submit'
-      : !full ? `${c} needs 4 tiles to submit (has ${n})`
-      : armed ? `Select the 4 ${armed} tiles and submit`
-      : `Submit the next color in order (${c})`;
+    goBtn.classList.toggle("notready", !full); // dimmed: Go would just shake
+    goBtn.title = !c
+      ? "Nothing left to submit"
+      : !full
+        ? `${c} needs 4 tiles to submit (has ${n})`
+        : armed
+          ? `Select the 4 ${armed} tiles and submit`
+          : `Submit the next color in order (${c})`;
   }
 
   function swapColors(a, b) {
-    const flip = c => c === a ? b : c === b ? a : c;
+    const flip = (c) => (c === a ? b : c === b ? a : c);
     for (const [w, c] of Object.entries(marks)) marks[w] = flip(c);
-    for (const [w, cs] of Object.entries(maybes)) maybes[w] = sortColors(cs.map(flip));
+    for (const [w, cs] of Object.entries(maybes))
+      maybes[w] = sortColors(cs.map(flip));
   }
-  const sortColors = cs => ORDER.filter(c => cs.includes(c));
+  const sortColors = (cs) => ORDER.filter((c) => cs.includes(c));
   // keeps each tile either decided or undecided. An undecided tile down to one candidate
   // becomes that color's mark when the color has room (else it stays a dashed one-color maybe).
   function settle() {
     for (const w of Object.keys(maybes)) {
-      const cs = sortColors([...(maybes[w] || []), ...(marks[w] ? [marks[w]] : [])]);
+      const cs = sortColors([
+        ...(maybes[w] || []),
+        ...(marks[w] ? [marks[w]] : []),
+      ]);
       if (!cs.length) delete maybes[w];
-      else if (cs.length === 1 && (marks[w] === cs[0] || countOf(cs[0]) < MAX_PER_COLOR)) {
-        marks[w] = cs[0]; delete maybes[w];
-      } else { maybes[w] = cs; delete marks[w]; }
+      else if (
+        cs.length === 1 &&
+        (marks[w] === cs[0] || countOf(cs[0]) < MAX_PER_COLOR)
+      ) {
+        marks[w] = cs[0];
+        delete maybes[w];
+      } else {
+        maybes[w] = cs;
+        delete marks[w];
+      }
     }
   }
   const snapshot = () => JSON.stringify({ m: marks, y: maybes });
   function restore(snap) {
     const o = JSON.parse(snap);
-    marks = o.m; maybes = o.y;
+    marks = o.m;
+    maybes = o.y;
   }
 
   // ---------- undo: snapshots of your marks before each change you make ----------
@@ -979,9 +1477,14 @@
     if (undoStack.length > UNDO_LIMIT) undoStack.shift();
     showUndo();
   }
-  function showUndo() { undoBtn.classList.toggle('off', !undoStack.length); }
+  function showUndo() {
+    undoBtn.classList.toggle("off", !undoStack.length);
+  }
   function undo() {
-    if (submitting || !undoStack.length) { shake(); return; }
+    if (submitting || !undoStack.length) {
+      shake();
+      return;
+    }
     restore(undoStack.pop());
     arm(null);
     save();
@@ -995,53 +1498,93 @@
     const sel = selectedTiles();
     const solved = solvedColors();
     if (!sel.length) {
-      if (maybeMode) { shake(); return; } // maybes go on selected tiles
-      if (!HEX[color] || solved.has(color)) { arm(null); shake(); return; } // nothing to arm
-      if (!armed) { arm(color); return; }
-      if (armed !== color) { remember(); swapColors(armed, color); save(); apply(); }
+      if (maybeMode) {
+        shake();
+        return;
+      } // maybes go on selected tiles
+      if (!HEX[color] || solved.has(color)) {
+        arm(null);
+        shake();
+        return;
+      } // nothing to arm
+      if (!armed) {
+        arm(color);
+        return;
+      }
+      if (armed !== color) {
+        remember();
+        swapColors(armed, color);
+        save();
+        apply();
+      }
       arm(null);
       return;
     }
     arm(null);
     const words = sel.map(wordOf);
     const before = snapshot();
-    if (color === 'erase') {
-      for (const w of words) { delete marks[w]; delete maybes[w]; }
+    if (color === "erase") {
+      for (const w of words) {
+        delete marks[w];
+        delete maybes[w];
+      }
     } else if (maybeMode) {
       // toggle the tapped color among the selection's options (on for all if any lacks it):
       // one option is a plain mark, two or more split the outline
-      if (solved.has(color)) { shake(); return; }
-      const opts = w => maybes[w] || (marks[w] ? [marks[w]] : []);
-      const add = words.some(w => !opts(w).includes(color));
+      if (solved.has(color)) {
+        shake();
+        return;
+      }
+      const opts = (w) => maybes[w] || (marks[w] ? [marks[w]] : []);
+      const add = words.some((w) => !opts(w).includes(color));
       for (const w of words) {
         const cs = new Set(opts(w));
-        if (add) cs.add(color); else cs.delete(color);
+        if (add) cs.add(color);
+        else cs.delete(color);
         delete marks[w];
-        if (cs.size) maybes[w] = sortColors([...cs]); else delete maybes[w];
+        if (cs.size) maybes[w] = sortColors([...cs]);
+        else delete maybes[w];
       }
       settle();
-      if (opt('autoFill')) autoFill(); // a split down to one color may have filled a third color
+      if (opt("autoFill")) autoFill(); // a split down to one color may have filled a third color
     } else {
-      if (solved.has(color)) { shake(); return; } // that group is already solved
-      const incoming = words.filter(w => marks[w] !== color);
-      const outgoing = words.filter(w => marks[w] === color);
+      if (solved.has(color)) {
+        shake();
+        return;
+      } // that group is already solved
+      const incoming = words.filter((w) => marks[w] !== color);
+      const outgoing = words.filter((w) => marks[w] === color);
       if (countOf(color) + incoming.length > MAX_PER_COLOR) {
         // color is full: if you selected as many of its tiles as new ones, exchange them,
         // e.g. TENOR (blue) + LAB (purple) → purple makes TENOR purple and LAB blue
-        if (!outgoing.length || outgoing.length !== incoming.length) { shake(); return; } // selection stays
+        if (!outgoing.length || outgoing.length !== incoming.length) {
+          shake();
+          return;
+        } // selection stays
         incoming.forEach((w, i) => {
           const old = marks[w];
-          if (old) marks[outgoing[i]] = old; else delete marks[outgoing[i]];
-          if (maybes[w]) { maybes[outgoing[i]] = maybes[w]; delete maybes[w]; } // an undecided tile's options move too
+          if (old) marks[outgoing[i]] = old;
+          else delete marks[outgoing[i]];
+          if (maybes[w]) {
+            maybes[outgoing[i]] = maybes[w];
+            delete maybes[w];
+          } // an undecided tile's options move too
           marks[w] = color;
         });
       } else {
-        for (const w of incoming) { marks[w] = color; delete maybes[w]; }
-        if (opt('autoFill')) autoFill();
+        for (const w of incoming) {
+          marks[w] = color;
+          delete maybes[w];
+        }
+        if (opt("autoFill")) autoFill();
       }
       settle();
     }
-    if (snapshot() !== before) { undoStack.push(before); if (undoStack.length > UNDO_LIMIT) undoStack.shift(); showUndo(); }
+    if (snapshot() !== before) {
+      undoStack.push(before);
+      if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+      showUndo();
+    }
     save();
     apply();
     deselectAll();
@@ -1051,12 +1594,17 @@
   // color) → they all get the last color. Counts include words from groups you've already
   // solved, so it works mid-game too.
   function autoFill() {
-    const full = ORDER.filter(k => countOf(k) === MAX_PER_COLOR);
+    const full = ORDER.filter((k) => countOf(k) === MAX_PER_COLOR);
     if (full.length !== 3) return;
-    const last = ORDER.find(k => !full.includes(k));
-    const rest = tiles().map(wordOf).filter(w => !marks[w] || marks[w] === last);
+    const last = ORDER.find((k) => !full.includes(k));
+    const rest = tiles()
+      .map(wordOf)
+      .filter((w) => !marks[w] || marks[w] === last);
     if (rest.length !== 4) return;
-    for (const w of rest) { marks[w] = last; delete maybes[w]; }
+    for (const w of rest) {
+      marks[w] = last;
+      delete maybes[w];
+    }
   }
 
   // ---------- after a group is solved, correct the colors to match the game ----------
@@ -1068,27 +1616,36 @@
     if (!groups.length) return;
     const before = snapshot();
     for (const { color: real, words } of groups) {
-      if (!opt('reconcile')) { for (const w of words) marks[w] = real; continue; } // only the solved tiles
+      if (!opt("reconcile")) {
+        for (const w of words) marks[w] = real;
+        continue;
+      } // only the solved tiles
       const tally = {};
-      for (const w of words) if (marks[w]) tally[marks[w]] = (tally[marks[w]] || 0) + 1;
-      const guessed = Object.keys(tally).find(c => tally[c] >= 3);
+      for (const w of words)
+        if (marks[w]) tally[marks[w]] = (tally[marks[w]] || 0) + 1;
+      const guessed = Object.keys(tally).find((c) => tally[c] >= 3);
       if (guessed && guessed !== real) swapColors(guessed, real);
       for (const w of words) marks[w] = real;
     }
-    if (opt('reconcile')) {
-      const solvedAs = new Map(groups.flatMap(g => g.words.map(w => [w, g.color])));
-      const solved = new Set(groups.map(g => g.color));
+    if (opt("reconcile")) {
+      const solvedAs = new Map(
+        groups.flatMap((g) => g.words.map((w) => [w, g.color])),
+      );
+      const solved = new Set(groups.map((g) => g.color));
       for (const [w, c] of Object.entries(marks)) {
         if (solved.has(c) && solvedAs.get(w) !== c) delete marks[w];
       }
     }
     // a solved color drops out of every undecided tile (yellow-or-green becomes green once
     // yellow is solved), and solved tiles are decided
-    const solvedWords = new Set(groups.flatMap(g => g.words));
-    const solvedSet = new Set(groups.map(g => g.color));
+    const solvedWords = new Set(groups.flatMap((g) => g.words));
+    const solvedSet = new Set(groups.map((g) => g.color));
     for (const [w, cs] of Object.entries(maybes)) {
-      const keep = solvedWords.has(w) ? [] : cs.filter(c => !solvedSet.has(c));
-      if (keep.length) maybes[w] = keep; else delete maybes[w];
+      const keep = solvedWords.has(w)
+        ? []
+        : cs.filter((c) => !solvedSet.has(c));
+      if (keep.length) maybes[w] = keep;
+      else delete maybes[w];
     }
     settle();
     if (snapshot() !== before) save();
@@ -1099,45 +1656,72 @@
   // game counts as a mistake is kept, flagged if the game said "One away". Recorded always
   // (it's just this browser's storage); the settings only decide what's shown.
   const mistakesLeft = () => {
-    const n = parseInt(document.querySelector('[data-testid="mistake-count"]')?.textContent, 10);
+    const n = parseInt(
+      document.querySelector('[data-testid="mistake-count"]')?.textContent,
+      10,
+    );
     return Number.isNaN(n) ? null : n;
   };
-  const sameGuess = (a, b) => a.join('|') === b.join('|');
+  const sameGuess = (a, b) => a.join("|") === b.join("|");
   let pending = null; // { w, before, away, recorded }
   let pollTimer = null;
-  window.addEventListener('click', e => {
-    const b = e.target.closest?.('button');
-    if (!b || b !== submitButton()) return;
-    const w = selectedTiles().map(wordOf).sort();
-    if (w.length !== 4) return;
-    const old = guesses.find(g => sameGuess(g.w, w));
-    if (old) { // the game will just say "Already guessed"
-      if (opt('history')) note(old.away ? 'Already guessed · it was one away' : 'Already guessed');
-      return;
-    }
-    pending = { w, before: mistakesLeft(), away: false, recorded: null, at: Date.now() };
-    clearInterval(pollTimer);
-    // until the game answers: just watch for the result, and redraw only when it changes something
-    pollTimer = setInterval(() => {
-      if (!pending || Date.now() - pending.at > 6000) { pending = null; clearInterval(pollTimer); return; }
-      const before = guessSig();
-      checkGuess();
-      if (!pending || guessSig() !== before) apply();
-    }, 150);
-  }, true);
+  window.addEventListener(
+    "click",
+    (e) => {
+      const b = e.target.closest?.("button");
+      if (!b || b !== submitButton()) return;
+      const w = selectedTiles().map(wordOf).sort();
+      if (w.length !== 4) return;
+      const old = guesses.find((g) => sameGuess(g.w, w));
+      if (old) {
+        // the game will just say "Already guessed"
+        if (opt("history"))
+          note(
+            old.away ? "Already guessed · it was one away" : "Already guessed",
+          );
+        return;
+      }
+      pending = {
+        w,
+        before: mistakesLeft(),
+        away: false,
+        recorded: null,
+        at: Date.now(),
+      };
+      clearInterval(pollTimer);
+      // until the game answers: just watch for the result, and redraw only when it changes something
+      pollTimer = setInterval(() => {
+        if (!pending || Date.now() - pending.at > 6000) {
+          pending = null;
+          clearInterval(pollTimer);
+          return;
+        }
+        const before = guessSig();
+        checkGuess();
+        if (!pending || guessSig() !== before) apply();
+      }, 150);
+    },
+    true,
+  );
   const guessSig = () => JSON.stringify(guesses);
   function checkGuess() {
     if (!pending) return;
     const p = pending;
-    if (solvedGroups().some(g => p.w.every(w => g.words.includes(w)))) { pending = null; return; } // right
-    const toast = document.querySelector('[data-testid="connection-toast"]')?.textContent || '';
+    if (solvedGroups().some((g) => p.w.every((w) => g.words.includes(w)))) {
+      pending = null;
+      return;
+    } // right
+    const toast =
+      document.querySelector('[data-testid="connection-toast"]')?.textContent ||
+      "";
     if (/one away/i.test(toast)) p.away = true;
     const left = mistakesLeft();
     if (!p.recorded && p.before != null && left != null && left < p.before) {
       p.recorded = { w: p.w, away: p.away };
       guesses.push(p.recorded);
       saveGuesses();
-    } else if (p.recorded && p.away && !p.recorded.away) { // toast showed up after the count dropped
+    } else if (p.recorded && p.away && !p.recorded.away) {
+      // toast showed up after the count dropped
       p.recorded.away = true;
       saveGuesses();
     }
@@ -1149,51 +1733,90 @@
     noteEl.textContent = text;
     noteEl.hidden = false;
     clearTimeout(noteTimer);
-    noteTimer = setTimeout(() => { noteEl.hidden = true; }, 2600);
+    noteTimer = setTimeout(() => {
+      noteEl.hidden = true;
+    }, 2600);
   }
 
   let historyShown = null; // the guess list the open sheet shows
   function renderHistory() {
     const wrong = guesses.length;
-    const label = '📜' + (wrong ? wrong : '');
+    const label = "📜" + (wrong ? wrong : "");
     if (histBtn.textContent !== label) histBtn.textContent = label;
-    if (histSheet.hidden) { historyShown = null; return; }
+    if (histSheet.hidden) {
+      historyShown = null;
+      return;
+    }
     const sig = guessSig();
     if (sig === historyShown) return; // already showing this list
     historyShown = sig;
-    histSheet.innerHTML = '<h4>Wrong guesses</h4>' + (wrong
-      ? '<ol>' + guesses.map(g => `<li>${g.w.map(x => x.replace(/&/g, '&amp;').replace(/</g, '&lt;')).join(' · ')}${g.away ? ' <span class="away">one away</span>' : ''}</li>`).join('') + '</ol>'
-      : '<p class="empty">No wrong guesses yet.</p>');
+    histSheet.innerHTML =
+      "<h4>Wrong guesses</h4>" +
+      (wrong
+        ? "<ol>" +
+          guesses
+            .map(
+              (g) =>
+                `<li>${g.w.map((x) => x.replace(/&/g, "&amp;").replace(/</g, "&lt;")).join(" · ")}${g.away ? ' <span class="away">one away</span>' : ""}</li>`,
+            )
+            .join("") +
+          "</ol>"
+        : '<p class="empty">No wrong guesses yet.</p>');
   }
   function toggleHistory(open = histSheet.hidden) {
     histSheet.hidden = !open;
-    histBtn.classList.toggle('active', open);
-    if (open) { toggleSettings(false); renderHistory(); }
+    histBtn.classList.toggle("active", open);
+    if (open) {
+      toggleSettings(false);
+      renderHistory();
+    }
   }
 
   // ---------- Go: submit the armed color, or the next one in order ----------
-  let confirmFor = null, confirmTimer = null;
+  let confirmFor = null,
+    confirmTimer = null;
   let goQuietUntil = 0;
   function clearConfirm() {
     clearTimeout(confirmTimer);
     confirmFor = null;
-    goBtn.classList.remove('warn');
+    goBtn.classList.remove("warn");
   }
   function onGo() {
-    if (submitting || !opt('goButton')) return;
-    if (Date.now() < goQuietUntil) { shake(); return; } // a tap meant for an expired "Sure?"
+    if (submitting || !opt("goButton")) return;
+    if (Date.now() < goQuietUntil) {
+      shake();
+      return;
+    } // a tap meant for an expired "Sure?"
     const next = nextColor();
     const color = armed || next;
-    if (!color) { shake(); return; }
-    if (tiles().filter(t => marks[wordOf(t)] === color).length !== 4) { arm(null); shake(); return; }
+    if (!color) {
+      shake();
+      return;
+    }
+    if (tiles().filter((t) => marks[wordOf(t)] === color).length !== 4) {
+      arm(null);
+      shake();
+      return;
+    }
     // out of order? ask once: Go turns red "Sure?", a second tap within 4s submits
-    if (opt('orderWarn') && SORT_MODES[sortMode].order && armed && next && armed !== next && confirmFor !== armed) {
+    if (
+      opt("orderWarn") &&
+      SORT_MODES[sortMode].order &&
+      armed &&
+      next &&
+      armed !== next &&
+      confirmFor !== armed
+    ) {
       clearConfirm();
       confirmFor = armed;
-      goBtn.textContent = 'Sure?';
-      goBtn.title = `${armed} before ${next} breaks the ${SORT_MODES[sortMode].title.split(':')[0].toLowerCase()} order. Tap again to submit anyway.`;
-      goBtn.classList.add('warn');
-      confirmTimer = setTimeout(() => { arm(null); showGo(); goQuietUntil = Date.now() + GRACE_MS; }, CONFIRM_MS); // let go of the color too
+      goBtn.textContent = "Sure?";
+      goBtn.title = `${armed} before ${next} breaks the ${SORT_MODES[sortMode].title.split(":")[0].toLowerCase()} order. Tap again to submit anyway.`;
+      goBtn.classList.add("warn");
+      confirmTimer = setTimeout(() => {
+        arm(null);
+        showGo();
+        goQuietUntil = Date.now() + GRACE_MS;
+      }, CONFIRM_MS); // let go of the color too
       return;
     }
     clearConfirm();
@@ -1203,30 +1826,47 @@
   // select a color's 4 tiles, then press the game's Submit
   let submitting = false;
   async function submitColor(color) {
-    const targets = tiles().filter(t => marks[wordOf(t)] === color).map(wordOf);
-    if (targets.length !== 4) { arm(null); shake(); return; } // need exactly 4 of that color on the board
+    const targets = tiles()
+      .filter((t) => marks[wordOf(t)] === color)
+      .map(wordOf);
+    if (targets.length !== 4) {
+      arm(null);
+      shake();
+      return;
+    } // need exactly 4 of that color on the board
     submitting = true;
     arm(null);
     try {
       if (selectedTiles().length) await deselectAll();
       for (const w of targets) {
-        const t = tiles().find(x => wordOf(x) === w); // re-find in case of re-render
-        if (t && !isSelected(t)) { press(t); await sleep(80); }
+        const t = tiles().find((x) => wordOf(x) === w); // re-find in case of re-render
+        if (t && !isSelected(t)) {
+          press(t);
+          await sleep(80);
+        }
       }
       // wait for the game to register all 4 and enable Submit. Presses made while the game
       // is still animating a solve can be dropped, so press any that didn't take again.
       for (let i = 0; i < 40; i++) {
         if (i % 8 === 7) {
           const sel = selectedTiles().map(wordOf);
-          if (sel.length < 4 && sel.every(w => targets.includes(w)))
+          if (sel.length < 4 && sel.every((w) => targets.includes(w)))
             for (const w of targets) {
-              const t = tiles().find(x => wordOf(x) === w);
-              if (t && !isSelected(t)) { press(t); await sleep(80); }
+              const t = tiles().find((x) => wordOf(x) === w);
+              if (t && !isSelected(t)) {
+                press(t);
+                await sleep(80);
+              }
             }
         }
         const btn = submitButton();
         const sel = selectedTiles().map(wordOf);
-        if (btn && !btn.disabled && sel.length === 4 && targets.every(w => sel.includes(w))) {
+        if (
+          btn &&
+          !btn.disabled &&
+          sel.length === 4 &&
+          targets.every((w) => sel.includes(w))
+        ) {
           btn.click();
           return;
         }
@@ -1241,26 +1881,46 @@
   // press the game's own "Deselect All" button, then tap off anything still selected
   async function deselectAll() {
     const btn = gameButton(/deselect\s*all/i);
-    if (btn && !btn.disabled) { btn.click(); await sleep(150); }
-    for (const t of tiles()) if (isSelected(t)) { press(t); await sleep(60); }
+    if (btn && !btn.disabled) {
+      btn.click();
+      await sleep(150);
+    }
+    for (const t of tiles())
+      if (isSelected(t)) {
+        press(t);
+        await sleep(60);
+      }
   }
 
   // Once all 16 words are known (board + solved groups), saved marks for words that aren't
   // in this puzzle are leftovers. Old versions saved tile text doubled ("LITTLELITTLE");
   // those are renamed to the real word, anything else is dropped.
   function tidyKeys(groups) {
-    const words = new Set([...tiles().map(wordOf), ...groups.flatMap(g => g.words)]);
-    if (words.size !== 16) { puzzleWords = null; return; }
+    const words = new Set([
+      ...tiles().map(wordOf),
+      ...groups.flatMap((g) => g.words),
+    ]);
+    if (words.size !== 16) {
+      puzzleWords = null;
+      return;
+    }
     // just moved to another date in the same page: wait until its board has rendered,
     // or the old board's words would make every new mark look like a leftover
-    const sig = [...words].sort().join('|');
-    if (staleBoard && sig === staleBoard) { puzzleWords = null; return; }
+    const sig = [...words].sort().join("|");
+    if (staleBoard && sig === staleBoard) {
+      puzzleWords = null;
+      return;
+    }
     staleBoard = null;
     puzzleWords = words;
     let changed = false;
     for (const store of [marks, maybes]) {
       const keys = Object.keys(store);
-      if (keys.length && !keys.some(k => words.has(k) || words.has(undouble(k)))) continue; // none fit: wrong board, keep them
+      if (
+        keys.length &&
+        !keys.some((k) => words.has(k) || words.has(undouble(k)))
+      )
+        continue; // none fit: wrong board, keep them
       for (const k of keys) {
         if (words.has(k)) continue;
         const u = undouble(k);
@@ -1276,38 +1936,53 @@
   let staleBoard = null; // the previous puzzle's words, right after a date change
   const markRoots = new WeakMap(); // <ccm-mark> → its closed shadow root
   function drawMark(tile, color, away, maybe = []) {
-    let m = [...tile.children].find(n => n.localName === 'ccm-mark');
-    if (!color && !away && !maybe.length) { if (m) m.remove(); return; }
-    const key = `${color || ''}|${away}|${opt('letters') ? 1 : 0}|${maybe.join(',')}`;
+    let m = [...tile.children].find((n) => n.localName === "ccm-mark");
+    if (!color && !away && !maybe.length) {
+      if (m) m.remove();
+      return;
+    }
+    const key = `${color || ""}|${away}|${opt("letters") ? 1 : 0}|${maybe.join(",")}`;
     if (m && m.dataset.k === key) return; // already drawn
     if (!m) {
-      m = document.createElement('ccm-mark');
-      const r = m.attachShadow({ mode: 'closed' });
+      m = document.createElement("ccm-mark");
+      const r = m.attachShadow({ mode: "closed" });
       markRoots.set(m, r);
       tile.appendChild(m);
     }
     m.dataset.k = key;
     const r = markRoots.get(m);
     const cs = color ? [color] : maybe;
-    const letters = opt('letters') ? cs.map(c => c[0].toUpperCase()).join('') : '';
+    const letters = opt("letters")
+      ? cs.map((c) => c[0].toUpperCase()).join("")
+      : "";
     // decided: a solid outline. Undecided: the outline split like a pie, one slice per
     // candidate color clockwise from the top; a lone candidate (its color is full) is dashed.
-    const fill = cs.length > 1
-      ? `conic-gradient(${cs.map((c, i) => `${HEX[c]} ${i * 100 / cs.length}% ${(i + 1) * 100 / cs.length}%`).join(', ')})`
-      : !color && cs.length ? `repeating-conic-gradient(${HEX[cs[0]]} 0 6deg, transparent 0 12deg)` : '';
-    r.innerHTML = `<style>${MARK_CSS}</style>` +
-      (color ? `<div class="ring" style="--c:${HEX[color]}"></div>` : '') +
-      (fill ? `<div class="pie" style="--g:${fill}"></div>` : '') +
+    const fill =
+      cs.length > 1
+        ? `conic-gradient(${cs.map((c, i) => `${HEX[c]} ${(i * 100) / cs.length}% ${((i + 1) * 100) / cs.length}%`).join(", ")})`
+        : !color && cs.length
+          ? `repeating-conic-gradient(${HEX[cs[0]]} 0 6deg, transparent 0 12deg)`
+          : "";
+    r.innerHTML =
+      `<style>${MARK_CSS}</style>` +
+      (color ? `<div class="ring" style="--c:${HEX[color]}"></div>` : "") +
+      (fill ? `<div class="pie" style="--g:${fill}"></div>` : "") +
       // the corner dot only appears to carry letters
-      (letters ? `<div class="dot letter" style="--c:${cs.length > 1 ? '#fff' : HEX[cs[0]]}">${letters}</div>` : '') +
-      (away ? `<div class="away">${away}</div>` : '');
+      (letters
+        ? `<div class="dot letter" style="--c:${cs.length > 1 ? "#fff" : HEX[cs[0]]}">${letters}</div>`
+        : "") +
+      (away ? `<div class="away">${away}</div>` : "");
   }
 
   // ---------- draw everything ----------
   function apply() {
-    if (puzzleId() !== lastId) { // moved to another date
-      const old = new Set([...tiles().map(wordOf), ...solvedGroups().flatMap(g => g.words)]);
-      staleBoard = old.size === 16 ? [...old].sort().join('|') : null;
+    if (puzzleId() !== lastId) {
+      // moved to another date
+      const old = new Set([
+        ...tiles().map(wordOf),
+        ...solvedGroups().flatMap((g) => g.words),
+      ]);
+      staleBoard = old.size === 16 ? [...old].sort().join("|") : null;
       lastId = puzzleId();
       marks = loadMarks();
       maybes = loadMaybes();
@@ -1316,7 +1991,12 @@
       undoStack = [];
       showUndo();
       arm(null);
-      if (maybeMode) { maybeMode = false; maybeBtn.classList.remove('active'); maybeBtn.setAttribute('aria-pressed', 'false'); panel.classList.remove('maybemode'); }
+      if (maybeMode) {
+        maybeMode = false;
+        maybeBtn.classList.remove("active");
+        maybeBtn.setAttribute("aria-pressed", "false");
+        panel.classList.remove("maybemode");
+      }
     }
     checkGuess();
     const groups = solvedGroups();
@@ -1325,17 +2005,23 @@
     settle(); // also merges 0.6 data, where a tile could have a mark and maybes
     if (snapshot() !== unsettled) save();
     reconcileSolved(groups);
-    const solved = new Set(groups.map(g => g.color));
+    const solved = new Set(groups.map((g) => g.color));
 
     // letter badges for "One away" guesses (A = first, B = second, …)
     const badge = {};
     // a guess is settled once a solved group holds 3 of its words; its badge is dropped
     // (letters stay the same for the others)
-    const aways = guesses.filter(g => g.away).map(g => g.w);
-    if (opt('oneAway')) aways.forEach((g, i) => {
-      if (groups.some(sg => g.filter(w => sg.words.includes(w)).length >= 3)) return;
-      g.forEach(w => { badge[w] = (badge[w] || '') + String.fromCharCode(65 + i); });
-    });
+    const aways = guesses.filter((g) => g.away).map((g) => g.w);
+    if (opt("oneAway"))
+      aways.forEach((g, i) => {
+        if (
+          groups.some((sg) => g.filter((w) => sg.words.includes(w)).length >= 3)
+        )
+          return;
+        g.forEach((w) => {
+          badge[w] = (badge[w] || "") + String.fromCharCode(65 + i);
+        });
+      });
 
     const ts = tiles();
     const present = new Set();
@@ -1343,33 +2029,43 @@
       const w = wordOf(el);
       present.add(w);
       const c = HEX[marks[w]] ? marks[w] : null;
-      if (c) { if (el.dataset.ccm !== c) el.dataset.ccm = c; }
-      else if (el.dataset.ccm) delete el.dataset.ccm;
-      if (badge[w]) { if (el.dataset.ccmAway !== badge[w]) el.dataset.ccmAway = badge[w]; }
-      else if (el.dataset.ccmAway) delete el.dataset.ccmAway;
-      const split = !c && maybes[w]?.length ? maybes[w].join(',') : '';
-      if (split) { if (el.dataset.ccmSplit !== split) el.dataset.ccmSplit = split; }
-      else if (el.dataset.ccmSplit) delete el.dataset.ccmSplit;
-      drawMark(el, c, badge[w] || '', c ? [] : (maybes[w] || []));
+      if (c) {
+        if (el.dataset.ccm !== c) el.dataset.ccm = c;
+      } else if (el.dataset.ccm) delete el.dataset.ccm;
+      if (badge[w]) {
+        if (el.dataset.ccmAway !== badge[w]) el.dataset.ccmAway = badge[w];
+      } else if (el.dataset.ccmAway) delete el.dataset.ccmAway;
+      const split = !c && maybes[w]?.length ? maybes[w].join(",") : "";
+      if (split) {
+        if (el.dataset.ccmSplit !== split) el.dataset.ccmSplit = split;
+      } else if (el.dataset.ccmSplit) delete el.dataset.ccmSplit;
+      drawMark(el, c, badge[w] || "", c ? [] : maybes[w] || []);
     }
     for (const k of ORDER) {
-      const n = [...present].filter(w => marks[w] === k).length;
-      const label = (opt('letters') ? k[0].toUpperCase() : '') + (solved.has(k) ? '✓' : n);
+      const n = [...present].filter((w) => marks[w] === k).length;
+      const label =
+        (opt("letters") ? k[0].toUpperCase() : "") + (solved.has(k) ? "✓" : n);
       const name = k[0].toUpperCase() + k.slice(1);
       const aria = solved.has(k) ? `${name}, solved` : `${name}, ${n} marked`;
       if (btns[k].textContent !== label) btns[k].textContent = label; // only touch the DOM on change
-      if (btns[k].getAttribute('aria-label') !== aria) {
-        btns[k].setAttribute('aria-label', aria);
-        btns[k].title = solved.has(k) ? `${name} is solved` : `${name}: ${n} of 4 marked. Tap to color the selected tiles`;
+      if (btns[k].getAttribute("aria-label") !== aria) {
+        btns[k].setAttribute("aria-label", aria);
+        btns[k].title = solved.has(k)
+          ? `${name} is solved`
+          : `${name}: ${n} of 4 marked. Tap to color the selected tiles`;
       }
-      btns[k].classList.toggle('solved', solved.has(k));
-      btns[k].classList.toggle('full', !solved.has(k) && n === MAX_PER_COLOR);
+      btns[k].classList.toggle("solved", solved.has(k));
+      btns[k].classList.toggle("full", !solved.has(k) && n === MAX_PER_COLOR);
     }
     if (armed && solved.has(armed)) arm(null);
     showGo();
     showTheme();
     renderHistory();
-    if (onBoard !== ts.length > 0) { onBoard = ts.length > 0; peek = false; showCollapsed(); }
+    if (onBoard !== ts.length > 0) {
+      onBoard = ts.length > 0;
+      peek = false;
+      showCollapsed();
+    }
     arrange(ts);
     showDefine();
   }
@@ -1380,7 +2076,7 @@
   function boardOf(ts) {
     if (ts.length < 2) return null;
     let b = ts[0].parentElement;
-    while (b && !ts.every(t => b.contains(t))) b = b.parentElement;
+    while (b && !ts.every((t) => b.contains(t))) b = b.parentElement;
     return b;
   }
   function cellOf(t, board) {
@@ -1388,7 +2084,9 @@
     while (n.parentElement && n.parentElement !== board) n = n.parentElement;
     return n;
   }
-  const setOrder = (el, v) => { if (el.style.order !== v) el.style.setProperty('order', v); };
+  const setOrder = (el, v) => {
+    if (el.style.order !== v) el.style.setProperty("order", v);
+  };
   let lastBoard = null;
   function arrange(ts) {
     if (lastBoard && !lastBoard.isConnected) lastBoard = null; // don't hold on to a replaced board
@@ -1397,110 +2095,174 @@
     lastBoard = board;
     const sortOrder = SORT_MODES[sortMode].order;
     if (!sortOrder) {
-      for (const c of board.children) if (c.style.order) c.style.removeProperty('order');
+      for (const c of board.children)
+        if (c.style.order) c.style.removeProperty("order");
       return;
     }
     if (!/grid|flex/.test(getComputedStyle(board).display)) return; // layout we can't reorder
     // in maybe mode tiles hold still while you add options; they re-sort when ? goes off
     // (unless the board itself changed, like a newly solved row, which needs placing)
-    if (maybeMode && [...board.children].every(c => c.style.order !== '')) return;
-    const cells = ts.map(t => cellOf(t, board));
+    if (maybeMode && [...board.children].every((c) => c.style.order !== ""))
+      return;
+    const cells = ts.map((t) => cellOf(t, board));
     const cellSet = new Set(cells);
     // anything else on the board (solved-group rows) stays on top, in its own order
-    [...board.children].forEach((c, i) => { if (!cellSet.has(c)) setOrder(c, String(i - 1000)); });
+    [...board.children].forEach((c, i) => {
+      if (!cellSet.has(c)) setOrder(c, String(i - 1000));
+    });
     const unmarked = [];
     const split = []; // undecided tiles stay together, matching combinations side by side
-    const byColor = Object.fromEntries(ORDER.map(k => [k, []]));
+    const byColor = Object.fromEntries(ORDER.map((k) => [k, []]));
     ts.forEach((t, i) => {
       const w = wordOf(t);
       if (byColor[marks[w]]) byColor[marks[w]].push(cells[i]);
-      else if (maybes[w]?.length) split.push([maybes[w].map(c => sortOrder.indexOf(c)).sort((a, b) => a - b), cells[i]]);
+      else if (maybes[w]?.length)
+        split.push([
+          maybes[w].map((c) => sortOrder.indexOf(c)).sort((a, b) => a - b),
+          cells[i],
+        ]);
       else unmarked.push(cells[i]);
     });
     // by combination, in sort order: purple-or-blue, then purple-or-blue-or-green, then purple-or-green, …
-    const byCombo = (a, b) => { for (let i = 0; i < Math.min(a.length, b.length); i++) if (a[i] !== b[i]) return a[i] - b[i]; return a.length - b.length; };
+    const byCombo = (a, b) => {
+      for (let i = 0; i < Math.min(a.length, b.length); i++)
+        if (a[i] !== b[i]) return a[i] - b[i];
+      return a.length - b.length;
+    };
     split.sort((a, b) => byCombo(a[0], b[0]));
     const seq = [];
     for (const k of sortOrder) {
       if (!byColor[k].length) continue;
       seq.push(...byColor[k]);
       // pad the row with blank tiles, then splits if there aren't enough
-      while (seq.length % 4 && (unmarked.length || split.length)) seq.push(unmarked.length ? unmarked.shift() : split.shift()[1]);
+      while (seq.length % 4 && (unmarked.length || split.length))
+        seq.push(unmarked.length ? unmarked.shift() : split.shift()[1]);
     }
-    seq.push(...split.map(s => s[1]), ...unmarked);
+    seq.push(...split.map((s) => s[1]), ...unmarked);
     seq.forEach((c, i) => setOrder(c, String(i)));
   }
 
   // ---------- another tab on the same puzzle changed something: pick it up ----------
-  window.addEventListener('storage', e => {
+  window.addEventListener("storage", (e) => {
     // marks and maybes are written together; read both so a half-arrived update
     // can't be "settled" and saved back over the other tab's change
     if (e.key === marksKey() || e.key === maybeKey()) {
-      marks = loadMarks(); maybes = loadMaybes();
-      undoStack = []; showUndo(); // undoing here would quietly revert the other tab's change
-    }
-    else if (e.key === guessKey()) guesses = loadGuesses();
-    else if (e.key === SETTINGS_KEY) { settings = { ...DEFAULTS, ...ls.get(SETTINGS_KEY, {}) }; applySettings(); return; }
-    else if (e.key === SORT_KEY) { const v = e.newValue; if (SORT_MODES[v]) { sortMode = v; showSort(); } }
-    else return;
+      marks = loadMarks();
+      maybes = loadMaybes();
+      undoStack = [];
+      showUndo(); // undoing here would quietly revert the other tab's change
+    } else if (e.key === guessKey()) guesses = loadGuesses();
+    else if (e.key === SETTINGS_KEY) {
+      settings = { ...DEFAULTS, ...ls.get(SETTINGS_KEY, {}) };
+      applySettings();
+      return;
+    } else if (e.key === SORT_KEY) {
+      const v = e.newValue;
+      if (SORT_MODES[v]) {
+        sortMode = v;
+        showSort();
+      }
+    } else return;
     apply();
   });
 
   // ---------- keyboard ----------
-  window.addEventListener('keydown', e => {
+  window.addEventListener("keydown", (e) => {
     // never while typing somewhere (including inside another extension's shadow root)
     const t = e.composedPath?.()[0] || e.target;
-    if (e.isComposing || t.isContentEditable ||
-        t.closest?.('textarea, select, input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"])')) return;
-    if (e.metaKey || e.ctrlKey || e.altKey || !opt('keys')) return;
+    if (
+      e.isComposing ||
+      t.isContentEditable ||
+      t.closest?.(
+        'textarea, select, input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"])',
+      )
+    )
+      return;
+    if (e.metaKey || e.ctrlKey || e.altKey || !opt("keys")) return;
     const digit = e.code?.match(/^(?:Digit|Numpad)([0-4])$/)?.[1];
-    if (e.shiftKey && digit && opt('maybes')) { // Shift+1–4: a maybe without entering maybe mode
-      const was = maybeMode; maybeMode = true;
-      assign(digit === '0' ? 'erase' : COLORS.find(c => c.hotkey === digit).key);
+    if (e.shiftKey && digit && opt("maybes")) {
+      // Shift+1–4: a maybe without entering maybe mode
+      const was = maybeMode;
+      maybeMode = true;
+      assign(
+        digit === "0" ? "erase" : COLORS.find((c) => c.hotkey === digit).key,
+      );
       maybeMode = was;
       if (!was) apply(); // a one-off option: sort as usual
       return;
     }
-    if ((e.key === 'm' || e.key === 'M') && opt('maybes')) { setMaybeMode(!maybeMode); return; }
-    const c = COLORS.find(c => c.hotkey === e.key);
+    if ((e.key === "m" || e.key === "M") && opt("maybes")) {
+      setMaybeMode(!maybeMode);
+      return;
+    }
+    const c = COLORS.find((c) => c.hotkey === e.key);
     if (c) assign(c.key);
-    else if (e.key === '0') assign('erase');
-    else if (e.key === 'Escape' && armed) arm(null);
-    else if (e.key === 'g' || e.key === 'G') onGo();
-    else if (e.key === 'z' || e.key === 'Z') undo();
+    else if (e.key === "0") assign("erase");
+    else if (e.key === "Escape" && armed) arm(null);
+    else if (e.key === "g" || e.key === "G") onGo();
+    else if (e.key === "z" || e.key === "Z") undo();
   });
 
   // ---------- redraw when the game re-renders (ignoring our own palette updates) ----------
   // Watches the game's own container (#pz-game-root) rather than the whole page, so ads and
   // other page activity don't cause redraws; falls back to the page until the game appears.
   // Also watches the light/dark switches on <body> and <html>. Our own overlays are ignored.
-  const ours = n => n.nodeType === 1 && (n === host || n === defineBtn || n === guideBtn || n.localName === 'ccm-mark');
-  let queued = false, watched = null;
-  const mo = new MutationObserver(muts => {
+  const ours = (n) =>
+    n.nodeType === 1 &&
+    (n === host ||
+      n === defineBtn ||
+      n === guideBtn ||
+      n.localName === "ccm-mark");
+  let queued = false,
+    watched = null;
+  const mo = new MutationObserver((muts) => {
     if (watched === document.body || !watched?.isConnected) watch();
     if (queued) return;
     // (the text inside our own buttons counts as ours too)
-    if (muts.every(m => m.type === 'childList' ? ours(m.target) || [...m.addedNodes, ...m.removedNodes].every(ours)
-      : m.type === 'characterData' && ours(m.target.parentNode))) return;
+    if (
+      muts.every((m) =>
+        m.type === "childList"
+          ? ours(m.target) || [...m.addedNodes, ...m.removedNodes].every(ours)
+          : m.type === "characterData" && ours(m.target.parentNode),
+      )
+    )
+      return;
     queued = true;
-    const run = () => { queued = false; apply(); };
-    if (document.hidden) setTimeout(run, 50); else requestAnimationFrame(run);
+    const run = () => {
+      queued = false;
+      apply();
+    };
+    if (document.hidden) setTimeout(run, 50);
+    else requestAnimationFrame(run);
   });
   function watch() {
-    const r = document.getElementById('pz-game-root') || document.body;
+    const r = document.getElementById("pz-game-root") || document.body;
     if (r === watched && r.isConnected) return;
     mo.disconnect();
     selWatch.disconnect();
     watched = r;
-    selWatch.observe(r, { attributes: true, attributeFilter: ['class'], subtree: true });
+    selWatch.observe(r, {
+      attributes: true,
+      attributeFilter: ["class"],
+      subtree: true,
+    });
     // one observe() per node: a second call on the same node would replace its options
-    const theme = { attributes: true, attributeFilter: ['data-mode'] };
-    if (r === document.body) mo.observe(r, { childList: true, subtree: true, characterData: true, ...theme });
+    const theme = { attributes: true, attributeFilter: ["data-mode"] };
+    if (r === document.body)
+      mo.observe(r, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+        ...theme,
+      });
     else {
       mo.observe(r, { childList: true, subtree: true, characterData: true });
       mo.observe(document.body, { childList: true, ...theme }); // notice the game root being swapped out
     }
-    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-darkreader-scheme'] });
+    mo.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-darkreader-scheme"],
+    });
   }
   watch();
 

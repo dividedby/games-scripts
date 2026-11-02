@@ -5,7 +5,7 @@ name: update Wordle word lists
 # changelog line. Nothing is released until that pull request is merged into main.
 on:
   schedule:
-    - cron: '17 14 1 * *' # the 1st of each month, 14:17 UTC
+    - cron: "17 14 1 * *" # the 1st of each month, 14:17 UTC
   workflow_dispatch:
 
 permissions:
@@ -34,8 +34,8 @@ jobs:
           delete-branch: true
           author: dividedby <64715420+dividedby@users.noreply.github.com>
           committer: dividedby <64715420+dividedby@users.noreply.github.com>
-          commit-message: 'Wordle Shortlist: update word lists from NYT WordleBot'
-          title: 'Wordle Shortlist: update word lists'
+          commit-message: "Wordle Shortlist: update word lists from NYT WordleBot"
+          title: "Wordle Shortlist: update word lists"
           body: |
             The word lists at [WordGamesBot](https://github.com/WordGamesBot/wordgamesbot.github.io) changed:
 

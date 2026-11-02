@@ -17,22 +17,22 @@
 // ==/UserScript==
 
 (() => {
-  'use strict';
+  "use strict";
   // already running (a second install): the panel only appears once the board has, so mark the page
-  if (document.documentElement.hasAttribute('data-wsl')) return;
-  document.documentElement.setAttribute('data-wsl', '');
+  if (document.documentElement.hasAttribute("data-wsl")) return;
+  document.documentElement.setAttribute("data-wsl", "");
 
-  const PICKS = 5;     // guesses offered each turn
+  const PICKS = 5; // guesses offered each turn
   // Each level draws the picks at random from this many of the best possible answers, so
   // some picks are better than others; Hard draws from all of them and hides the hints and
   // the count of answers left. start: the opening offer. 'best' is one of the best starters
   // (same pool), 'likely' any likely answer, 'any' a choice of five from every guessable word.
   const LEVELS = {
-    easy:   { name: 'Easy',   pool: 10,       hints: true,  start: 'best' },
-    medium: { name: 'Medium', pool: 30,       hints: true,  start: 'likely' },
-    hard:   { name: 'Hard',   pool: Infinity, hints: false, start: 'any' },
+    easy: { name: "Easy", pool: 10, hints: true, start: "best" },
+    medium: { name: "Medium", pool: 30, hints: true, start: "likely" },
+    hard: { name: "Hard", pool: Infinity, hints: false, start: "any" },
   };
-  const LEVEL_ORDER = ['easy', 'medium', 'hard'];
+  const LEVEL_ORDER = ["easy", "medium", "hard"];
   const KEEP_DAYS = 60;
 
   // ---------- words ----------
@@ -269,17 +269,17 @@ WOVENwowedWRACKwrapsWRATHWREAKWRECKwrensWRESTWRINGWRISTWRITEwritsWRONGWROTEWRUNG
 YAHOOyanksYAPPYyardsyarnsyawlsyawnsyawpsyeahsYEARNyearsYEASTyellsyelpsyesesYIELDyikesYODELyogisyoked
 YOKELyokesyolksYOUNGyoursYOUTHyowlsYUCCAyucksYUCKYYUMMYyurtsZEBRAzerosZESTYZILCHzineszingsZIPPYZONAL
 zonedzoneszooms
-`.replace(/\s+/g, '');
-  const ALL = [];       // every word we may suggest, lowercase
-  const ANSWER = [];    // ANSWER[i]: ALL[i] is a likely answer
+`.replace(/\s+/g, "");
+  const ALL = []; // every word we may suggest, lowercase
+  const ANSWER = []; // ANSWER[i]: ALL[i] is a likely answer
   for (let i = 0; i < WORDS.length; i += 5) {
     const w = WORDS.slice(i, i + 5);
     ALL.push(w.toLowerCase());
     ANSWER.push(w !== w.toLowerCase());
   }
-  const codes = w => Uint8Array.from(w, c => c.charCodeAt(0) - 97);
+  const codes = (w) => Uint8Array.from(w, (c) => c.charCodeAt(0) - 97);
   const CODES = ALL.map(codes);
-  const ANSWERS = ALL.map((_, i) => i).filter(i => ANSWER[i]);
+  const ANSWERS = ALL.map((_, i) => i).filter((i) => ANSWER[i]);
 
   // ---------- scoring ----------
   // The colors a guess would get against an answer, as a number: each letter is
@@ -290,10 +290,17 @@ zonedzoneszooms
   // With repeated letters, only as many copies turn yellow as the answer has spare, leftmost first
   function pattern(g, a) {
     for (let i = 0; i < 5; i++) {
-      if (g[i] === a[i]) res[i] = 2; else { res[i] = 0; spare[a[i]]++; }
+      if (g[i] === a[i]) res[i] = 2;
+      else {
+        res[i] = 0;
+        spare[a[i]]++;
+      }
     }
     for (let i = 0; i < 5; i++) {
-      if (res[i] !== 2 && spare[g[i]] > 0) { res[i] = 1; spare[g[i]]--; }
+      if (res[i] !== 2 && spare[g[i]] > 0) {
+        res[i] = 1;
+        spare[g[i]]--;
+      }
     }
     let p = 0;
     for (let i = 4; i >= 0; i--) p = p * 3 + res[i];
@@ -301,25 +308,36 @@ zonedzoneszooms
     return p;
   }
   const STATE = { absent: 0, present: 1, correct: 2 };
-  const toPattern = states => states.reduceRight((p, s) => p * 3 + STATE[s], 0);
+  const toPattern = (states) =>
+    states.reduceRight((p, s) => p * 3 + STATE[s], 0);
 
   // rows: [{ word, states: ['correct'|'present'|'absent' ×5] }]
   function candidates(rows, pool) {
-    const done = rows.map(r => ({ g: codes(r.word), p: toPattern(r.states) }));
-    return pool.filter(i => done.every(r => pattern(r.g, CODES[i]) === r.p));
+    const done = rows.map((r) => ({
+      g: codes(r.word),
+      p: toPattern(r.states),
+    }));
+    return pool.filter((i) =>
+      done.every((r) => pattern(r.g, CODES[i]) === r.p),
+    );
   }
 
   // Expected number of answers still possible after guessing g (0 when g is the only one left)
   const buckets = new Int32Array(243);
   const seen = new Int16Array(243); // the patterns hit, so only those get cleared
   function expectedLeft(g, cands) {
-    const touched = seen; let n = 0;
+    const touched = seen;
+    let n = 0;
     for (const a of cands) {
       const p = pattern(g, CODES[a]);
       if (buckets[p]++ === 0) touched[n++] = p;
     }
     let sum = 0;
-    for (let k = 0; k < n; k++) { const p = touched[k]; if (p !== GREEN_ALL) sum += buckets[p] * buckets[p]; buckets[p] = 0; }
+    for (let k = 0; k < n; k++) {
+      const p = touched[k];
+      if (p !== GREEN_ALL) sum += buckets[p] * buckets[p];
+      buckets[p] = 0;
+    }
     return sum / cands.length;
   }
 
@@ -331,13 +349,24 @@ zonedzoneszooms
     if (starters) return starters;
     const freq = new Int32Array(26);
     for (const i of ANSWERS) for (const c of new Set(CODES[i])) freq[c]++;
-    const common = i => [...new Set(CODES[i])].reduce((s, c) => s + freq[c], 0);
-    starters = ANSWERS.map(i => ({ i, f: common(i) })).sort((x, y) => y.f - x.f).slice(0, 100)
-      .map(({ i }) => ({ i, left: expectedLeft(CODES[i], ANSWERS) })).sort((x, y) => x.left - y.left).map(x => x.i);
+    const common = (i) =>
+      [...new Set(CODES[i])].reduce((s, c) => s + freq[c], 0);
+    starters = ANSWERS.map((i) => ({ i, f: common(i) }))
+      .sort((x, y) => y.f - x.f)
+      .slice(0, 100)
+      .map(({ i }) => ({ i, left: expectedLeft(CODES[i], ANSWERS) }))
+      .sort((x, y) => x.left - y.left)
+      .map((x) => x.i);
     return starters;
   }
 
-  const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const shuffle = (a) => {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
 
   // Returns { left: number of answers still possible, picks: [{ word, left }] }.
   // Every pick could be the answer (no "filler" words that only narrow things down),
@@ -345,50 +374,118 @@ zonedzoneszooms
   function choose(rows, lv = LEVELS.medium) {
     const pool = lv.pool;
     if (!rows.length) {
-      const scored = i => ({ word: ALL[i], left: expectedLeft(CODES[i], ANSWERS) });
-      const randomOf = list => list[Math.floor(Math.random() * list.length)];
-      if (lv.start === 'any') { // five words from the whole guess list, odd ones and all
+      const scored = (i) => ({
+        word: ALL[i],
+        left: expectedLeft(CODES[i], ANSWERS),
+      });
+      const randomOf = (list) => list[Math.floor(Math.random() * list.length)];
+      if (lv.start === "any") {
+        // five words from the whole guess list, odd ones and all
         const five = new Set();
-        while (five.size < PICKS) five.add(Math.floor(Math.random() * ALL.length));
+        while (five.size < PICKS)
+          five.add(Math.floor(Math.random() * ALL.length));
         return { left: ANSWERS.length, picks: [...five].map(scored) };
       }
-      if (lv.start === 'best') return { left: ANSWERS.length, picks: [scored(randomOf(bestStarters().slice(0, pool)))] };
+      if (lv.start === "best")
+        return {
+          left: ANSWERS.length,
+          picks: [scored(randomOf(bestStarters().slice(0, pool)))],
+        };
       return { left: ANSWERS.length, picks: [scored(randomOf(ANSWERS))] }; // any likely answer, good opener or not
     }
     let cands = candidates(rows, ANSWERS);
-    if (!cands.length) cands = candidates(rows, ALL.map((_, i) => i)); // the answer isn't on our list
-    const scored = cands.map(i => ({ word: ALL[i], left: expectedLeft(CODES[i], cands) }))
+    if (!cands.length)
+      cands = candidates(
+        rows,
+        ALL.map((_, i) => i),
+      ); // the answer isn't on our list
+    const scored = cands
+      .map((i) => ({ word: ALL[i], left: expectedLeft(CODES[i], cands) }))
       .sort((x, y) => x.left - y.left); // fewer answers left after it first
-    const picks = scored.length <= PICKS ? scored : shuffle(scored.slice(0, pool)).slice(0, PICKS).sort((x, y) => x.left - y.left);
+    const picks =
+      scored.length <= PICKS
+        ? scored
+        : shuffle(scored.slice(0, pool))
+            .slice(0, PICKS)
+            .sort((x, y) => x.left - y.left);
     return { left: cands.length, picks };
   }
 
   // ---------- storage ----------
   const ls = {
     // (storage off in private mode, full, or a value that isn't JSON: the script works without it)
-    get(k, fallback) { try { const v = localStorage.getItem(k); return v === null ? fallback : JSON.parse(v); } catch { return fallback; } },
-    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
-    del(k) { try { localStorage.removeItem(k); } catch {} },
+    get(k, fallback) {
+      try {
+        const v = localStorage.getItem(k);
+        return v === null ? fallback : JSON.parse(v);
+      } catch {
+        return fallback;
+      }
+    },
+    set(k, v) {
+      try {
+        localStorage.setItem(k, JSON.stringify(v));
+      } catch {}
+    },
+    del(k) {
+      try {
+        localStorage.removeItem(k);
+      } catch {}
+    },
   };
   // a saved puzzle record in the shape refresh() writes, or null (it ends up on screen)
-  const num = x => typeof x === 'number' && Number.isFinite(x);
+  const num = (x) => typeof x === "number" && Number.isFinite(x);
   function validSaved(v) {
-    if (!v || typeof v !== 'object' || Array.isArray(v) || typeof v.sig !== 'string') return null;
-    if (v.picks !== undefined && !(Array.isArray(v.picks) &&
-      v.picks.every(p => p && typeof p.word === 'string' && /^[a-z]{5}$/.test(p.word) && num(p.left)))) return null;
+    if (
+      !v ||
+      typeof v !== "object" ||
+      Array.isArray(v) ||
+      typeof v.sig !== "string"
+    )
+      return null;
+    if (
+      v.picks !== undefined &&
+      !(
+        Array.isArray(v.picks) &&
+        v.picks.every(
+          (p) =>
+            p &&
+            typeof p.word === "string" &&
+            /^[a-z]{5}$/.test(p.word) &&
+            num(p.left),
+        )
+      )
+    )
+      return null;
     if (v.picks?.length && !num(v.left)) return null;
     if (v.left !== undefined && !num(v.left)) return null;
-    if (v.easiest != null && !(Number.isInteger(v.easiest) && v.easiest >= 0 && v.easiest < LEVEL_ORDER.length)) return null;
+    if (
+      v.easiest != null &&
+      !(
+        Number.isInteger(v.easiest) &&
+        v.easiest >= 0 &&
+        v.easiest < LEVEL_ORDER.length
+      )
+    )
+      return null;
     if (v.level !== undefined && !LEVEL_ORDER.includes(v.level)) return null;
-    if (v.turns !== undefined && !(Array.isArray(v.turns) && v.turns.every(t => t && typeof t === 'object'))) return null;
+    if (
+      v.turns !== undefined &&
+      !(
+        Array.isArray(v.turns) &&
+        v.turns.every((t) => t && typeof t === "object")
+      )
+    )
+      return null;
     return v;
   }
   // Today's puzzle has no date in its URL, so it's filed under the day the page was opened
-  const openedOn = new Date().toLocaleDateString('en-CA');
-  const puzzleId = () => location.pathname.match(/\d{4}-\d{2}-\d{2}/)?.[0] || openedOn;
-  const picksKey = () => 'wsl:' + puzzleId();
-  const COLLAPSED_KEY = 'wsl:collapsed';
-  const LEVEL_KEY = 'wsl:level';
+  const openedOn = new Date().toLocaleDateString("en-CA");
+  const puzzleId = () =>
+    location.pathname.match(/\d{4}-\d{2}-\d{2}/)?.[0] || openedOn;
+  const picksKey = () => "wsl:" + puzzleId();
+  const COLLAPSED_KEY = "wsl:collapsed";
+  const LEVEL_KEY = "wsl:level";
 
   function tidy() {
     const cutoff = Date.now() - KEEP_DAYS * 864e5;
@@ -408,20 +505,35 @@ zonedzoneszooms
     let typed = 0;
     for (let r = 0; r * 5 < t.length; r++) {
       const row = t.slice(r * 5, r * 5 + 5);
-      const states = row.map(x => x.dataset.state);
-      if (states.every(s => s in STATE)) rows.push({ word: row.map(x => x.textContent.trim().toLowerCase()).join(''), states });
-      else { typed = states.filter(s => s === 'tbd').length; break; }
+      const states = row.map((x) => x.dataset.state);
+      if (states.every((s) => s in STATE))
+        rows.push({
+          word: row.map((x) => x.textContent.trim().toLowerCase()).join(""),
+          states,
+        });
+      else {
+        typed = states.filter((s) => s === "tbd").length;
+        break;
+      }
     }
-    const won = rows.some(r => r.states.every(s => s === 'correct'));
-    return { rows, typed, ready: t.length >= 30, won, over: won || rows.length >= 6 };
+    const won = rows.some((r) => r.states.every((s) => s === "correct"));
+    return {
+      rows,
+      typed,
+      ready: t.length >= 30,
+      won,
+      over: won || rows.length >= 6,
+    };
   }
-  const key = k => document.querySelector(`[data-key="${k}"]`);
-  const keyboard = () => key('↵')?.closest('[class*="Keyboard-module_keyboard"]') || key('↵')?.parentElement?.parentElement;
+  const key = (k) => document.querySelector(`[data-key="${k}"]`);
+  const keyboard = () =>
+    key("↵")?.closest('[class*="Keyboard-module_keyboard"]') ||
+    key("↵")?.parentElement?.parentElement;
 
   // ---------- panel ----------
-  const host = document.createElement('div');
-  host.id = 'wsl-root';
-  const root = host.attachShadow({ mode: 'closed' });
+  const host = document.createElement("div");
+  host.id = "wsl-root";
+  const root = host.attachShadow({ mode: "closed" });
   root.innerHTML = `<style>
     /* padding goes on #wsl: the page's own CSS overrides any padding set on :host */
     :host { display: block; width: 100%; max-width: 500px; margin: 0 auto; box-sizing: border-box; }
@@ -461,57 +573,98 @@ zonedzoneszooms
   </style>
   <div id="wsl" hidden></div>
   <button id="show" hidden title="Show the shortlist">🎲 Shortlist</button>`;
-  const panel = root.getElementById('wsl');
-  const show = root.getElementById('show');
+  const panel = root.getElementById("wsl");
+  const show = root.getElementById("show");
 
   // state: what's saved for this puzzle: { sig, left, picks, level, turns, at }.
   // turns: one entry per guess made with a choice of picks: { used, best } (played a pick,
   // and was it one of the best on offer)
   let state = null;
-  let busy = false;   // typing a pick in
+  let busy = false; // typing a pick in
   let collapsed = ls.get(COLLAPSED_KEY, false);
-  let level = (v => LEVEL_ORDER.includes(v) ? v : 'medium')(ls.get(LEVEL_KEY, 'medium'));
+  let level = ((v) => (LEVEL_ORDER.includes(v) ? v : "medium"))(
+    ls.get(LEVEL_KEY, "medium"),
+  );
 
-  const leftText = n => n < 1.5 ? '~1 left' : `~${Math.round(n)} left`;
-  const sigOf = rows => rows.map(r => r.word + ':' + toPattern(r.states)).join(',');
-  const plural = (n, w) => `${n.toLocaleString()} ${w}${n === 1 ? '' : 's'}`;
+  const leftText = (n) => (n < 1.5 ? "~1 left" : `~${Math.round(n)} left`);
+  const sigOf = (rows) =>
+    rows.map((r) => r.word + ":" + toPattern(r.states)).join(",");
+  const plural = (n, w) => `${n.toLocaleString()} ${w}${n === 1 ? "" : "s"}`;
 
   function recap(board) {
     const turns = state.turns || [];
-    const best = turns.filter(t => t.best).length;
-    return [board.won ? `Solved in ${board.rows.length}` : 'Out of guesses',
-      turns.length ? `best pick ${best} of ${turns.length}` : '',
-      LEVELS[LEVEL_ORDER[state.easiest ?? LEVEL_ORDER.indexOf(state.level || level)]].name].filter(Boolean).join(' · ');
+    const best = turns.filter((t) => t.best).length;
+    return [
+      board.won ? `Solved in ${board.rows.length}` : "Out of guesses",
+      turns.length ? `best pick ${best} of ${turns.length}` : "",
+      LEVELS[
+        LEVEL_ORDER[state.easiest ?? LEVEL_ORDER.indexOf(state.level || level)]
+      ].name,
+    ]
+      .filter(Boolean)
+      .join(" · ");
   }
 
   // dark if whatever is painted behind the shortlist is dark, however it got that way
   function checkTheme() {
-    let bg = '';
+    let bg = "";
     for (let e = host.parentElement; e; e = e.parentElement) {
       const c = getComputedStyle(e).backgroundColor;
-      if (c && c !== 'transparent' && !/rgba\(.*,\s*0\)$/.test(c)) { bg = c; break; }
+      if (c && c !== "transparent" && !/rgba\(.*,\s*0\)$/.test(c)) {
+        bg = c;
+        break;
+      }
     }
     const [r, g, b] = (bg.match(/[\d.]+/g) || [255, 255, 255]).map(Number);
     const dark = 0.2126 * r + 0.7152 * g + 0.0722 * b < 128;
-    if (dark !== ('dark' in host.dataset)) { if (dark) host.dataset.dark = ''; else delete host.dataset.dark; }
+    if (dark !== "dark" in host.dataset) {
+      if (dark) host.dataset.dark = "";
+      else delete host.dataset.dark;
+    }
   }
 
   // the panel is built from DOM nodes and text, never HTML, since the picks come back from storage
-  const el = (tag, props = {}, kids = []) => { const e = document.createElement(tag); Object.assign(e, props); e.append(...kids); return e; };
-  let shown = ''; // what the panel shows now, to skip rebuilding it when nothing changed
+  const el = (tag, props = {}, kids = []) => {
+    const e = document.createElement(tag);
+    Object.assign(e, props);
+    e.append(...kids);
+    return e;
+  };
+  let shown = ""; // what the panel shows now, to skip rebuilding it when nothing changed
   function render(board) {
     checkTheme();
     const showPanel = !!state;
-    const now = JSON.stringify([showPanel && state, collapsed, busy, level, board.over, board.won, board.rows.length]);
+    const now = JSON.stringify([
+      showPanel && state,
+      collapsed,
+      busy,
+      level,
+      board.over,
+      board.won,
+      board.rows.length,
+    ]);
     if (now === shown) return;
     shown = now;
     show.hidden = !showPanel || !collapsed;
     panel.hidden = !showPanel || collapsed;
-    if (!showPanel || collapsed) { fit(); return; }
-    const hide = () => el('button', { className: 'tool', id: 'hide', title: 'Hide the shortlist', textContent: '▾' });
+    if (!showPanel || collapsed) {
+      fit();
+      return;
+    }
+    const hide = () =>
+      el("button", {
+        className: "tool",
+        id: "hide",
+        title: "Hide the shortlist",
+        textContent: "▾",
+      });
     if (board.over) {
-      panel.replaceChildren(el('div', { className: 'row' }, [
-        el('span', { className: 'note', textContent: recap(board) }), el('span', { className: 'tools' }, [hide()])]));
+      panel.replaceChildren(
+        el("div", { className: "row" }, [
+          el("span", { className: "note", textContent: recap(board) }),
+          el("span", { className: "tools" }, [hide()]),
+        ]),
+      );
       fit();
       return;
     }
@@ -519,44 +672,97 @@ zonedzoneszooms
     const lv = LEVELS[level];
     // Hard never says how many answers are left; its start is a choice, so it says that instead
     const choice = first && state.picks.length > 1;
-    const lead = choice ? 'Pick a starting word' : lv.hints ? plural(first ? ANSWERS.length : state.left, 'possible answer') : '';
-    const info = el('div', { className: 'info' }, [lead ? `${lead} · ` : '',
-      el('button', { id: 'level', disabled: busy, textContent: `${lv.name} ▸`,
-        title: 'Level. Easy: a strong starting word, then picks from the best 10, with hints. ' +
-          'Medium: any likely starting word, then the best 30, with hints. ' +
-          'Hard: choose a start from 5 random words, then any possible answer, with no hints or counts. ' +
-          'The recap shows the easiest level you used' })]);
+    const lead = choice
+      ? "Pick a starting word"
+      : lv.hints
+        ? plural(first ? ANSWERS.length : state.left, "possible answer")
+        : "";
+    const info = el("div", { className: "info" }, [
+      lead ? `${lead} · ` : "",
+      el("button", {
+        id: "level",
+        disabled: busy,
+        textContent: `${lv.name} ▸`,
+        title:
+          "Level. Easy: a strong starting word, then picks from the best 10, with hints. " +
+          "Medium: any likely starting word, then the best 30, with hints. " +
+          "Hard: choose a start from 5 random words, then any possible answer, with no hints or counts. " +
+          "The recap shows the easiest level you used",
+      }),
+    ]);
     const row = [];
-    if (first && !choice) row.push(el('span', { className: 'lead', textContent: 'Start with' }));
-    if (!state.picks.length) row.push(el('span', { className: 'note', textContent: 'No word on my list fits these colors' }));
+    if (first && !choice)
+      row.push(el("span", { className: "lead", textContent: "Start with" }));
+    if (!state.picks.length)
+      row.push(
+        el("span", {
+          className: "note",
+          textContent: "No word on my list fits these colors",
+        }),
+      );
     const last = state.left === 1 && lv.hints;
     for (const p of state.picks) {
       // the start word only gets a hint on Easy, where it's picked for being good
-      const hint = last ? 'only fit' : (first ? lv.start === 'best' : lv.hints) ? leftText(p.left) : '';
-      const tip = last ? `${p.word.toUpperCase()}: the only likely answer that fits. Tap to play it`
-        : hint ? `${p.word.toUpperCase()}: if it isn't the answer, about ${Math.max(1, Math.round(p.left))} answer${Math.round(p.left) > 1 ? 's' : ''} left on average. Tap to play it`
-        : `${p.word.toUpperCase()}: tap to play it`;
-      const b = el('button', { className: 'pick', title: tip, disabled: busy },
-        [el('b', { textContent: p.word }), ...(hint ? [el('small', { textContent: hint })] : [])]);
+      const hint = last
+        ? "only fit"
+        : (first ? lv.start === "best" : lv.hints)
+          ? leftText(p.left)
+          : "";
+      const tip = last
+        ? `${p.word.toUpperCase()}: the only likely answer that fits. Tap to play it`
+        : hint
+          ? `${p.word.toUpperCase()}: if it isn't the answer, about ${Math.max(1, Math.round(p.left))} answer${Math.round(p.left) > 1 ? "s" : ""} left on average. Tap to play it`
+          : `${p.word.toUpperCase()}: tap to play it`;
+      const b = el(
+        "button",
+        { className: "pick", title: tip, disabled: busy },
+        [
+          el("b", { textContent: p.word }),
+          ...(hint ? [el("small", { textContent: hint })] : []),
+        ],
+      );
       b.dataset.w = p.word;
       row.push(b);
     }
-    row.push(el('span', { className: 'tools' }, [
-      el('button', { className: 'tool', id: 'roll', title: 'Deal a different shortlist', disabled: busy, textContent: '🎲' }), hide()]));
-    panel.replaceChildren(info, el('div', { className: 'row' }, row));
+    row.push(
+      el("span", { className: "tools" }, [
+        el("button", {
+          className: "tool",
+          id: "roll",
+          title: "Deal a different shortlist",
+          disabled: busy,
+          textContent: "🎲",
+        }),
+        hide(),
+      ]),
+    );
+    panel.replaceChildren(info, el("div", { className: "row" }, row));
     fit();
   }
 
   // say once in the console if the game's markup has changed under us (one part found, not the other)
   const warned = new Set();
-  const warnOnce = (k, msg) => { if (!warned.has(k)) { warned.add(k); console.warn('[Wordle Shortlist] ' + msg); } };
+  const warnOnce = (k, msg) => {
+    if (!warned.has(k)) {
+      warned.add(k);
+      console.warn("[Wordle Shortlist] " + msg);
+    }
+  };
   function refresh(force = false) {
     const board = readBoard();
     if (!board.ready) {
-      if (key('↵')) warnOnce('board', 'found the keyboard but not the board\'s tiles ([data-testid="tile"]); the game may have changed');
+      if (key("↵"))
+        warnOnce(
+          "board",
+          'found the keyboard but not the board\'s tiles ([data-testid="tile"]); the game may have changed',
+        );
       return;
     }
-    if (!board.over && !keyboard()) warnOnce('keyboard', 'found the board but not the keyboard ([data-key="↵"]); the game may have changed');
+    if (!board.over && !keyboard())
+      warnOnce(
+        "keyboard",
+        'found the board but not the keyboard ([data-key="↵"]); the game may have changed',
+      );
     place(board);
     if (!host.isConnected) return;
     const sig = sigOf(board.rows);
@@ -564,74 +770,130 @@ zonedzoneszooms
     let saved = validSaved(ls.get(picksKey(), null));
     // a board that doesn't continue the saved one is a different game (say, today's tab left
     // open past midnight): start its record fresh
-    const continues = (from, to) => !from || to === from || to.startsWith(from + ',');
+    const continues = (from, to) =>
+      !from || to === from || to.startsWith(from + ",");
     if (saved && !continues(saved.sig, sig)) saved = null;
     if (saved && saved.sig !== sig) {
       // one new guess since the last shortlist: note whether it was one of the best picks
-      const before = saved.sig ? saved.sig.split(',').length : 0;
-      if (board.rows.length === before + 1 && before === 0 && saved.level && saved.picks?.some(x => x.word === board.rows[0].word)) {
+      const before = saved.sig ? saved.sig.split(",").length : 0;
+      if (
+        board.rows.length === before + 1 &&
+        before === 0 &&
+        saved.level &&
+        saved.picks?.some((x) => x.word === board.rows[0].word)
+      ) {
         // a start word played as offered: its level counts toward the easiest used
         const idx = LEVEL_ORDER.indexOf(saved.level);
         saved.easiest = Math.min(saved.easiest ?? idx, idx);
       }
       // a shortlist (not the start, which is a word to begin with, not a call to make)
-      if (board.rows.length === before + 1 && before > 0 && saved.picks?.length > 1) {
+      if (
+        board.rows.length === before + 1 &&
+        before > 0 &&
+        saved.picks?.length > 1
+      ) {
         const word = board.rows[before].word;
-        const p = saved.picks.find(x => x.word === word);
-        const min = Math.min(...saved.picks.map(x => x.left));
-        saved.turns = [...(saved.turns || []), { used: !!p, best: !!p && p.left <= min }];
+        const p = saved.picks.find((x) => x.word === word);
+        const min = Math.min(...saved.picks.map((x) => x.left));
+        saved.turns = [
+          ...(saved.turns || []),
+          { used: !!p, best: !!p && p.left <= min },
+        ];
       }
     }
     if (board.over) {
       state = { ...(saved || {}), sig, picks: [], at: Date.now() };
       ls.set(picksKey(), state);
-    } else if (force || !saved || saved.sig !== sig || !saved.picks || saved.level !== level ||
+    } else if (
+      force ||
+      !saved ||
+      saved.sig !== sig ||
+      !saved.picks ||
+      saved.level !== level ||
       // a start saved by an older version: one word where Hard now offers five
-      (!board.rows.length && (saved.picks.length > 1) !== (LEVELS[level].start === 'any'))) {
+      (!board.rows.length &&
+        saved.picks.length > 1 !== (LEVELS[level].start === "any"))
+    ) {
       const c = choose(board.rows, LEVELS[level]);
       // the recap names the easiest level any shortlist was dealt at, or a start word played at
       const idx = LEVEL_ORDER.indexOf(level);
-      const easiest = board.rows.length ? Math.min(saved?.easiest ?? idx, idx) : saved?.easiest;
-      state = { sig, left: c.left, picks: c.picks.map(p => ({ ...p, left: Math.round(p.left * 10) / 10 })),
-        level, easiest, turns: saved?.turns || [], at: Date.now() };
+      const easiest = board.rows.length
+        ? Math.min(saved?.easiest ?? idx, idx)
+        : saved?.easiest;
+      state = {
+        sig,
+        left: c.left,
+        picks: c.picks.map((p) => ({
+          ...p,
+          left: Math.round(p.left * 10) / 10,
+        })),
+        level,
+        easiest,
+        turns: saved?.turns || [],
+        at: Date.now(),
+      };
       ls.set(picksKey(), state);
     } else state = saved;
     render(board);
   }
 
-  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   let playId = 0;
   async function play(word) {
     if (busy) return;
     const board = readBoard();
     if (board.over) return;
     const id = ++playId;
-    busy = true; render(board);
-    for (let i = 0; i < board.typed; i++) { key('←')?.click(); await sleep(30); }
-    for (const c of word) { key(c)?.click(); await sleep(30); }
-    key('↵')?.click();
+    busy = true;
+    render(board);
+    for (let i = 0; i < board.typed; i++) {
+      key("←")?.click();
+      await sleep(30);
+    }
+    for (const c of word) {
+      key(c)?.click();
+      await sleep(30);
+    }
+    key("↵")?.click();
     // the board update clears busy; if the game didn't take the word, give the buttons back
-    setTimeout(() => { if (busy && id === playId) { busy = false; render(readBoard()); } }, 4000);
+    setTimeout(() => {
+      if (busy && id === playId) {
+        busy = false;
+        render(readBoard());
+      }
+    }, 4000);
   }
 
-  panel.addEventListener('click', e => {
-    const b = e.target.closest('button');
+  panel.addEventListener("click", (e) => {
+    const b = e.target.closest("button");
     if (!b || b.disabled) return;
     if (b.dataset.w) play(b.dataset.w);
-    else if (b.id === 'roll') refresh(true);
-    else if (b.id === 'level') {
-      level = LEVEL_ORDER[(LEVEL_ORDER.indexOf(level) + 1) % LEVEL_ORDER.length];
+    else if (b.id === "roll") refresh(true);
+    else if (b.id === "level") {
+      level =
+        LEVEL_ORDER[(LEVEL_ORDER.indexOf(level) + 1) % LEVEL_ORDER.length];
       ls.set(LEVEL_KEY, level);
       refresh(true); // deal a new shortlist (or start word) at the new level
+    } else if (b.id === "hide") {
+      collapsed = true;
+      ls.set(COLLAPSED_KEY, true);
+      render(readBoard());
     }
-    else if (b.id === 'hide') { collapsed = true; ls.set(COLLAPSED_KEY, true); render(readBoard()); }
   });
-  show.addEventListener('click', () => { collapsed = false; ls.set(COLLAPSED_KEY, false); render(readBoard()); });
+  show.addEventListener("click", () => {
+    collapsed = false;
+    ls.set(COLLAPSED_KEY, false);
+    render(readBoard());
+  });
 
   // the picks sit right above the game's keyboard
   function place(board) {
     const kb = keyboard();
-    if (kb) { if (host.nextElementSibling !== kb) kb.parentElement.insertBefore(host, kb); return; }
+    if (kb) {
+      if (host.nextElementSibling !== kb)
+        kb.parentElement.insertBefore(host, kb);
+      return;
+    }
     // after the game ends the keyboard can be swapped for the game's result buttons:
     // keep the recap just below the board
     const bc = document.querySelector('[class*="Board-module_boardContainer"]');
@@ -643,40 +905,74 @@ zonedzoneszooms
     const b = document.querySelector('[class*="Board-module_board__"]');
     const kb = keyboard();
     if (!b || !kb) return;
-    b.style.transform = b.style.transformOrigin = b.style.marginBottom = '';
+    b.style.transform = b.style.transformOrigin = b.style.marginBottom = "";
     // only the part the picks caused: if the game already runs past the screen, that's its own
-    const over = Math.min(host.offsetHeight,
-      kb.getBoundingClientRect().bottom - Math.min(innerHeight, window.visualViewport?.height || innerHeight));
+    const over = Math.min(
+      host.offsetHeight,
+      kb.getBoundingClientRect().bottom -
+        Math.min(innerHeight, window.visualViewport?.height || innerHeight),
+    );
     if (over <= 0) return;
     const h = b.offsetHeight;
     const scale = Math.max(0.6, (h - over - 4) / h);
     b.style.transform = `scale(${scale})`;
-    b.style.transformOrigin = 'top center';
+    b.style.transformOrigin = "top center";
     b.style.marginBottom = `${-Math.round(h * (1 - scale))}px`;
   }
   let fitTimer = 0;
-  addEventListener('resize', () => { clearTimeout(fitTimer); fitTimer = setTimeout(fit, 200); });
+  addEventListener("resize", () => {
+    clearTimeout(fitTimer);
+    fitTimer = setTimeout(fit, 200);
+  });
 
   // wait for the page to settle, but never more than 400ms, so a busy page can't starve it
-  let timer = 0, firstChange = 0;
+  let timer = 0,
+    firstChange = 0;
   const later = () => {
     clearTimeout(timer);
     if (!firstChange) firstChange = Date.now();
-    const run = () => { firstChange = 0; refresh(); };
-    if (Date.now() - firstChange > 400) run(); else timer = setTimeout(run, 120);
+    const run = () => {
+      firstChange = 0;
+      refresh();
+    };
+    if (Date.now() - firstChange > 400) run();
+    else timer = setTimeout(run, 120);
   };
-  new MutationObserver(later).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-state'] });
+  new MutationObserver(later).observe(document.body, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    attributeFilter: ["data-state"],
+  });
   // dark modes switch by attributes on <html> or <body> (Dark Reader, NYT, Wordle's own),
   // sometimes with a stylesheet that lands a moment later
-  new MutationObserver(() => { checkTheme(); setTimeout(checkTheme, 300); })
-    .observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-darkreader-scheme', 'data-mode'] });
-  new MutationObserver(() => { checkTheme(); setTimeout(checkTheme, 300); })
-    .observe(document.body, { attributes: true, attributeFilter: ['class', 'data-mode'] });
+  new MutationObserver(() => {
+    checkTheme();
+    setTimeout(checkTheme, 300);
+  }).observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class", "data-darkreader-scheme", "data-mode"],
+  });
+  new MutationObserver(() => {
+    checkTheme();
+    setTimeout(checkTheme, 300);
+  }).observe(document.body, {
+    attributes: true,
+    attributeFilter: ["class", "data-mode"],
+  });
 
   tidy();
   refresh();
-  if (window.__WSL_TEST__ || ls.get('wsl:debug', false)) {
+  if (window.__WSL_TEST__ || ls.get("wsl:debug", false)) {
     window.__wslRoot = root;
-    window.__wsl = { pattern, choose, candidates, expectedLeft, ALL, ANSWERS, codes };
+    window.__wsl = {
+      pattern,
+      choose,
+      candidates,
+      expectedLeft,
+      ALL,
+      ANSWERS,
+      codes,
+    };
   }
 })();
