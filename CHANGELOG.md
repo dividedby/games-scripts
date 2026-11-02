@@ -19,6 +19,18 @@ Versions below 1.0.0 are pre-release.
 
 ### [Unreleased]
 
+### [1.1.1] - 2026-10-16
+#### Fixed
+- On the Games home page when logged out, the lock on each puzzle card was invisible in dark (black on a dark circle). The circle is light again, so the lock shows.
+
+### [1.1.0] - 2026-10-16
+#### Added
+- The ◐ toggle is now in Wordle's toolbar too, next to ⚙ (just Auto, Dark or Light on a phone), so the mode can be switched without leaving Wordle.
+
+#### Fixed
+- Links in the dark top bar, like Upgrade subscription, were black on black: invisible but still clickable. They're now light, outline included.
+- Tapping the toggle in the top bar did nothing on iPhone; it now switches the mode.
+
 ### [1.0.1] - 2026-10-13
 #### Fixed
 - Lighter on hint, forum and bot pages: as the page loads more, only the new parts are looked at instead of the whole page, and each look reads the page's colors before changing any.
@@ -31,6 +43,13 @@ Versions below 1.0.0 are pre-release.
 ## Wordle Shortlist
 
 ### [Unreleased]
+
+### [1.1.0] - 2026-10-16
+#### Added
+- Each level has its own start: Easy gives one of the 10 best openers (with its hint), Medium any likely answer as before, and Hard a choice of five random words from the whole guess list (about 4,600 words), not just the likely answers. Switching level before the first guess deals that level's start, and an Easy start you play counts toward the recap's easiest level.
+
+#### Changed
+- Hard no longer shows how many answers are left, on the line above the picks or as "only fit", and Medium's start word no longer shows a hint.
 
 ### [1.0.2] - 2026-10-13
 #### Fixed

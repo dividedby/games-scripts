@@ -2,7 +2,7 @@
 
 For people who want to play the daily Wordle without really playing Wordle.
 
-You get a random starting word (not CRANE, not SLATE, just whatever comes up), then each turn a shortlist of five words that could be the answer. Tap one. That's the job. It's easy, but it isn't autopilot: the five aren't equally good, so there's still a right call to make, and on Hard nobody tells you which one it is.
+You get a random starting word (on Medium, not CRANE, not SLATE, just whatever comes up), then each turn a shortlist of five words that could be the answer. Tap one. That's the job. It's easy, but it isn't autopilot: the five aren't equally good, so there's still a right call to make, and on Hard nobody tells you which one it is.
 
 **Install:** [Greasy Fork](https://greasyfork.org/en/scripts/599505-wordle-shortlist) · [GitHub](https://raw.githubusercontent.com/dividedby/games-scripts/main/wordle/wordle-shortlist.user.js) · [Changelog](../CHANGELOG.md#wordle-shortlist)
 
@@ -12,9 +12,9 @@ You get a random starting word (not CRANE, not SLATE, just whatever comes up), t
 
 ## How it works
 
-1. Install the script (see [Installing](../README.md#installing)) and open Wordle. Above the keyboard you get a starting word: any of the roughly 3,000 likely answers, picked at random. Some days it's a decent opener. Some days it's KAZOO.
+1. Install the script (see [Installing](../README.md#installing)) and open Wordle. Above the keyboard you get a starting word: on Medium, any of the roughly 3,000 likely answers, picked at random. Some days it's a decent opener. Some days it's KAZOO. Easy gives you a strong opener instead, and Hard lets you choose from five random words (see [Levels](#levels)).
 2. Tap it to play it, or type your own word if you feel strongly.
-3. After each guess you get 5 picks, and every one of them could be the answer: no clever filler words that only narrow things down, so you're always playing by hard mode's rules. Under each word is roughly how many answers would still be possible if it isn't the one (fewer is better). The line above says how many answers still fit.
+3. After each guess you get 5 picks, and every one of them could be the answer: no clever filler words that only narrow things down, so you're always playing by hard mode's rules. Under each word is roughly how many answers would still be possible if it isn't the one (fewer is better). The line above says how many answers still fit (except on Hard).
 4. Tap a pick to play it. Anything you'd already typed is cleared first.
 5. When one answer is left, it's the only pick. When the puzzle's over, the shortlist turns into a recap: how many guesses it took, how often you played the best pick on offer, and the level.
 
@@ -28,13 +28,13 @@ The picks are drawn at random from the best possible answers, so some are better
 
 ## Levels
 
-Tap the level in the line above the picks (**Medium ▸**) to switch it, any time. Mid-puzzle, the new level deals a fresh shortlist. Your choice is remembered for the next puzzles, and the recap names the easiest level you used, so dropping to Easy for one turn shows.
+Tap the level in the line above the picks (**Medium ▸**) to switch it, any time. The new level deals a fresh shortlist, or a fresh start before your first guess. Your choice is remembered for the next puzzles, and the recap names the easiest level you used (a start word counts once you play it), so dropping to Easy for one turn shows.
 
-| Level | Picks come from | Hints |
-| --- | --- | --- |
-| Easy | the 10 best possible answers | shown |
-| Medium (default) | the 30 best | shown |
-| Hard | any possible answer | hidden: you're on your own |
+| Level | Starting word | Picks come from | Hints and count |
+| --- | --- | --- | --- |
+| Easy | one of the 10 best openers, with its hint | the 10 best possible answers | shown |
+| Medium (default) | any likely answer, no hint | the 30 best | shown |
+| Hard | your choice of 5 random words from the whole guess list (about 4,600), not just likely answers | any possible answer | hidden: you're on your own |
 
 <details>
 <summary>Screenshot: Hard</summary>

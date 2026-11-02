@@ -3,7 +3,7 @@
 // @namespace    https://greasyfork.org/en/users/594496-divided-by
 // @author       dividedby
 // @description  NYT Wordle with a nudge: a random starting word, then a shortlist of possible answers to choose from each turn, so you still make the call
-// @version      1.0.2
+// @version      1.1.0
 // @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
@@ -24,11 +24,13 @@
 
   const PICKS = 5;     // guesses offered each turn
   // Each level draws the picks at random from this many of the best possible answers, so
-  // some picks are better than others; Hard draws from all of them and hides the hints.
+  // some picks are better than others; Hard draws from all of them and hides the hints and
+  // the count of answers left. start: the opening offer. 'best' is one of the best starters
+  // (same pool), 'likely' any likely answer, 'any' a choice of five from every guessable word.
   const LEVELS = {
-    easy:   { name: 'Easy',   pool: 10,       hints: true },
-    medium: { name: 'Medium', pool: 30,       hints: true },
-    hard:   { name: 'Hard',   pool: Infinity, hints: false },
+    easy:   { name: 'Easy',   pool: 10,       hints: true,  start: 'best' },
+    medium: { name: 'Medium', pool: 30,       hints: true,  start: 'likely' },
+    hard:   { name: 'Hard',   pool: Infinity, hints: false, start: 'any' },
   };
   const LEVEL_ORDER = ['easy', 'medium', 'hard'];
   const KEEP_DAYS = 60;
@@ -321,15 +323,37 @@ zonedzoneszooms
     return sum / cands.length;
   }
 
+  // The likely answers that leave the fewest answers on average, best first. Scoring all of
+  // them takes most of a second on a phone, and the best ones always use the commonest
+  // letters, so only the 100 with the commonest letters are scored. Worked out once, when needed.
+  let starters = null;
+  function bestStarters() {
+    if (starters) return starters;
+    const freq = new Int32Array(26);
+    for (const i of ANSWERS) for (const c of new Set(CODES[i])) freq[c]++;
+    const common = i => [...new Set(CODES[i])].reduce((s, c) => s + freq[c], 0);
+    starters = ANSWERS.map(i => ({ i, f: common(i) })).sort((x, y) => y.f - x.f).slice(0, 100)
+      .map(({ i }) => ({ i, left: expectedLeft(CODES[i], ANSWERS) })).sort((x, y) => x.left - y.left).map(x => x.i);
+    return starters;
+  }
+
   const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
   // Returns { left: number of answers still possible, picks: [{ word, left }] }.
   // Every pick could be the answer (no "filler" words that only narrow things down),
   // so they follow hard mode's rules on their own.
-  function choose(rows, pool = LEVELS.medium.pool) {
-    if (!rows.length) { // truly random, not a good starter: any likely answer
-      const i = ANSWERS[Math.floor(Math.random() * ANSWERS.length)];
-      return { left: ANSWERS.length, picks: [{ word: ALL[i], left: expectedLeft(CODES[i], ANSWERS) }] };
+  function choose(rows, lv = LEVELS.medium) {
+    const pool = lv.pool;
+    if (!rows.length) {
+      const scored = i => ({ word: ALL[i], left: expectedLeft(CODES[i], ANSWERS) });
+      const randomOf = list => list[Math.floor(Math.random() * list.length)];
+      if (lv.start === 'any') { // five words from the whole guess list, odd ones and all
+        const five = new Set();
+        while (five.size < PICKS) five.add(Math.floor(Math.random() * ALL.length));
+        return { left: ANSWERS.length, picks: [...five].map(scored) };
+      }
+      if (lv.start === 'best') return { left: ANSWERS.length, picks: [scored(randomOf(bestStarters().slice(0, pool)))] };
+      return { left: ANSWERS.length, picks: [scored(randomOf(ANSWERS))] }; // any likely answer, good opener or not
     }
     let cands = candidates(rows, ANSWERS);
     if (!cands.length) cands = candidates(rows, ALL.map((_, i) => i)); // the answer isn't on our list
@@ -493,15 +517,22 @@ zonedzoneszooms
     }
     const first = !board.rows.length;
     const lv = LEVELS[level];
-    const info = el('div', { className: 'info' }, [`${plural(first ? ANSWERS.length : state.left, 'possible answer')} · `,
+    // Hard never says how many answers are left; its start is a choice, so it says that instead
+    const choice = first && state.picks.length > 1;
+    const lead = choice ? 'Pick a starting word' : lv.hints ? plural(first ? ANSWERS.length : state.left, 'possible answer') : '';
+    const info = el('div', { className: 'info' }, [lead ? `${lead} · ` : '',
       el('button', { id: 'level', disabled: busy, textContent: `${lv.name} ▸`,
-        title: 'Level. Easy: picks from the best 10, with hints. Medium: the best 30, with hints. Hard: any possible answer, no hints. The recap shows the easiest level you used' })]);
+        title: 'Level. Easy: a strong starting word, then picks from the best 10, with hints. ' +
+          'Medium: any likely starting word, then the best 30, with hints. ' +
+          'Hard: choose a start from 5 random words, then any possible answer, with no hints or counts. ' +
+          'The recap shows the easiest level you used' })]);
     const row = [];
-    if (first) row.push(el('span', { className: 'lead', textContent: 'Start with' }));
+    if (first && !choice) row.push(el('span', { className: 'lead', textContent: 'Start with' }));
     if (!state.picks.length) row.push(el('span', { className: 'note', textContent: 'No word on my list fits these colors' }));
-    const last = state.left === 1;
+    const last = state.left === 1 && lv.hints;
     for (const p of state.picks) {
-      const hint = last ? 'only fit' : lv.hints || first ? leftText(p.left) : '';
+      // the start word only gets a hint on Easy, where it's picked for being good
+      const hint = last ? 'only fit' : (first ? lv.start === 'best' : lv.hints) ? leftText(p.left) : '';
       const tip = last ? `${p.word.toUpperCase()}: the only likely answer that fits. Tap to play it`
         : hint ? `${p.word.toUpperCase()}: if it isn't the answer, about ${Math.max(1, Math.round(p.left))} answer${Math.round(p.left) > 1 ? 's' : ''} left on average. Tap to play it`
         : `${p.word.toUpperCase()}: tap to play it`;
@@ -538,7 +569,13 @@ zonedzoneszooms
     if (saved && saved.sig !== sig) {
       // one new guess since the last shortlist: note whether it was one of the best picks
       const before = saved.sig ? saved.sig.split(',').length : 0;
-      if (board.rows.length === before + 1 && saved.picks?.length > 1) {
+      if (board.rows.length === before + 1 && before === 0 && saved.level && saved.picks?.some(x => x.word === board.rows[0].word)) {
+        // a start word played as offered: its level counts toward the easiest used
+        const idx = LEVEL_ORDER.indexOf(saved.level);
+        saved.easiest = Math.min(saved.easiest ?? idx, idx);
+      }
+      // a shortlist (not the start, which is a word to begin with, not a call to make)
+      if (board.rows.length === before + 1 && before > 0 && saved.picks?.length > 1) {
         const word = board.rows[before].word;
         const p = saved.picks.find(x => x.word === word);
         const min = Math.min(...saved.picks.map(x => x.left));
@@ -548,9 +585,11 @@ zonedzoneszooms
     if (board.over) {
       state = { ...(saved || {}), sig, picks: [], at: Date.now() };
       ls.set(picksKey(), state);
-    } else if (force || !saved || saved.sig !== sig || !saved.picks || (board.rows.length && saved.level !== level)) {
-      const c = choose(board.rows, LEVELS[level].pool);
-      // the recap names the easiest level any shortlist was dealt at (the start word doesn't count)
+    } else if (force || !saved || saved.sig !== sig || !saved.picks || saved.level !== level ||
+      // a start saved by an older version: one word where Hard now offers five
+      (!board.rows.length && (saved.picks.length > 1) !== (LEVELS[level].start === 'any'))) {
+      const c = choose(board.rows, LEVELS[level]);
+      // the recap names the easiest level any shortlist was dealt at, or a start word played at
       const idx = LEVEL_ORDER.indexOf(level);
       const easiest = board.rows.length ? Math.min(saved?.easiest ?? idx, idx) : saved?.easiest;
       state = { sig, left: c.left, picks: c.picks.map(p => ({ ...p, left: Math.round(p.left * 10) / 10 })),
@@ -583,9 +622,7 @@ zonedzoneszooms
     else if (b.id === 'level') {
       level = LEVEL_ORDER[(LEVEL_ORDER.indexOf(level) + 1) % LEVEL_ORDER.length];
       ls.set(LEVEL_KEY, level);
-      const board = readBoard();
-      if (board.rows.length) refresh(true); // deal a new shortlist at the new level
-      else { if (state) { state.level = level; ls.set(picksKey(), state); } render(board); }
+      refresh(true); // deal a new shortlist (or start word) at the new level
     }
     else if (b.id === 'hide') { collapsed = true; ls.set(COLLAPSED_KEY, true); render(readBoard()); }
   });

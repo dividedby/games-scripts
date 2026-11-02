@@ -9,7 +9,7 @@ The full README (with the dev/test info) lives on GitHub.
 
 For people who want to play the daily **NYT Wordle** without really playing Wordle.
 
-You get a random starting word (not CRANE, not SLATE, just whatever comes up), then
+You get a random starting word (on Medium, not CRANE, not SLATE, just whatever comes up), then
 each turn a shortlist of five words that could be the answer. Tap one. That's the job.
 It's easy, but it isn't autopilot: the five aren't equally good, so there's still a
 right call to make. Works on desktop, iPhone and Android.
@@ -21,21 +21,26 @@ right call to make. Works on desktop, iPhone and Android.
 **What it does**
 
 - A **starting word** picked at random from about 3,000 likely answers. Some days
-  it's a decent opener. Some days it's KAZOO.
+  it's a decent opener. Some days it's KAZOO. (Easy and Hard start differently: see Levels.)
 - After each guess, **five picks**, every one a possible answer, so you're always
   playing by hard mode's rules. Each shows roughly how many answers would be left
-  if it isn't the one; the line above shows how many still fit.
+  if it isn't the one; the line above shows how many still fit (except on Hard).
 - **Tap a pick** to play it. 🎲 deals a different five, ▾ tucks them away.
 - When the puzzle's over, a **recap**: guesses, how often you played the best pick
   on offer, and the level.
 
 **Levels** (tap the level above the picks to switch, any time)
 
-- **Easy**: picks from the 10 best possible answers, with hints.
-- **Medium** (default): the 30 best, with hints.
-- **Hard**: any possible answer, no hints. You're on your own.
+- **Easy**: a strong opener, then picks from the 10 best possible answers, with hints.
+- **Medium** (default): any likely answer to start, then the 30 best, with hints.
+- **Hard**: choose your start from 5 random words off the whole guess list, odd
+  ones included, then any possible answer, with no hints and no count of what's left. You're on your own.
 
 The recap names the easiest level you used, so dropping to Easy for one turn shows.
+
+**New in 1.1:** each level starts differently: a strong opener on Easy, a random
+likely answer on Medium, and a choice of five random words on Hard, which also stops
+saying how many answers are left.
 
 <details>
 <summary>More screenshots</summary>

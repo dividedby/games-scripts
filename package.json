@@ -4,10 +4,13 @@
   "type": "module",
   "scripts": {
     "test": "node --test \"*/test/*.test.mjs\"",
-    "update-words": "node wordle/tools/update-words.mjs"
+    "update-words": "node wordle/tools/update-words.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
-    "jsdom": "^24.1.0"
+    "jsdom": "^24.1.0",
+    "prettier": "3.9.10"
   },
   "packageManager": "pnpm@9.15.0"
 }
