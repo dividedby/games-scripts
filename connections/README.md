@@ -1,6 +1,6 @@
 # Connections Palette
 
-*Formerly Connections Color Marker.*
+_Formerly Connections Color Marker._
 
 Color-code the tiles in NYT Connections as you work out the groups, then submit them in whatever order you like. It's especially handy if you go for a **reverse rainbow**: solving the hardest group (purple) first and the easiest (yellow) last.
 
@@ -30,11 +30,11 @@ Color-code the tiles in NYT Connections as you work out the groups, then submit 
 
 As soon as you color a tile, it moves into a row with the other tiles of that color, so each group sits in its own row. The button labeled **P→Y** sets the order of the rows:
 
-| Button | Row order | What Go submits first |
-| --- | --- | --- |
-| **P→Y** (default) | Purple, blue, green, yellow: the reverse rainbow | Purple |
-| **Y→P** | Yellow, green, blue, purple: the rainbow | Yellow |
-| **Off** | Tiles stay wherever the game puts them | Purple |
+| Button            | Row order                                        | What Go submits first |
+| ----------------- | ------------------------------------------------ | --------------------- |
+| **P→Y** (default) | Purple, blue, green, yellow: the reverse rainbow | Purple                |
+| **Y→P**           | Yellow, green, blue, purple: the rainbow         | Yellow                |
+| **Off**           | Tiles stay wherever the game puts them           | Purple                |
 
 Tap the button to switch between them. The game's Shuffle button still works, but it won't break up your rows. On a phone, the sort button is behind **⋯**.
 
@@ -55,7 +55,7 @@ For tiles you're unsure about. Turn this on in ⚙, and a **?** button appears o
 
 ## Definitions
 
-Not sure what a word means, or which meaning the puzzle is after? Select just that one tile and a **Definition** button appears next to the game's Shuffle button (on a narrow phone it's labeled **Define**). Tap it and a panel opens over the board, just above the game's buttons, with the word's common meanings grouped by part of speech. **Show all** adds the rest. Below them, **Names and titles** lists up to three people, places, films and the like with that name (DUNE: the 2021 film, the sand landform, the video game). In a definition like "plural of *end*", the dotted word is tappable and takes you to END. Tap ✕, tap outside, or press Esc to close it.
+Not sure what a word means, or which meaning the puzzle is after? Select just that one tile and a **Definition** button appears next to the game's Shuffle button (on a narrow phone it's labeled **Define**). Tap it and a panel opens over the board, just above the game's buttons, with the word's common meanings grouped by part of speech. **Show all** adds the rest. Below them, **Names and titles** lists up to three people, places, films and the like with that name (DUNE: the 2021 film, the sand landform, the video game). In a definition like "plural of _end_", the dotted word is tappable and takes you to END. Tap ✕, tap outside, or press Esc to close it.
 
 Definitions come from [Wiktionary](https://en.wiktionary.org) (CC BY-SA) and names from [Wikidata](https://www.wikidata.org). Nothing is looked up until you tap. Only the word is sent, along with the script's name and a link to this repo, which Wikimedia asks scripts to include; nothing about you. A first lookup can take a few seconds; the answer is then kept on your device for 60 days, so the same word opens instantly next time. Turn the button off in ⚙ if you'd rather not have it.
 
@@ -122,20 +122,20 @@ On a phone the palette is a single row along the bottom of the screen: the color
 
 Tap ⚙ on the palette. Your choices are saved in your browser.
 
-| Setting | Default |
-| --- | --- |
-| Mark "One away" guesses | Off |
-| Guess history (📜 list of wrong guesses) | Off |
-| Maybe colors (**?** lets one tile have several colors) | Off |
-| Auto-fill the last group | On |
-| Fix my colors after a solve (when off, only the solved tiles change) | On |
-| Go button (when off, the palette only colors tiles) | On |
-| Ask before going out of order | On |
-| Show color letters (Y/G/B/P on each mark and on the palette, for colorblind players) | Off |
-| Keyboard shortcuts (desktop only) | On |
-| Palette on the left | Off |
-| Color guide button (Guide, next to Submit) | On |
-| Definition button (with one tile selected) | On |
+| Setting                                                                              | Default |
+| ------------------------------------------------------------------------------------ | ------- |
+| Mark "One away" guesses                                                              | Off     |
+| Guess history (📜 list of wrong guesses)                                             | Off     |
+| Maybe colors (**?** lets one tile have several colors)                               | Off     |
+| Auto-fill the last group                                                             | On      |
+| Fix my colors after a solve (when off, only the solved tiles change)                 | On      |
+| Go button (when off, the palette only colors tiles)                                  | On      |
+| Ask before going out of order                                                        | On      |
+| Show color letters (Y/G/B/P on each mark and on the palette, for colorblind players) | Off     |
+| Keyboard shortcuts (desktop only)                                                    | On      |
+| Palette on the left                                                                  | Off     |
+| Color guide button (Guide, next to Submit)                                           | On      |
+| Definition button (with one tile selected)                                           | On      |
 
 The panel also has **Clear this puzzle** (removes all your colors on this puzzle; ↶ brings them back) and **Reset settings**.
 
@@ -149,14 +149,14 @@ The panel also has **Clear this puzzle** (removes all your colors on this puzzle
 
 ## Keyboard (desktop)
 
-| Key | Does |
-| --- | --- |
-| 1 2 3 4 | Yellow, green, blue, purple |
-| 0 | Clear the selected tiles |
-| Z | Undo |
-| G | Go |
-| Esc | Let go of a color you tapped (before Go or a swap) |
-| M | Turn **?** on or off (with maybe colors on) |
+| Key         | Does                                                          |
+| ----------- | ------------------------------------------------------------- |
+| 1 2 3 4     | Yellow, green, blue, purple                                   |
+| 0           | Clear the selected tiles                                      |
+| Z           | Undo                                                          |
+| G           | Go                                                            |
+| Esc         | Let go of a color you tapped (before Go or a swap)            |
+| M           | Turn **?** on or off (with maybe colors on)                   |
 | Shift + 1–4 | Add or remove that color as a maybe, without turning on **?** |
 
 ## Good to know

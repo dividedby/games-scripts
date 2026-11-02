@@ -2,248 +2,445 @@
 // jsdom:  pnpm test
 // The markup mirrors what the live game renders (data-testid="tile" with data-state,
 // keyboard buttons with data-key, ↵ and ←); keep it in step if NYT changes the page.
-import { test } from 'node:test';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { JSDOM } from 'jsdom';
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { JSDOM } from "jsdom";
 
-const SRC = readFileSync(new URL('../wordle-shortlist.user.js', import.meta.url), 'utf8');
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-const STATES = ['absent', 'present', 'correct'];
+const SRC = readFileSync(
+  new URL("../wordle-shortlist.user.js", import.meta.url),
+  "utf8",
+);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const STATES = ["absent", "present", "correct"];
 
 // The game's coloring, written independently of the script's: greens first, then yellows
 // left to right while the answer has unmatched copies of the letter.
 function colors(guess, answer) {
-  const out = Array(5).fill('absent'), spare = {};
-  for (let i = 0; i < 5; i++) if (guess[i] === answer[i]) out[i] = 'correct'; else spare[answer[i]] = (spare[answer[i]] || 0) + 1;
-  for (let i = 0; i < 5; i++) if (out[i] !== 'correct' && spare[guess[i]] > 0) { out[i] = 'present'; spare[guess[i]]--; }
+  const out = Array(5).fill("absent"),
+    spare = {};
+  for (let i = 0; i < 5; i++)
+    if (guess[i] === answer[i]) out[i] = "correct";
+    else spare[answer[i]] = (spare[answer[i]] || 0) + 1;
+  for (let i = 0; i < 5; i++)
+    if (out[i] !== "correct" && spare[guess[i]] > 0) {
+      out[i] = "present";
+      spare[guess[i]]--;
+    }
   return out;
 }
 
 // answer: the puzzle's word; played: guesses already on the board; stored: localStorage seed
-async function game({ answer = 'pouch', played = [], date = '2023-07-11', stored = {} } = {}) {
-  const rows = Array.from({ length: 6 }, (_, r) =>
-    `<div class="Row-module_row" role="group" aria-label="Row ${r + 1}">` +
-    Array.from({ length: 5 }, () => '<div class="Tile-module_tile" data-testid="tile" data-state="empty" data-animation="idle"></div>').join('') +
-    '</div>').join('');
-  const keys = ['qwertyuiop', 'asdfghjkl', '↵zxcvbnm←'].map(r =>
-    `<div class="Keyboard-module_row">${[...r].map(k => `<button type="button" data-key="${k}">${k}</button>`).join('')}</div>`).join('');
-  const dom = new JSDOM(`<!doctype html><body><main id="wordle-app-game"><div class="Board-module_boardContainer"><div class="Board-module_board">${rows}</div></div>` +
-    `<div class="Keyboard-module_keyboard">${keys}</div></main></body>`,
-  { url: `https://www.nytimes.com/games/wordle${date ? '/' + date : ''}`, runScripts: 'outside-only', pretendToBeVisual: true });
-  const w = dom.window, d = w.document;
-  const tiles = () => [...d.querySelectorAll('[data-testid=tile]')];
-  const g = { w, d, answer, typed: '', row: 0, submitted: [] };
+async function game({
+  answer = "pouch",
+  played = [],
+  date = "2023-07-11",
+  stored = {},
+} = {}) {
+  const rows = Array.from(
+    { length: 6 },
+    (_, r) =>
+      `<div class="Row-module_row" role="group" aria-label="Row ${r + 1}">` +
+      Array.from(
+        { length: 5 },
+        () =>
+          '<div class="Tile-module_tile" data-testid="tile" data-state="empty" data-animation="idle"></div>',
+      ).join("") +
+      "</div>",
+  ).join("");
+  const keys = ["qwertyuiop", "asdfghjkl", "↵zxcvbnm←"]
+    .map(
+      (r) =>
+        `<div class="Keyboard-module_row">${[...r].map((k) => `<button type="button" data-key="${k}">${k}</button>`).join("")}</div>`,
+    )
+    .join("");
+  const dom = new JSDOM(
+    `<!doctype html><body><main id="wordle-app-game"><div class="Board-module_boardContainer"><div class="Board-module_board">${rows}</div></div>` +
+      `<div class="Keyboard-module_keyboard">${keys}</div></main></body>`,
+    {
+      url: `https://www.nytimes.com/games/wordle${date ? "/" + date : ""}`,
+      runScripts: "outside-only",
+      pretendToBeVisual: true,
+    },
+  );
+  const w = dom.window,
+    d = w.document;
+  const tiles = () => [...d.querySelectorAll("[data-testid=tile]")];
+  const g = { w, d, answer, typed: "", row: 0, submitted: [] };
   // the game: keys type into the current row, ↵ colors it
-  d.querySelector('.Keyboard-module_keyboard').addEventListener('click', e => {
-    const k = e.target.closest('button')?.dataset.key;
-    if (!k || g.row >= 6) return;
+  d.querySelector(".Keyboard-module_keyboard").addEventListener(
+    "click",
+    (e) => {
+      const k = e.target.closest("button")?.dataset.key;
+      if (!k || g.row >= 6) return;
+      const row = tiles().slice(g.row * 5, g.row * 5 + 5);
+      if (k === "←") {
+        if (g.typed) {
+          g.typed = g.typed.slice(0, -1);
+          row[g.typed.length].textContent = "";
+          row[g.typed.length].dataset.state = "empty";
+        }
+      } else if (k === "↵") {
+        if (g.typed.length === 5) g.enter(g.typed);
+      } else if (g.typed.length < 5) {
+        row[g.typed.length].textContent = k;
+        row[g.typed.length].dataset.state = "tbd";
+        g.typed += k;
+      }
+    },
+  );
+  g.enter = (word) => {
     const row = tiles().slice(g.row * 5, g.row * 5 + 5);
-    if (k === '←') { if (g.typed) { g.typed = g.typed.slice(0, -1); row[g.typed.length].textContent = ''; row[g.typed.length].dataset.state = 'empty'; } }
-    else if (k === '↵') { if (g.typed.length === 5) g.enter(g.typed); }
-    else if (g.typed.length < 5) { row[g.typed.length].textContent = k; row[g.typed.length].dataset.state = 'tbd'; g.typed += k; }
-  });
-  g.enter = word => {
-    const row = tiles().slice(g.row * 5, g.row * 5 + 5);
-    colors(word, g.answer).forEach((s, i) => { row[i].textContent = word[i]; row[i].dataset.state = s; });
-    g.submitted.push(word); g.row++; g.typed = '';
+    colors(word, g.answer).forEach((s, i) => {
+      row[i].textContent = word[i];
+      row[i].dataset.state = s;
+    });
+    g.submitted.push(word);
+    g.row++;
+    g.typed = "";
   };
-  played.forEach(x => g.enter(x));
+  played.forEach((x) => g.enter(x));
   g.submitted = [];
-  for (const [k, v] of Object.entries(stored)) w.localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
+  for (const [k, v] of Object.entries(stored))
+    w.localStorage.setItem(k, typeof v === "string" ? v : JSON.stringify(v));
   w.__WSL_TEST__ = true;
   w.eval(SRC);
   await sleep(20);
   g.root = w.__wslRoot;
   g.E = w.__wsl;
-  g.panel = () => g.root.getElementById('wsl');
-  g.picks = () => [...g.panel().querySelectorAll('.pick')].map(b => b.dataset.w);
-  g.pick = word => g.panel().querySelector(`.pick[data-w="${word}"]`);
-  g.saved = () => JSON.parse(w.localStorage.getItem('wsl:' + date));
-  g.type = async word => { for (const c of word) d.querySelector(`[data-key="${c}"]`).click(); await sleep(200); };
-  g.guess = async word => { await g.type(word); d.querySelector('[data-key="↵"]').click(); await sleep(250); };
+  g.panel = () => g.root.getElementById("wsl");
+  g.picks = () =>
+    [...g.panel().querySelectorAll(".pick")].map((b) => b.dataset.w);
+  g.pick = (word) => g.panel().querySelector(`.pick[data-w="${word}"]`);
+  g.saved = () => JSON.parse(w.localStorage.getItem("wsl:" + date));
+  g.type = async (word) => {
+    for (const c of word) d.querySelector(`[data-key="${c}"]`).click();
+    await sleep(200);
+  };
+  g.guess = async (word) => {
+    await g.type(word);
+    d.querySelector('[data-key="↵"]').click();
+    await sleep(250);
+  };
   return g;
 }
 
-test('the game coloring matches the script, repeated letters included', async () => {
+test("the game coloring matches the script, repeated letters included", async () => {
   const g = await game();
-  const pairs = [['speed', 'abide'], ['eerie', 'there'], ['llama', 'hello'], ['allee', 'level'], ['crane', 'crane'], ['mamma', 'jazzy']];
+  const pairs = [
+    ["speed", "abide"],
+    ["eerie", "there"],
+    ["llama", "hello"],
+    ["allee", "level"],
+    ["crane", "crane"],
+    ["mamma", "jazzy"],
+  ];
   for (const [x, y] of pairs) {
     const p = g.E.pattern(g.E.codes(x), g.E.codes(y));
-    const s = Array.from({ length: 5 }, (_, i) => STATES[Math.floor(p / 3 ** i) % 3]);
+    const s = Array.from(
+      { length: 5 },
+      (_, i) => STATES[Math.floor(p / 3 ** i) % 3],
+    );
     assert.deepEqual(s, colors(x, y), `${x} against ${y}`);
   }
 });
 
-test('before the first guess: one random starting word from the likely answers, kept on reload', async () => {
+test("before the first guess: one random starting word from the likely answers, kept on reload", async () => {
   const g = await game();
   const picks = g.picks();
   assert.equal(picks.length, 1);
   assert.match(g.panel().textContent, /Start with/);
-  assert.ok(g.E.ANSWERS.some(i => g.E.ALL[i] === picks[0]), 'the starting word is a likely answer');
-  const again = await game({ stored: { ['wsl:2023-07-11']: g.saved() } });
-  assert.deepEqual(again.picks(), picks, 'reloading the page shows the same word');
+  assert.ok(
+    g.E.ANSWERS.some((i) => g.E.ALL[i] === picks[0]),
+    "the starting word is a likely answer",
+  );
+  const again = await game({ stored: { ["wsl:2023-07-11"]: g.saved() } });
+  assert.deepEqual(
+    again.picks(),
+    picks,
+    "reloading the page shows the same word",
+  );
 });
 
-test('after a guess: five picks, all possible answers, from the best 30 of them, each with a hint', async () => {
-  const g = await game({ played: ['crane'] });
+test("after a guess: five picks, all possible answers, from the best 30 of them, each with a hint", async () => {
+  const g = await game({ played: ["crane"] });
   const picks = g.picks();
   assert.equal(picks.length, 5);
   assert.equal(new Set(picks).size, 5);
-  const rows = [{ word: 'crane', states: colors('crane', 'pouch') }];
-  const cands = Array.from(g.E.candidates(rows, g.E.ANSWERS), i => g.E.ALL[i]);
-  const ranked = cands.map(x => g.E.expectedLeft(g.E.codes(x), g.E.candidates(rows, g.E.ANSWERS))).sort((a, b) => a - b);
+  const rows = [{ word: "crane", states: colors("crane", "pouch") }];
+  const cands = Array.from(
+    g.E.candidates(rows, g.E.ANSWERS),
+    (i) => g.E.ALL[i],
+  );
+  const ranked = cands
+    .map((x) =>
+      g.E.expectedLeft(g.E.codes(x), g.E.candidates(rows, g.E.ANSWERS)),
+    )
+    .sort((a, b) => a - b);
   const cutoff = ranked[29];
   for (const p of picks) {
     assert.ok(cands.includes(p), `${p} could be the answer: no filler words`);
-    assert.ok(g.E.expectedLeft(g.E.codes(p), g.E.candidates(rows, g.E.ANSWERS)) <= cutoff + 1e-9, `${p} is among the best 30`);
-    assert.match(g.pick(p).querySelector('small').textContent, /^~\d+ left$/);
+    assert.ok(
+      g.E.expectedLeft(g.E.codes(p), g.E.candidates(rows, g.E.ANSWERS)) <=
+        cutoff + 1e-9,
+      `${p} is among the best 30`,
+    );
+    assert.match(g.pick(p).querySelector("small").textContent, /^~\d+ left$/);
   }
-  assert.ok(!picks.includes('crane'), 'never offers a word already played');
+  assert.ok(!picks.includes("crane"), "never offers a word already played");
 });
 
-test('every pick follows the hints, so they suit hard mode', async () => {
-  const g = await game({ played: ['crane', 'pilot'] });
-  const rows = ['crane', 'pilot'].map(x => ({ word: x, states: colors(x, 'pouch') }));
+test("every pick follows the hints, so they suit hard mode", async () => {
+  const g = await game({ played: ["crane", "pilot"] });
+  const rows = ["crane", "pilot"].map((x) => ({
+    word: x,
+    states: colors(x, "pouch"),
+  }));
   assert.ok(g.picks().length > 0);
   for (const p of g.picks()) {
     for (const r of rows) {
-      r.states.forEach((s, i) => { if (s === 'correct') assert.equal(p[i], r.word[i], `${p} keeps the green ${r.word[i]}`); });
-      r.states.forEach((s, i) => { if (s === 'present') assert.ok(p.includes(r.word[i]), `${p} uses the yellow ${r.word[i]}`); });
+      r.states.forEach((s, i) => {
+        if (s === "correct")
+          assert.equal(p[i], r.word[i], `${p} keeps the green ${r.word[i]}`);
+      });
+      r.states.forEach((s, i) => {
+        if (s === "present")
+          assert.ok(p.includes(r.word[i]), `${p} uses the yellow ${r.word[i]}`);
+      });
     }
   }
 });
 
-test('the starting word is any likely answer, not just a good opener', async () => {
+test("the starting word is any likely answer, not just a good opener", async () => {
   const g = await game();
   const seen = new Set();
-  for (let i = 0; i < 40; i++) { g.root.getElementById('roll').click(); await sleep(5); seen.add(g.picks()[0]); }
-  assert.ok(seen.size > 30, 'rolls land all over the list');
-  const left = [...seen].map(x => g.E.expectedLeft(g.E.codes(x), g.E.ANSWERS)).sort((a, b) => a - b);
-  assert.ok(left.at(-1) > 2 * left[0], 'some starters are much weaker than others');
+  for (let i = 0; i < 40; i++) {
+    g.root.getElementById("roll").click();
+    await sleep(5);
+    seen.add(g.picks()[0]);
+  }
+  assert.ok(seen.size > 30, "rolls land all over the list");
+  const left = [...seen]
+    .map((x) => g.E.expectedLeft(g.E.codes(x), g.E.ANSWERS))
+    .sort((a, b) => a - b);
+  assert.ok(
+    left.at(-1) > 2 * left[0],
+    "some starters are much weaker than others",
+  );
 });
 
-test('tapping a pick clears what you typed, types the pick and submits it', async () => {
-  const g = await game({ played: ['crane'] });
-  await g.type('xy');
-  const p = g.picks().find(x => x !== 'pouch');
+test("tapping a pick clears what you typed, types the pick and submits it", async () => {
+  const g = await game({ played: ["crane"] });
+  await g.type("xy");
+  const p = g.picks().find((x) => x !== "pouch");
   g.pick(p).click();
   await sleep(600);
   assert.deepEqual(g.submitted, [p]);
-  assert.ok(g.picks().length > 0, 'new picks for the next turn');
+  assert.ok(g.picks().length > 0, "new picks for the next turn");
   assert.ok(!g.picks().includes(p));
 });
 
-test('with five or fewer answers left, those are the picks', async () => {
-  const g = await game({ answer: 'pouch', played: ['crane', 'pilot'] });
-  const rows = ['crane', 'pilot'].map(x => ({ word: x, states: colors(x, 'pouch') }));
-  const cands = Array.from(g.E.candidates(rows, g.E.ANSWERS), i => g.E.ALL[i]);
-  assert.ok(cands.length <= 5, 'sanity: two guesses narrow it to five or fewer');
+test("with five or fewer answers left, those are the picks", async () => {
+  const g = await game({ answer: "pouch", played: ["crane", "pilot"] });
+  const rows = ["crane", "pilot"].map((x) => ({
+    word: x,
+    states: colors(x, "pouch"),
+  }));
+  const cands = Array.from(
+    g.E.candidates(rows, g.E.ANSWERS),
+    (i) => g.E.ALL[i],
+  );
+  assert.ok(
+    cands.length <= 5,
+    "sanity: two guesses narrow it to five or fewer",
+  );
   assert.deepEqual(g.picks().sort(), cands.sort());
 });
 
-test('a finished puzzle shows a recap: guesses, how often you took the best pick, level', async () => {
-  const g = await game({ answer: 'pouch' });
-  await g.guess(g.picks()[0]);                       // the starting word: no choice, not counted
+test("a finished puzzle shows a recap: guesses, how often you took the best pick, level", async () => {
+  const g = await game({ answer: "pouch" });
+  await g.guess(g.picks()[0]); // the starting word: no choice, not counted
   let choices = 0; // guesses made with more than one pick to choose from: only those are turns
-  for (let turn = 0; turn < 5 && g.row < 6 && g.submitted.at(-1) !== 'pouch'; turn++) {
+  for (
+    let turn = 0;
+    turn < 5 && g.row < 6 && g.submitted.at(-1) !== "pouch";
+    turn++
+  ) {
     const picks = g.picks();
     if (picks.length > 1) choices++;
-    const pick = picks.includes('pouch') ? 'pouch' : picks[turn % 2 ? 0 : picks.length - 1];
+    const pick = picks.includes("pouch")
+      ? "pouch"
+      : picks[turn % 2 ? 0 : picks.length - 1];
     const before = g.row;
     g.pick(pick).click();
     // the pick is typed key by key: wait for its row to land
     for (let i = 0; i < 50 && g.row === before; i++) await sleep(100);
     await sleep(200);
   }
-  assert.ok(!g.panel().hidden, 'the recap stays up');
-  assert.equal(g.picks().length, 0, 'no picks once it is over');
+  assert.ok(!g.panel().hidden, "the recap stays up");
+  assert.equal(g.picks().length, 0, "no picks once it is over");
   const text = g.panel().textContent;
-  assert.match(text, g.submitted.at(-1) === 'pouch' ? new RegExp(`Solved in ${g.row}`) : /Out of guesses/);
-  assert.match(text, choices ? /best pick \d+ of \d+/ : /^(?![\s\S]*best pick)/);
+  assert.match(
+    text,
+    g.submitted.at(-1) === "pouch"
+      ? new RegExp(`Solved in ${g.row}`)
+      : /Out of guesses/,
+  );
+  assert.match(
+    text,
+    choices ? /best pick \d+ of \d+/ : /^(?![\s\S]*best pick)/,
+  );
   assert.match(text, /Medium/);
   // the last turn is saved once the row's colors settle, which can lag on a busy machine
-  for (let i = 0; i < 20 && g.saved().turns.length < choices; i++) await sleep(100);
-  assert.equal(g.saved().turns.length, choices, 'every guess made with a choice of picks is a turn (a lone last answer is not)');
-  const lost = await game({ answer: 'pouch', played: ['crane', 'pilot', 'shtum', 'dodgy', 'jazzy', 'fifty'] });
+  for (let i = 0; i < 20 && g.saved().turns.length < choices; i++)
+    await sleep(100);
+  assert.equal(
+    g.saved().turns.length,
+    choices,
+    "every guess made with a choice of picks is a turn (a lone last answer is not)",
+  );
+  const lost = await game({
+    answer: "pouch",
+    played: ["crane", "pilot", "shtum", "dodgy", "jazzy", "fifty"],
+  });
   assert.match(lost.panel().textContent, /Out of guesses/);
 });
 
-test('the best-pick count survives a reload and only counts each guess once', async () => {
-  const g = await game({ answer: 'pouch', played: ['crane'] });
+test("the best-pick count survives a reload and only counts each guess once", async () => {
+  const g = await game({ answer: "pouch", played: ["crane"] });
   const best = g.picks()[0];
-  g.pick(best).click(); await sleep(600);
-  assert.deepEqual(g.saved().turns.map(t => ({ ...t })), [{ used: true, best: true }]);
-  const again = await game({ answer: 'pouch', played: ['crane', best], stored: { 'wsl:2023-07-11': g.saved() } });
+  g.pick(best).click();
+  await sleep(600);
+  assert.deepEqual(
+    g.saved().turns.map((t) => ({ ...t })),
+    [{ used: true, best: true }],
+  );
+  const again = await game({
+    answer: "pouch",
+    played: ["crane", best],
+    stored: { "wsl:2023-07-11": g.saved() },
+  });
   assert.equal(again.saved().turns.length, 1);
-  const own = await game({ answer: 'pouch', played: ['crane'] });
-  await own.guess('pilot');
-  assert.deepEqual(own.saved().turns.map(t => ({ ...t })), [{ used: false, best: false }], 'your own word is not a pick');
+  const own = await game({ answer: "pouch", played: ["crane"] });
+  await own.guess("pilot");
+  assert.deepEqual(
+    own.saved().turns.map((t) => ({ ...t })),
+    [{ used: false, best: false }],
+    "your own word is not a pick",
+  );
 });
 
-test('the info line shows how many answers still fit', async () => {
-  const g = await game({ played: ['crane'] });
-  const n = g.E.candidates([{ word: 'crane', states: colors('crane', 'pouch') }], g.E.ANSWERS).length;
-  assert.match(g.root.querySelector('.info').textContent, new RegExp(`^${n.toLocaleString()} possible answers · Medium ▸$`));
+test("the info line shows how many answers still fit", async () => {
+  const g = await game({ played: ["crane"] });
+  const n = g.E.candidates(
+    [{ word: "crane", states: colors("crane", "pouch") }],
+    g.E.ANSWERS,
+  ).length;
+  assert.match(
+    g.root.querySelector(".info").textContent,
+    new RegExp(`^${n.toLocaleString()} possible answers · Medium ▸$`),
+  );
   const start = await game();
-  assert.match(start.root.querySelector('.info').textContent, /^2,983 possible answers · Medium/);
+  assert.match(
+    start.root.querySelector(".info").textContent,
+    /^2,983 possible answers · Medium/,
+  );
 });
 
-test('levels: Easy draws from the best 10, Hard from all with hints hidden; switch any time', async () => {
+test("levels: Easy draws from the best 10, Hard from all with hints hidden; switch any time", async () => {
   const g = await game();
-  const lv = () => g.root.getElementById('level');
+  const lv = () => g.root.getElementById("level");
   assert.match(lv().textContent, /Medium/);
   const cycle = [];
-  for (let i = 0; i < 4; i++) { lv().click(); await sleep(20); cycle.push(lv().textContent.split(' ')[0]); }
-  assert.deepEqual(cycle, ['Hard', 'Easy', 'Medium', 'Hard']);
-  assert.equal(g.w.localStorage.getItem('wsl:level'), '"hard"', 'the level is remembered for the next puzzles');
-  assert.equal(g.picks().length, 5, 'Hard starts with a choice of five');
+  for (let i = 0; i < 4; i++) {
+    lv().click();
+    await sleep(20);
+    cycle.push(lv().textContent.split(" ")[0]);
+  }
+  assert.deepEqual(cycle, ["Hard", "Easy", "Medium", "Hard"]);
+  assert.equal(
+    g.w.localStorage.getItem("wsl:level"),
+    '"hard"',
+    "the level is remembered for the next puzzles",
+  );
+  assert.equal(g.picks().length, 5, "Hard starts with a choice of five");
   await g.guess(g.picks()[0]);
   await sleep(300);
-  assert.equal(g.root.querySelector('.info').textContent, 'Hard ▸', 'Hard never says how many answers are left');
+  assert.equal(
+    g.root.querySelector(".info").textContent,
+    "Hard ▸",
+    "Hard never says how many answers are left",
+  );
   assert.ok(g.picks().length > 0);
-  for (const p of g.picks()) assert.equal(g.pick(p).querySelector('small'), null, `${p} has no hint in Hard`);
+  for (const p of g.picks())
+    assert.equal(
+      g.pick(p).querySelector("small"),
+      null,
+      `${p} has no hint in Hard`,
+    );
 
   // mid-puzzle: switching deals a new shortlist at the new level
-  lv().click(); await sleep(300); // Easy
-  assert.match(g.root.querySelector('.info').textContent, /· Easy ▸$/);
-  assert.ok(g.pick(g.picks()[0]).querySelector('small'), 'Easy shows hints');
-  assert.equal(g.saved().level, 'easy');
-  lv().click(); await sleep(300); lv().click(); await sleep(300); // Medium, then Hard
-  assert.equal(g.saved().easiest, 0, 'the recap remembers Easy was used');
+  lv().click();
+  await sleep(300); // Easy
+  assert.match(g.root.querySelector(".info").textContent, /· Easy ▸$/);
+  assert.ok(g.pick(g.picks()[0]).querySelector("small"), "Easy shows hints");
+  assert.equal(g.saved().level, "easy");
+  lv().click();
+  await sleep(300);
+  lv().click();
+  await sleep(300); // Medium, then Hard
+  assert.equal(g.saved().easiest, 0, "the recap remembers Easy was used");
 
-  const easy = await game({ played: ['crane'], stored: { 'wsl:level': '"easy"' } });
-  const rows = [{ word: 'crane', states: colors('crane', 'pouch') }];
+  const easy = await game({
+    played: ["crane"],
+    stored: { "wsl:level": '"easy"' },
+  });
+  const rows = [{ word: "crane", states: colors("crane", "pouch") }];
   const cands = easy.E.candidates(rows, easy.E.ANSWERS);
-  const cutoff = Array.from(cands, i => easy.E.expectedLeft(easy.E.codes(easy.E.ALL[i]), cands)).sort((a, b) => a - b)[9];
-  for (const p of easy.picks()) assert.ok(easy.E.expectedLeft(easy.E.codes(p), cands) <= cutoff + 1e-9, `${p} is among the best 10`);
+  const cutoff = Array.from(cands, (i) =>
+    easy.E.expectedLeft(easy.E.codes(easy.E.ALL[i]), cands),
+  ).sort((a, b) => a - b)[9];
+  for (const p of easy.picks())
+    assert.ok(
+      easy.E.expectedLeft(easy.E.codes(p), cands) <= cutoff + 1e-9,
+      `${p} is among the best 10`,
+    );
 });
 
-test('Easy starts with one of the 10 best starters, with its hint', async () => {
-  const g = await game({ stored: { 'wsl:level': '"easy"' } });
-  const ranked = g.E.ANSWERS.map(i => g.E.expectedLeft(g.E.codes(g.E.ALL[i]), g.E.ANSWERS)).sort((a, b) => a - b);
+test("Easy starts with one of the 10 best starters, with its hint", async () => {
+  const g = await game({ stored: { "wsl:level": '"easy"' } });
+  const ranked = g.E.ANSWERS.map((i) =>
+    g.E.expectedLeft(g.E.codes(g.E.ALL[i]), g.E.ANSWERS),
+  ).sort((a, b) => a - b);
   const seen = new Set();
   for (let i = 0; i < 30; i++) {
     assert.equal(g.picks().length, 1);
     const w = g.picks()[0];
     seen.add(w);
-    assert.ok(g.E.expectedLeft(g.E.codes(w), g.E.ANSWERS) <= ranked[9] + 1e-9, `${w} is among the 10 best starters`);
-    assert.match(g.pick(w).querySelector('small').textContent, /^~\d+ left$/);
-    g.root.getElementById('roll').click(); await sleep(5);
+    assert.ok(
+      g.E.expectedLeft(g.E.codes(w), g.E.ANSWERS) <= ranked[9] + 1e-9,
+      `${w} is among the 10 best starters`,
+    );
+    assert.match(g.pick(w).querySelector("small").textContent, /^~\d+ left$/);
+    g.root.getElementById("roll").click();
+    await sleep(5);
   }
-  assert.ok(seen.size > 3, 'not the same opener every day');
+  assert.ok(seen.size > 3, "not the same opener every day");
 });
 
-test('Medium starts with any likely answer, without a hint', async () => {
+test("Medium starts with any likely answer, without a hint", async () => {
   const g = await game();
   assert.equal(g.picks().length, 1);
-  assert.equal(g.pick(g.picks()[0]).querySelector('small'), null);
+  assert.equal(g.pick(g.picks()[0]).querySelector("small"), null);
   assert.match(g.panel().textContent, /Start with/);
 });
 
-test('Hard starts with a choice of five from every guessable word, no hints or counts', async () => {
-  const g = await game({ stored: { 'wsl:level': '"hard"' } });
-  assert.equal(g.root.querySelector('.info').textContent, 'Pick a starting word · Hard ▸');
+test("Hard starts with a choice of five from every guessable word, no hints or counts", async () => {
+  const g = await game({ stored: { "wsl:level": '"hard"' } });
+  assert.equal(
+    g.root.querySelector(".info").textContent,
+    "Pick a starting word · Hard ▸",
+  );
   assert.doesNotMatch(g.panel().textContent, /Start with|possible answer/);
   let junk = 0;
   for (let i = 0; i < 20; i++) {
@@ -251,150 +448,278 @@ test('Hard starts with a choice of five from every guessable word, no hints or c
     assert.equal(new Set(picks).size, 5);
     for (const w of picks) {
       assert.ok(g.E.ALL.includes(w), `${w} is a word the game takes`);
-      assert.equal(g.pick(w).querySelector('small'), null, `${w} has no hint`);
-      if (!g.E.ANSWERS.some(j => g.E.ALL[j] === w)) junk++;
+      assert.equal(g.pick(w).querySelector("small"), null, `${w} has no hint`);
+      if (!g.E.ANSWERS.some((j) => g.E.ALL[j] === w)) junk++;
     }
-    g.root.getElementById('roll').click(); await sleep(5);
+    g.root.getElementById("roll").click();
+    await sleep(5);
   }
-  assert.ok(junk > 0, 'words that are never answers come up too');
-  const one = await game({ answer: 'earth', played: ['crane', 'tales'], stored: { 'wsl:level': '"hard"' } });
-  assert.deepEqual(one.picks(), ['earth']);
-  assert.equal(one.pick('earth').querySelector('small'), null, 'not even "only fit" gives the count away');
+  assert.ok(junk > 0, "words that are never answers come up too");
+  const one = await game({
+    answer: "earth",
+    played: ["crane", "tales"],
+    stored: { "wsl:level": '"hard"' },
+  });
+  assert.deepEqual(one.picks(), ["earth"]);
+  assert.equal(
+    one.pick("earth").querySelector("small"),
+    null,
+    'not even "only fit" gives the count away',
+  );
 });
 
-test('switching level before the first guess deals that level\'s start', async () => {
+test("switching level before the first guess deals that level's start", async () => {
   const g = await game();
-  g.root.getElementById('level').click(); await sleep(20); // Hard
+  g.root.getElementById("level").click();
+  await sleep(20); // Hard
   assert.equal(g.picks().length, 5);
-  assert.equal(g.saved().level, 'hard');
-  g.root.getElementById('level').click(); await sleep(20); // Easy
+  assert.equal(g.saved().level, "hard");
+  g.root.getElementById("level").click();
+  await sleep(20); // Easy
   assert.equal(g.picks().length, 1);
-  assert.ok(g.pick(g.picks()[0]).querySelector('small'));
+  assert.ok(g.pick(g.picks()[0]).querySelector("small"));
 });
 
-test('a one-word Hard start saved by an older version is dealt again as five', async () => {
-  const old = { sig: '', left: 2983, picks: [{ word: 'beard', left: 169.6 }], level: 'hard', turns: [], at: Date.now() };
-  const g = await game({ stored: { 'wsl:2023-07-11': old, 'wsl:level': '"hard"' } });
+test("a one-word Hard start saved by an older version is dealt again as five", async () => {
+  const old = {
+    sig: "",
+    left: 2983,
+    picks: [{ word: "beard", left: 169.6 }],
+    level: "hard",
+    turns: [],
+    at: Date.now(),
+  };
+  const g = await game({
+    stored: { "wsl:2023-07-11": old, "wsl:level": '"hard"' },
+  });
   assert.equal(g.picks().length, 5);
 });
 
-test('the start word: an Easy one played counts toward the recap, a Hard choice is not a turn', async () => {
-  const easy = await game({ answer: 'pouch', stored: { 'wsl:level': '"easy"' } });
-  easy.root.getElementById('level').click(); await sleep(20); // Medium: a new start, so Easy wasn't used
+test("the start word: an Easy one played counts toward the recap, a Hard choice is not a turn", async () => {
+  const easy = await game({
+    answer: "pouch",
+    stored: { "wsl:level": '"easy"' },
+  });
+  easy.root.getElementById("level").click();
+  await sleep(20); // Medium: a new start, so Easy wasn't used
   await easy.guess(easy.picks()[0]);
   assert.equal(easy.saved().easiest, 1);
-  const again = await game({ answer: 'pouch', stored: { 'wsl:level': '"easy"' } });
+  const again = await game({
+    answer: "pouch",
+    stored: { "wsl:level": '"easy"' },
+  });
   await again.guess(again.picks()[0]);
-  assert.equal(again.saved().easiest, 0, 'an Easy start counts');
-  const hard = await game({ answer: 'pouch', stored: { 'wsl:level': '"hard"' } });
+  assert.equal(again.saved().easiest, 0, "an Easy start counts");
+  const hard = await game({
+    answer: "pouch",
+    stored: { "wsl:level": '"hard"' },
+  });
   await hard.guess(hard.picks()[0]);
-  assert.deepEqual([...hard.saved().turns], [], 'choosing a start is not a best-pick turn');
+  assert.deepEqual(
+    [...hard.saved().turns],
+    [],
+    "choosing a start is not a best-pick turn",
+  );
   assert.equal(hard.saved().easiest, 2);
 });
 
-test('the recap names the easiest level a shortlist was dealt at', async () => {
-  const g = await game({ answer: 'pouch', played: ['crane'], stored: { 'wsl:level': '"easy"' } });
-  g.root.getElementById('level').click(); await sleep(300); // Medium
-  g.root.getElementById('level').click(); await sleep(300); // Hard
-  await g.guess('pouch');
-  assert.match(g.panel().querySelector(".note").textContent, /^Solved in 2 · .*Easy$/);
+test("the recap names the easiest level a shortlist was dealt at", async () => {
+  const g = await game({
+    answer: "pouch",
+    played: ["crane"],
+    stored: { "wsl:level": '"easy"' },
+  });
+  g.root.getElementById("level").click();
+  await sleep(300); // Medium
+  g.root.getElementById("level").click();
+  await sleep(300); // Hard
+  await g.guess("pouch");
+  assert.match(
+    g.panel().querySelector(".note").textContent,
+    /^Solved in 2 · .*Easy$/,
+  );
 });
 
-test('🎲 deals new picks and ▾ tucks them away until 🎲 Shortlist is tapped', async () => {
-  const g = await game({ played: ['crane'] });
+test("🎲 deals new picks and ▾ tucks them away until 🎲 Shortlist is tapped", async () => {
+  const g = await game({ played: ["crane"] });
   const first = g.picks().join();
   let changed = false;
-  for (let i = 0; i < 5 && !changed; i++) { g.root.getElementById('roll').click(); await sleep(20); changed = g.picks().join() !== first; }
+  for (let i = 0; i < 5 && !changed; i++) {
+    g.root.getElementById("roll").click();
+    await sleep(20);
+    changed = g.picks().join() !== first;
+  }
   assert.ok(changed);
-  assert.equal(g.saved().picks.map(p => p.word).join(), g.picks().join(), 'the new picks are saved');
-  g.root.getElementById('hide').click(); await sleep(20);
+  assert.equal(
+    g
+      .saved()
+      .picks.map((p) => p.word)
+      .join(),
+    g.picks().join(),
+    "the new picks are saved",
+  );
+  g.root.getElementById("hide").click();
+  await sleep(20);
   assert.ok(g.panel().hidden);
-  const show = g.root.getElementById('show');
+  const show = g.root.getElementById("show");
   assert.ok(!show.hidden);
-  const g2 = await game({ played: ['crane'], stored: { 'wsl:collapsed': true } });
-  assert.ok(g2.panel().hidden, 'stays tucked away on reload');
-  g2.root.getElementById('show').click(); await sleep(20);
+  const g2 = await game({
+    played: ["crane"],
+    stored: { "wsl:collapsed": true },
+  });
+  assert.ok(g2.panel().hidden, "stays tucked away on reload");
+  g2.root.getElementById("show").click();
+  await sleep(20);
   assert.ok(!g2.panel().hidden);
 });
 
-test('an answer missing from the list still gets picks from the wider guess list', async () => {
+test("an answer missing from the list still gets picks from the wider guess list", async () => {
   const g = await game();
-  const notAnswer = g.E.ALL.find((x, i) => !g.E.ANSWERS.includes(i) && !/(.).*\1/.test(x));
-  const g2 = await game({ answer: notAnswer, played: ['crane', 'pilot'] });
-  const rows = ['crane', 'pilot'].map(x => ({ word: x, states: colors(x, notAnswer) }));
+  const notAnswer = g.E.ALL.find(
+    (x, i) => !g.E.ANSWERS.includes(i) && !/(.).*\1/.test(x),
+  );
+  const g2 = await game({ answer: notAnswer, played: ["crane", "pilot"] });
+  const rows = ["crane", "pilot"].map((x) => ({
+    word: x,
+    states: colors(x, notAnswer),
+  }));
   assert.ok(g2.picks().length > 0);
-  assert.ok(g2.E.candidates(rows, g2.E.ALL.map((_, i) => i)).some(i => g2.E.ALL[i] === notAnswer));
+  assert.ok(
+    g2.E.candidates(
+      rows,
+      g2.E.ALL.map((_, i) => i),
+    ).some((i) => g2.E.ALL[i] === notAnswer),
+  );
 });
 
-test('the picks sit just above the game keyboard, and saved picks expire after 60 days', async () => {
+test("the picks sit just above the game keyboard, and saved picks expire after 60 days", async () => {
   const old = Date.now() - 61 * 864e5;
-  const g = await game({ stored: { 'wsl:2023-01-01': { sig: '', picks: [], at: old }, 'wsl:2023-07-10': { sig: '', picks: [], at: Date.now() } } });
-  assert.equal(g.d.getElementById('wsl-root').nextElementSibling.className, 'Keyboard-module_keyboard');
-  assert.equal(g.w.localStorage.getItem('wsl:2023-01-01'), null);
-  assert.notEqual(g.w.localStorage.getItem('wsl:2023-07-10'), null);
+  const g = await game({
+    stored: {
+      "wsl:2023-01-01": { sig: "", picks: [], at: old },
+      "wsl:2023-07-10": { sig: "", picks: [], at: Date.now() },
+    },
+  });
+  assert.equal(
+    g.d.getElementById("wsl-root").nextElementSibling.className,
+    "Keyboard-module_keyboard",
+  );
+  assert.equal(g.w.localStorage.getItem("wsl:2023-01-01"), null);
+  assert.notEqual(g.w.localStorage.getItem("wsl:2023-07-10"), null);
 });
 
-test('when only one answer fits, it is the single pick, labeled as the only fit', async () => {
-  const g = await game({ answer: 'earth', played: ['crane', 'tales'] });
-  assert.deepEqual(g.picks(), ['earth']);
-  assert.equal(g.pick('earth').querySelector('small').textContent, 'only fit');
+test("when only one answer fits, it is the single pick, labeled as the only fit", async () => {
+  const g = await game({ answer: "earth", played: ["crane", "tales"] });
+  assert.deepEqual(g.picks(), ["earth"]);
+  assert.equal(g.pick("earth").querySelector("small").textContent, "only fit");
 });
 
-test('a board that does not continue the saved game starts a fresh record', async () => {
-  const stale = { sig: 'crane:0,pilot:0', left: 3, picks: [{ word: 'pouch', left: 0 }], level: 'easy', easiest: 0, turns: [{ used: true, best: true }], at: Date.now() };
-  const g = await game({ played: ['shtum'], stored: { 'wsl:2023-07-11': stale } });
-  assert.deepEqual([...g.saved().turns], [], 'turns from the other game are dropped');
-  assert.equal(g.saved().easiest, 1, 'and so is its easiest level');
+test("a board that does not continue the saved game starts a fresh record", async () => {
+  const stale = {
+    sig: "crane:0,pilot:0",
+    left: 3,
+    picks: [{ word: "pouch", left: 0 }],
+    level: "easy",
+    easiest: 0,
+    turns: [{ used: true, best: true }],
+    at: Date.now(),
+  };
+  const g = await game({
+    played: ["shtum"],
+    stored: { "wsl:2023-07-11": stale },
+  });
+  assert.deepEqual(
+    [...g.saved().turns],
+    [],
+    "turns from the other game are dropped",
+  );
+  assert.equal(g.saved().easiest, 1, "and so is its easiest level");
 });
 
-test('the picks and the level button are disabled while a word is being entered', async () => {
-  const g = await game({ played: ['crane'] });
-  g.pick(g.picks().find(x => x !== 'pouch')).click(); await sleep(600);
+test("the picks and the level button are disabled while a word is being entered", async () => {
+  const g = await game({ played: ["crane"] });
+  g.pick(g.picks().find((x) => x !== "pouch")).click();
+  await sleep(600);
   // the second pick: the game takes a while to color the row
-  const slow = g.enter; let release;
-  g.enter = word => { release = () => slow(word); };
+  const slow = g.enter;
+  let release;
+  g.enter = (word) => {
+    release = () => slow(word);
+  };
   await sleep(400);
   const p = g.picks()[0]; // whatever is left, even the answer: the row won't color until release()
-  g.pick(p).click(); await sleep(300);
-  assert.ok(g.root.querySelector('.pick').disabled, 'disabled while the word is being entered');
-  assert.ok(g.root.getElementById('level').disabled, 'level too');
-  release(); await sleep(300);
+  g.pick(p).click();
+  await sleep(300);
+  assert.ok(
+    g.root.querySelector(".pick").disabled,
+    "disabled while the word is being entered",
+  );
+  assert.ok(g.root.getElementById("level").disabled, "level too");
+  release();
+  await sleep(300);
 });
 
-test('light text when the page behind is dark (Wordle dark theme or an extension like Dark Reader)', async () => {
+test("light text when the page behind is dark (Wordle dark theme or an extension like Dark Reader)", async () => {
   const g = await game();
-  const host = g.d.getElementById('wsl-root');
-  assert.ok(!('dark' in host.dataset), 'light page: game text color');
-  g.d.body.style.backgroundColor = 'rgb(24, 26, 27)';
-  g.d.documentElement.setAttribute('data-darkreader-scheme', 'dark');
+  const host = g.d.getElementById("wsl-root");
+  assert.ok(!("dark" in host.dataset), "light page: game text color");
+  g.d.body.style.backgroundColor = "rgb(24, 26, 27)";
+  g.d.documentElement.setAttribute("data-darkreader-scheme", "dark");
   await sleep(400);
-  assert.ok('dark' in host.dataset, 'dark page: light text');
-  g.d.body.style.backgroundColor = 'rgb(255, 255, 255)';
-  g.d.documentElement.setAttribute('data-darkreader-scheme', 'light');
+  assert.ok("dark" in host.dataset, "dark page: light text");
+  g.d.body.style.backgroundColor = "rgb(255, 255, 255)";
+  g.d.documentElement.setAttribute("data-darkreader-scheme", "light");
   await sleep(400);
-  assert.ok(!('dark' in host.dataset), 'back to light');
+  assert.ok(!("dark" in host.dataset), "back to light");
 });
 
-test('a malformed saved record is ignored, never shown as markup', async () => {
+test("a malformed saved record is ignored, never shown as markup", async () => {
   const bad = [
-    { sig: '', left: 1, picks: [{ word: '<img src=x onerror=alert(1)>', left: 1 }], level: 'medium', turns: [], at: Date.now() },
-    { sig: '', left: '<b>x</b>', picks: [{ word: 'pouch', left: 1 }], at: Date.now() },
-    { sig: '', left: 3, picks: 'pouch', at: Date.now() },
-    { sig: '', left: 3, picks: [{ word: 'pouch', left: 1 }], easiest: 'constructor', at: Date.now() },
-    null, 'x', [1, 2],
+    {
+      sig: "",
+      left: 1,
+      picks: [{ word: "<img src=x onerror=alert(1)>", left: 1 }],
+      level: "medium",
+      turns: [],
+      at: Date.now(),
+    },
+    {
+      sig: "",
+      left: "<b>x</b>",
+      picks: [{ word: "pouch", left: 1 }],
+      at: Date.now(),
+    },
+    { sig: "", left: 3, picks: "pouch", at: Date.now() },
+    {
+      sig: "",
+      left: 3,
+      picks: [{ word: "pouch", left: 1 }],
+      easiest: "constructor",
+      at: Date.now(),
+    },
+    null,
+    "x",
+    [1, 2],
   ];
   for (const rec of bad) {
-    const g = await game({ stored: { 'wsl:2023-07-11': rec, 'wsl:level': 'constructor' } });
-    assert.equal(g.panel().querySelector('img'), null);
+    const g = await game({
+      stored: { "wsl:2023-07-11": rec, "wsl:level": "constructor" },
+    });
+    assert.equal(g.panel().querySelector("img"), null);
     const picks = g.picks();
-    assert.equal(picks.length, 1, 'a fresh starting word instead');
+    assert.equal(picks.length, 1, "a fresh starting word instead");
     assert.match(picks[0], /^[a-z]{5}$/);
-    assert.match(g.panel().textContent, /Medium/, 'an unknown stored level falls back to Medium');
+    assert.match(
+      g.panel().textContent,
+      /Medium/,
+      "an unknown stored level falls back to Medium",
+    );
   }
 });
 
-test('a second copy of the script does nothing', async () => {
+test("a second copy of the script does nothing", async () => {
   const g = await game();
-  g.w.eval(SRC); await sleep(200);
-  assert.equal(g.d.querySelectorAll('#wsl-root').length, 1);
+  g.w.eval(SRC);
+  await sleep(200);
+  assert.equal(g.d.querySelectorAll("#wsl-root").length, 1);
 });
