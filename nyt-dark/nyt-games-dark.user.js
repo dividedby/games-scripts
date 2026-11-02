@@ -26,30 +26,47 @@
 // ==/UserScript==
 
 (() => {
-  'use strict';
-  if (document.getElementById('nytd-style')) return; // already running (a second install)
+  "use strict";
+  if (document.getElementById("nytd-style")) return; // already running (a second install)
 
   // NYT already ships a full dark color set for its games (the one its apps use), switched
   // on by <body data-mode="dark" class="display-settings-enabled">, plus older ".dark" rules.
   // The website just never turns it on. This script does, and patches the few parts of the
   // page that have no dark colors of their own (the site header and the page background).
 
-  const MODE_KEY = 'nytd:mode';          // 'auto' (follow the system) | 'dark' | 'light'
-  const MODES = ['auto', 'dark', 'light'];
-  const LABEL = { auto: 'Auto', dark: 'Dark', light: 'Light' };
+  const MODE_KEY = "nytd:mode"; // 'auto' (follow the system) | 'dark' | 'light'
+  const MODES = ["auto", "dark", "light"];
+  const LABEL = { auto: "Auto", dark: "Dark", light: "Light" };
   // (storage off in private mode, or a value that isn't JSON: the mode just isn't remembered)
   const ls = {
-    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
-    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+    get(k, d) {
+      try {
+        const v = localStorage.getItem(k);
+        return v === null ? d : JSON.parse(v);
+      } catch {
+        return d;
+      }
+    },
+    set(k, v) {
+      try {
+        localStorage.setItem(k, JSON.stringify(v));
+      } catch {}
+    },
   };
-  const savedMode = () => { const v = ls.get(MODE_KEY, 'auto'); return MODES.includes(v) ? v : 'auto'; };
+  const savedMode = () => {
+    const v = ls.get(MODE_KEY, "auto");
+    return MODES.includes(v) ? v : "auto";
+  };
   let mode = savedMode();
-  const system = window.matchMedia?.('(prefers-color-scheme: dark)');
-  const wantDark = () => mode === 'dark' || (mode === 'auto' && !!system?.matches);
+  const system = window.matchMedia?.("(prefers-color-scheme: dark)");
+  const wantDark = () =>
+    mode === "dark" || (mode === "auto" && !!system?.matches);
   // Hints, companions, forums and the game bots are news-style pages, not game pages. NYT gives
   // them their own dark colors (the app's), switched by a class on <html>; the script swaps it.
   // The help center has none, so it gets only the generic darkening below.
-  const ARTICLE = location.host !== 'www.nytimes.com' || !/^\/(games|puzzles|crosswords)(\/|$)/.test(location.pathname);
+  const ARTICLE =
+    location.host !== "www.nytimes.com" ||
+    !/^\/(games|puzzles|crosswords)(\/|$)/.test(location.pathname);
 
   // ---------- the parts NYT left out ----------
   const CSS = `
@@ -150,15 +167,16 @@
     html.nytd-dark [data-nytd-panel] img:is([src*=arrow i], [src*=chevron i], [src*=caret i]) { filter: invert(1); }
   `;
 
-  const rgb = color => {
+  const rgb = (color) => {
     const m = color.match(/[\d.]+/g);
     if (!m || (m[3] !== undefined && +m[3] < 0.5)) return null; // (mostly) transparent
     return m.slice(0, 3).map(Number);
   };
   const lightness = ([r, g, b]) => (0.299 * r + 0.587 * g + 0.114 * b) / 255;
   // A light, colorless background (white or light gray), as opposed to a game's brand color
-  const neutralLight = c => Math.min(...c) > 200 && Math.max(...c) - Math.min(...c) < 14;
-  const isPlainLight = el => {
+  const neutralLight = (c) =>
+    Math.min(...c) > 200 && Math.max(...c) - Math.min(...c) < 14;
+  const isPlainLight = (el) => {
     const c = rgb(getComputedStyle(el).backgroundColor);
     return !!c && neutralLight(c);
   };
@@ -166,54 +184,78 @@
   // gradient in the darkened panel color. The page's own inline value is kept to put back.
   const fades = new Map();
   // (split in two, reading then writing, so a scan reads every style before changing any)
-  function fadeFor(el) { // the darkened gradient, or null
+  function fadeFor(el) {
+    // the darkened gradient, or null
     if (fades.has(el)) return null;
     const img = getComputedStyle(el).backgroundImage;
-    if (!img.includes('gradient')) return null;
-    const dark = img.replace(/rgba?\((\d+), (\d+), (\d+)((?:, [\d.]+)?)\)/g, (m, r, g, b, a) =>
-      neutralLight([+r, +g, +b]) ? `${a ? 'rgba' : 'rgb'}(27, 27, 27${a})` : m);
+    if (!img.includes("gradient")) return null;
+    const dark = img.replace(
+      /rgba?\((\d+), (\d+), (\d+)((?:, [\d.]+)?)\)/g,
+      (m, r, g, b, a) =>
+        neutralLight([+r, +g, +b])
+          ? `${a ? "rgba" : "rgb"}(27, 27, 27${a})`
+          : m,
+    );
     return dark === img ? null : dark;
   }
   function darkenFade(el, dark) {
-    fades.set(el, [el.style.getPropertyValue('background-image'), el.style.getPropertyPriority('background-image')]);
-    el.style.setProperty('background-image', dark, 'important');
+    fades.set(el, [
+      el.style.getPropertyValue("background-image"),
+      el.style.getPropertyPriority("background-image"),
+    ]);
+    el.style.setProperty("background-image", dark, "important");
   }
   // The background an element's text is actually drawn on: dark if it's one we darkened,
   // or if nothing up the tree paints one (the page itself is dark)
-  const backdropIsLight = el => {
+  const backdropIsLight = (el) => {
     for (let e = el; e && e !== document.body; e = e.parentElement) {
-      if ('nytdPanel' in e.dataset) return false;
+      if ("nytdPanel" in e.dataset) return false;
       const c = rgb(getComputedStyle(e).backgroundColor);
       if (c) return lightness(c) > 0.55;
     }
     return false;
   };
   // Dark icons (drawn as background images or <img>) that need flipping on a dark background
-  const DARK_ICON = /black|puzzle-progress|arrow|chevron|carr?et|print|list-view|close|t-logo/i;
-  const iconUrl = el => {
-    if (el.tagName === 'IMG') return el.getAttribute('src') || '';
+  const DARK_ICON =
+    /black|puzzle-progress|arrow|chevron|carr?et|print|list-view|close|t-logo/i;
+  const iconUrl = (el) => {
+    if (el.tagName === "IMG") return el.getAttribute("src") || "";
     const bg = getComputedStyle(el).backgroundImage;
-    return bg.startsWith('url(') ? bg : '';
+    return bg.startsWith("url(") ? bg : "";
   };
-  const hasOwnText = el => [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
+  const hasOwnText = (el) =>
+    [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
 
   // Where neutral light areas get darkened: the screens NYT draws over a game (start screens,
   // results, promos) and the pages around the games (home page, archives, footer). Never the
   // game boards themselves, which NYT's own dark colors already cover.
   const PANELS = [
-    '[class*="Welcome-module_contentWelcome"]', '[class*="_moment_"]', '[role="dialog"]',
-    '[class*="Modal-module"]', '[class*="pz-moment"]',
-    '[id$="-root"]:not(#pz-game-root)', '.pz-footer', // home, stats and Spelling Bee pages: #hub-root, #stats-root…
+    '[class*="Welcome-module_contentWelcome"]',
+    '[class*="_moment_"]',
+    '[role="dialog"]',
+    '[class*="Modal-module"]',
+    '[class*="pz-moment"]',
+    '[id$="-root"]:not(#pz-game-root)',
+    ".pz-footer", // home, stats and Spelling Bee pages: #hub-root, #stats-root…
     '[class*="ArchiveLayout-module_wrapper"]',
-    '.tab__tabNav', '.archive_date-selector-container', '.archive_buttons-right', '.archive_mode-toggle',
-  ].join(', ');
-  const SCAN = 'div, section, aside, article, header, footer, nav, ul, ol, li, a, button, span, h1, h2, h3, h4, h5, h6, p, label, img, i, em, strong, b, small, td, th, dt, dd, figcaption, blockquote, summary, time';
+    ".tab__tabNav",
+    ".archive_date-selector-container",
+    ".archive_buttons-right",
+    ".archive_mode-toggle",
+  ].join(", ");
+  const SCAN =
+    "div, section, aside, article, header, footer, nav, ul, ol, li, a, button, span, h1, h2, h3, h4, h5, h6, p, label, img, i, em, strong, b, small, td, th, dt, dd, figcaption, blockquote, summary, time";
   // Elements already looked at, with the class, style and child count they had then. A rescan
   // (after every change to the page) only looks again at new elements or ones that changed;
   // the rest would only give the same answer, at a cost on long pages and slow phones.
   let checked = new WeakMap();
-  const changed = el => {
-    const sig = (el.getAttribute('class') || '') + '|' + (el.getAttribute('style') || '') + '|' + el.childNodes.length;
+  const changed = (el) => {
+    const sig =
+      (el.getAttribute("class") || "") +
+      "|" +
+      (el.getAttribute("style") || "") +
+      "|" +
+      el.childNodes.length;
     if (checked.get(el) === sig) return false;
     checked.set(el, sig);
     return true;
@@ -221,14 +263,19 @@
   // added: on news-style pages, just the elements the page added since the last look (instead
   // of the whole page); { parents } are elements whose own children changed, looked at alone
   function markPanels(added) {
-    if (!document.documentElement.classList.contains('nytd-dark')) return;
+    if (!document.documentElement.classList.contains("nytd-dark")) return;
     const roots = [...document.querySelectorAll(PANELS)];
     const els = new Set();
     if (ARTICLE && document.body) {
-      if (added) { roots.push(...added.subtrees); for (const el of added.parents) els.add(el); }
-      else roots.push(document.body);
+      if (added) {
+        roots.push(...added.subtrees);
+        for (const el of added.parents) els.add(el);
+      } else roots.push(document.body);
     }
-    for (const root of roots) { els.add(root); for (const el of root.querySelectorAll(SCAN)) els.add(el); }
+    for (const root of roots) {
+      els.add(root);
+      for (const el of root.querySelectorAll(SCAN)) els.add(el);
+    }
     const fresh = [...els].filter(changed);
     for (const el of fades.keys()) if (!el.isConnected) fades.delete(el); // don't hold on to removed elements
     // backgrounds first (outside in), so the text pass sees the final backdrops. Every
@@ -236,15 +283,21 @@
     // browser recompute styles once per element.
     const todo = [];
     for (const el of fresh) {
-      if ('nytdPanel' in el.dataset || 'nytdFlip' in el.dataset) continue;
+      if ("nytdPanel" in el.dataset || "nytdFlip" in el.dataset) continue;
       // the primary button is the one we deliberately make light: leave it
-      if (el.matches('button[class*=primary i], button[class*=primary i] *')) continue;
-      const fade = el.matches('.time-bar') ? null : fadeFor(el);
+      if (el.matches("button[class*=primary i], button[class*=primary i] *"))
+        continue;
+      const fade = el.matches(".time-bar") ? null : fadeFor(el);
       const light = isPlainLight(el);
       // a light button drawn with a dark icon image: flip the whole button;
       // an empty shape (a chart bar, an empty calendar day) stays a visible gray
-      const how = !light ? null : DARK_ICON.test(iconUrl(el)) ? 'flip'
-        : el.childElementCount || el.textContent.trim() ? '' : 'shape';
+      const how = !light
+        ? null
+        : DARK_ICON.test(iconUrl(el))
+          ? "flip"
+          : el.childElementCount || el.textContent.trim()
+            ? ""
+            : "shape";
       if (fade || how !== null) todo.push([el, fade, how]);
     }
     let marked = false;
@@ -252,7 +305,7 @@
       if (fade) darkenFade(el, fade);
       if (how === null) continue;
       marked = true;
-      if (how === 'flip') el.dataset.nytdFlip = '';
+      if (how === "flip") el.dataset.nytdFlip = "";
       else el.dataset.nytdPanel = how;
     }
     // a newly darkened area changes the backdrop of everything inside it: look at all text
@@ -263,37 +316,68 @@
     // colorful drawings (game icons), are left alone
     // (read them all, then flip; an svg inside one just flipped is left alone)
     const svgs = new Set();
-    if (ARTICLE) for (const root of added ? roots : [document.body]) {
-      if (root.localName === 'svg') svgs.add(root);
-      for (const svg of root.querySelectorAll('svg')) svgs.add(svg);
-    }
+    if (ARTICLE)
+      for (const root of added ? roots : [document.body]) {
+        if (root.localName === "svg") svgs.add(root);
+        for (const svg of root.querySelectorAll("svg")) svgs.add(svg);
+      }
     const flips = [];
     for (const svg of svgs) {
       if (!changed(svg) && !marked) continue;
-      if ('nytdFlip' in svg.dataset || svg.closest('[data-nytd-flip]') || svg.getBoundingClientRect().width > 400) continue;
+      if (
+        "nytdFlip" in svg.dataset ||
+        svg.closest("[data-nytd-flip]") ||
+        svg.getBoundingClientRect().width > 400
+      )
+        continue;
       const paints = [];
-      for (const shape of svg.querySelectorAll('path, rect, circle, ellipse, polygon, polyline, line, text')) {
+      for (const shape of svg.querySelectorAll(
+        "path, rect, circle, ellipse, polygon, polyline, line, text",
+      )) {
         const cs = getComputedStyle(shape);
-        for (const c of [cs.fill, cs.stroke]) if (c !== 'none') paints.push(rgb(c));
+        for (const c of [cs.fill, cs.stroke])
+          if (c !== "none") paints.push(rgb(c));
       }
-      if (paints.length && paints.every(c => !c || lightness(c) < 0.25) && !backdropIsLight(svg)) flips.push(svg);
+      if (
+        paints.length &&
+        paints.every((c) => !c || lightness(c) < 0.25) &&
+        !backdropIsLight(svg)
+      )
+        flips.push(svg);
     }
-    for (const svg of flips) if (!svg.parentElement?.closest('[data-nytd-flip]')) svg.dataset.nytdFlip = '';
+    for (const svg of flips)
+      if (!svg.parentElement?.closest("[data-nytd-flip]"))
+        svg.dataset.nytdFlip = "";
     for (const el of look) {
-      if ('nytdFlip' in el.dataset || 'nytdInk' in el.dataset || el.closest('[data-nytd-flip]')) continue;
-      if (DARK_ICON.test(iconUrl(el))) { if (!backdropIsLight(el)) el.dataset.nytdFlip = ''; continue; }
+      if (
+        "nytdFlip" in el.dataset ||
+        "nytdInk" in el.dataset ||
+        el.closest("[data-nytd-flip]")
+      )
+        continue;
+      if (DARK_ICON.test(iconUrl(el))) {
+        if (!backdropIsLight(el)) el.dataset.nytdFlip = "";
+        continue;
+      }
       if (!hasOwnText(el)) continue;
       const c = rgb(getComputedStyle(el).color);
       if (!c) continue;
-      const lightText = lightness(c) > 0.5, lightBack = backdropIsLight(el);
-      if (lightText === lightBack) el.dataset.nytdInk = lightBack ? 'dark' : 'light';
+      const lightText = lightness(c) > 0.5,
+        lightBack = backdropIsLight(el);
+      if (lightText === lightBack)
+        el.dataset.nytdInk = lightBack ? "dark" : "light";
     }
   }
   function unmarkPanels() {
-    for (const el of document.querySelectorAll('[data-nytd-panel], [data-nytd-ink], [data-nytd-flip]')) {
-      delete el.dataset.nytdPanel; delete el.dataset.nytdInk; delete el.dataset.nytdFlip;
+    for (const el of document.querySelectorAll(
+      "[data-nytd-panel], [data-nytd-ink], [data-nytd-flip]",
+    )) {
+      delete el.dataset.nytdPanel;
+      delete el.dataset.nytdInk;
+      delete el.dataset.nytdFlip;
     }
-    for (const [el, [value, priority]] of fades) el.style.setProperty('background-image', value, priority);
+    for (const [el, [value, priority]] of fades)
+      el.style.setProperty("background-image", value, priority);
     fades.clear();
     checked = new WeakMap(); // look at everything afresh next time dark is on
   }
@@ -303,9 +387,17 @@
   const added = new Map(); // element -> { settings, dark }
   function meta(name, content) {
     let m = document.head?.querySelector(`meta[name="${name}"][data-nytd]`);
-    if (content == null) { m?.remove(); return; }
+    if (content == null) {
+      m?.remove();
+      return;
+    }
     if (!document.head) return;
-    if (!m) { m = document.createElement('meta'); m.name = name; m.dataset.nytd = ''; document.head.appendChild(m); }
+    if (!m) {
+      m = document.createElement("meta");
+      m.name = name;
+      m.dataset.nytd = "";
+      document.head.appendChild(m);
+    }
     m.content = content;
   }
   // news-style pages: NYT's tpl-always-light → tpl-always-dark, put back when turned off
@@ -313,35 +405,48 @@
   function tpl(dark) {
     const c = document.documentElement.classList;
     if (dark) {
-      if (tplLight === null) tplLight = c.contains('tpl-always-light');
+      if (tplLight === null) tplLight = c.contains("tpl-always-light");
       // (only touch the class list when it changes: the observer on <html> would loop)
-      if (c.contains('tpl-always-light')) c.remove('tpl-always-light');
-      if (!c.contains('tpl-always-dark')) c.add('tpl-always-dark');
+      if (c.contains("tpl-always-light")) c.remove("tpl-always-light");
+      if (!c.contains("tpl-always-dark")) c.add("tpl-always-dark");
     } else if (tplLight !== null) {
-      c.remove('tpl-always-dark'); if (tplLight) c.add('tpl-always-light');
+      c.remove("tpl-always-dark");
+      if (tplLight) c.add("tpl-always-light");
       tplLight = null;
     }
   }
   function apply() {
     const dark = wantDark();
-    document.documentElement.classList.toggle('nytd-dark', dark);
+    document.documentElement.classList.toggle("nytd-dark", dark);
     if (ARTICLE) tpl(dark);
     // tell dark-mode extensions (Dark Reader, Noir) the page is already dark, so they stand back
-    meta('darkreader-lock', dark ? '' : null);
-    meta('color-scheme', dark ? 'dark' : null);
+    meta("darkreader-lock", dark ? "" : null);
+    meta("color-scheme", dark ? "dark" : null);
     // on <html> too, so NYT's dark colors reach the page background (CSS variables set on
     // <body> alone don't apply to <html>)
     for (const el of [document.documentElement, document.body]) {
       if (!el) continue;
       const mine = added.get(el) || { settings: false, dark: false };
       if (dark) {
-        if (el.dataset.mode !== 'dark') el.dataset.mode = 'dark';
-        if (!el.classList.contains('display-settings-enabled')) { el.classList.add('display-settings-enabled'); mine.settings = true; }
-        if (el === document.body && !el.classList.contains('dark')) { el.classList.add('dark'); mine.dark = true; }
+        if (el.dataset.mode !== "dark") el.dataset.mode = "dark";
+        if (!el.classList.contains("display-settings-enabled")) {
+          el.classList.add("display-settings-enabled");
+          mine.settings = true;
+        }
+        if (el === document.body && !el.classList.contains("dark")) {
+          el.classList.add("dark");
+          mine.dark = true;
+        }
       } else {
-        if (el.dataset.mode === 'dark') el.dataset.mode = 'light';
-        if (mine.settings) { el.classList.remove('display-settings-enabled'); mine.settings = false; }
-        if (mine.dark) { el.classList.remove('dark'); mine.dark = false; }
+        if (el.dataset.mode === "dark") el.dataset.mode = "light";
+        if (mine.settings) {
+          el.classList.remove("display-settings-enabled");
+          mine.settings = false;
+        }
+        if (mine.dark) {
+          el.classList.remove("dark");
+          mine.dark = false;
+        }
       }
       added.set(el, mine);
     }
@@ -352,17 +457,19 @@
 
   // ---------- the toggle in the site header ----------
   // after the site header's logo, or, in Wordle (which has its own toolbar), after ⚙ Settings
-  const NAV = '.pz-nav__title, #js-logo-nav';
-  const TOOLBAR = '[class*="AppHeader-module_toolbar__menu"] > #settings-button';
-  const anchor = () => document.querySelector(NAV) || document.querySelector(TOOLBAR);
+  const NAV = ".pz-nav__title, #js-logo-nav";
+  const TOOLBAR =
+    '[class*="AppHeader-module_toolbar__menu"] > #settings-button';
+  const anchor = () =>
+    document.querySelector(NAV) || document.querySelector(TOOLBAR);
   function showToggle() {
     const nav = anchor();
-    let t = document.getElementById('nytd-toggle');
+    let t = document.getElementById("nytd-toggle");
     if (!nav) return;
     if (!t) {
-      t = document.createElement('button');
-      t.id = 'nytd-toggle';
-      t.type = 'button';
+      t = document.createElement("button");
+      t.id = "nytd-toggle";
+      t.type = "button";
       // On iPhones the site header handles touches itself, so a tap there never becomes a
       // click: a finger switches on pointerup, a mouse (or keyboard) on click, and the click
       // that may still follow a tap is skipped.
@@ -372,63 +479,95 @@
         ls.set(MODE_KEY, mode);
         apply();
       };
-      t.addEventListener('pointerup', e => {
-        if (e.pointerType === 'mouse' || !e.isPrimary) return;
-        e.preventDefault(); e.stopPropagation();
+      t.addEventListener("pointerup", (e) => {
+        if (e.pointerType === "mouse" || !e.isPrimary) return;
+        e.preventDefault();
+        e.stopPropagation();
         tapped = Date.now();
         cycle();
       });
-      t.addEventListener('click', e => {
-        e.preventDefault(); e.stopPropagation();
+      t.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         if (Date.now() - tapped < 800) return;
         cycle();
       });
     }
     if (t.previousElementSibling !== nav) nav.after(t);
-    t.classList.toggle('nytd-in-toolbar', !nav.matches(NAV));
+    t.classList.toggle("nytd-in-toolbar", !nav.matches(NAV));
     const label = `◐ ${LABEL[mode]}`;
     if (t.textContent !== label) {
       // ◐ is its own element so a narrow toolbar can leave it out and keep the word
-      const icon = document.createElement('span'), word = document.createElement('span');
-      icon.className = 'nytd-icon'; icon.textContent = '◐ ';
-      word.className = 'nytd-word'; word.textContent = LABEL[mode];
+      const icon = document.createElement("span"),
+        word = document.createElement("span");
+      icon.className = "nytd-icon";
+      icon.textContent = "◐ ";
+      word.className = "nytd-word";
+      word.textContent = LABEL[mode];
       t.replaceChildren(icon, word);
     }
-    t.setAttribute('aria-label', `Dark mode: ${LABEL[mode]}`);
-    t.title = mode === 'auto' ? 'Dark mode: following your device (tap for always dark)'
-      : mode === 'dark' ? 'Dark mode: always on (tap for always light)' : 'Dark mode: off (tap to follow your device)';
+    t.setAttribute("aria-label", `Dark mode: ${LABEL[mode]}`);
+    t.title =
+      mode === "auto"
+        ? "Dark mode: following your device (tap for always dark)"
+        : mode === "dark"
+          ? "Dark mode: always on (tap for always light)"
+          : "Dark mode: off (tap to follow your device)";
   }
 
   // ---------- start as early as possible, and keep it on as the page re-renders ----------
-  const style = document.createElement('style');
-  style.id = 'nytd-style';
+  const style = document.createElement("style");
+  style.id = "nytd-style";
   style.textContent = CSS;
   (document.head || document.documentElement).appendChild(style);
-  document.documentElement.classList.toggle('nytd-dark', wantDark());
+  document.documentElement.classList.toggle("nytd-dark", wantDark());
 
-  system?.addEventListener?.('change', apply);
-  window.addEventListener('storage', e => { if (e.key === MODE_KEY) { mode = savedMode(); apply(); } });
+  system?.addEventListener?.("change", apply);
+  window.addEventListener("storage", (e) => {
+    if (e.key === MODE_KEY) {
+      mode = savedMode();
+      apply();
+    }
+  });
 
-  let queued = false, panelQueued = false;
+  let queued = false,
+    panelQueued = false;
   // news-style pages: what the page added since the last look (null: look at everything)
   let addedSince = { subtrees: new Set(), parents: new Set() };
   const MAX_ADDED = 300; // past this many, one look at the whole page is cheaper
-  const later = () => { if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; apply(); }); } };
+  const later = () => {
+    if (!queued) {
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        apply();
+      });
+    }
+  };
   const watch = () => {
     // the game sometimes rewrites <body>'s attributes; put ours back
-    new MutationObserver(later).observe(document.body, { attributes: true, attributeFilter: ['class', 'data-mode'] });
-    new MutationObserver(later).observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-mode'] });
+    new MutationObserver(later).observe(document.body, {
+      attributes: true,
+      attributeFilter: ["class", "data-mode"],
+    });
+    new MutationObserver(later).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class", "data-mode"],
+    });
     // the header (or Wordle's toolbar, once past its start screen) is rendered late; place the
     // toggle when it appears (pages with neither never get a toggle: don't keep trying)
-    new MutationObserver(muts => {
+    new MutationObserver((muts) => {
       if (ARTICLE && addedSince) {
         for (const m of muts) {
           if (m.target.nodeType === 1) addedSince.parents.add(m.target); // its own text may have changed
-          for (const n of m.addedNodes) if (n.nodeType === 1) addedSince.subtrees.add(n);
+          for (const n of m.addedNodes)
+            if (n.nodeType === 1) addedSince.subtrees.add(n);
         }
-        if (addedSince.subtrees.size + addedSince.parents.size > MAX_ADDED) addedSince = null;
+        if (addedSince.subtrees.size + addedSince.parents.size > MAX_ADDED)
+          addedSince = null;
       }
-      if (!document.getElementById('nytd-toggle')?.isConnected && anchor()) later();
+      if (!document.getElementById("nytd-toggle")?.isConnected && anchor())
+        later();
       else if (!panelQueued) {
         panelQueued = true;
         setTimeout(() => {
@@ -436,7 +575,8 @@
           const a = addedSince;
           addedSince = { subtrees: new Set(), parents: new Set() };
           if (!a) return markPanels();
-          for (const s of [a.subtrees, a.parents]) for (const el of s) if (!el.isConnected) s.delete(el);
+          for (const s of [a.subtrees, a.parents])
+            for (const el of s) if (!el.isConnected) s.delete(el);
           markPanels({ subtrees: [...a.subtrees], parents: [...a.parents] });
         }, 150);
       }
@@ -444,9 +584,24 @@
     if (style.parentNode !== document.head) document.head.appendChild(style);
     apply();
   };
-  if (document.body) watch(); else document.addEventListener('DOMContentLoaded', watch, { once: true });
+  if (document.body) watch();
+  else document.addEventListener("DOMContentLoaded", watch, { once: true });
   // stylesheets still loading can make a first look wrong: look at everything again once they're in
-  window.addEventListener('load', () => { checked = new WeakMap(); markPanels(); }, { once: true });
+  window.addEventListener(
+    "load",
+    () => {
+      checked = new WeakMap();
+      markPanels();
+    },
+    { once: true },
+  );
 
-  if (window.__NYTD_TEST__) window.__nytd = { apply, markPanels, get mode() { return mode; } };
+  if (window.__NYTD_TEST__)
+    window.__nytd = {
+      apply,
+      markPanels,
+      get mode() {
+        return mode;
+      },
+    };
 })();

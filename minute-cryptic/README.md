@@ -19,11 +19,11 @@ A **⌨** button next to **check** switches back to the game's keyboard (and bac
 
 Open the scribble space as usual. The game's buttons do a bit more:
 
-| Button | What it does |
-| --- | --- |
-| **Shuffle** (the game's) | Shuffles the loose letters, as before, **and** the letters in the answer boxes, in place. |
-| **Circle** (the game's) | If there are letters in the answer boxes, takes them all out and lays them out in a shuffled circle, in one tap. With nothing in the boxes, it's the game's own Circle. |
-| **⤓** (new, next to Shuffle) | Puts the loose letters back into the empty answer boxes: round the circle clockwise from the top, or row by row in Grid layout. |
+| Button                       | What it does                                                                                                                                                            |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Shuffle** (the game's)     | Shuffles the loose letters, as before, **and** the letters in the answer boxes, in place.                                                                               |
+| **Circle** (the game's)      | If there are letters in the answer boxes, takes them all out and lays them out in a shuffled circle, in one tap. With nothing in the boxes, it's the game's own Circle. |
+| **⤓** (new, next to Shuffle) | Puts the loose letters back into the empty answer boxes: round the circle clockwise from the top, or row by row in Grid layout.                                         |
 
 Letters a hint has revealed always stay where they are, and letters already in a box stay too. If there are more loose letters than empty boxes, the rest stay loose.
 

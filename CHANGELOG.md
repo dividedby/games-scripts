@@ -12,7 +12,9 @@ Versions below 1.0.0 are pre-release.
 ### [Unreleased]
 
 ### [0.1.0] - 2026-10-14
+
 #### Added
+
 - First version: your phone's own keyboard instead of the game's (tap an answer box; ⌨ next to check switches back), Shuffle also shuffles the letters in the answer boxes, Circle takes them out into a shuffled circle in one tap, and ⤓ puts loose letters back in the boxes. Letters revealed by a hint stay put.
 
 ## NYT Games Dark
@@ -20,24 +22,33 @@ Versions below 1.0.0 are pre-release.
 ### [Unreleased]
 
 ### [1.1.1] - 2026-10-16
+
 #### Fixed
+
 - On the Games home page when logged out, the lock on each puzzle card was invisible in dark (black on a dark circle). The circle is light again, so the lock shows.
 
 ### [1.1.0] - 2026-10-16
+
 #### Added
+
 - The ◐ toggle is now in Wordle's toolbar too, next to ⚙ (just Auto, Dark or Light on a phone), so the mode can be switched without leaving Wordle.
 
 #### Fixed
+
 - Links in the dark top bar, like Upgrade subscription, were black on black: invisible but still clickable. They're now light, outline included.
 - Tapping the toggle in the top bar did nothing on iPhone; it now switches the mode.
 
 ### [1.0.1] - 2026-10-13
+
 #### Fixed
+
 - Lighter on hint, forum and bot pages: as the page loads more, only the new parts are looked at instead of the whole page, and each look reads the page's colors before changing any.
 - A mode saved by another tab is checked before use (anything unknown means Auto), and a second copy of the script does nothing.
 
 ### [1.0.0] - 2026-10-11
+
 #### Added
+
 - First version: switches on NYT's own dark colors on the Games website (the ones the app uses) and darkens the parts of the site NYT never gave dark colors: the top bar, the ☰ menu, the page background, Wordle's start screen, white promo cards, the Games home page, the puzzle archives, the stats page and the footer. The crossword grid gets dark squares too, like the NYT app. Also darkens the hint and forum pages, Wordle Bot and Connections Bot, and the Help Center. Follows your device's dark mode, or tap ◐ in the top bar for always dark or always light. Tells Dark Reader to stand back so the page isn't darkened twice (Noir needs turning off for nytimes.com).
 
 ## Wordle Shortlist
@@ -45,31 +56,42 @@ Versions below 1.0.0 are pre-release.
 ### [Unreleased]
 
 ### [1.1.0] - 2026-10-16
+
 #### Added
+
 - Each level has its own start: Easy gives one of the 10 best openers (with its hint), Medium any likely answer as before, and Hard a choice of five random words from the whole guess list (about 4,600 words), not just the likely answers. Switching level before the first guess deals that level's start, and an Easy start you play counts toward the recap's easiest level.
 
 #### Changed
+
 - Hard no longer shows how many answers are left, on the line above the picks or as "only fit", and Medium's start word no longer shows a hint.
 
 ### [1.0.2] - 2026-10-13
+
 #### Fixed
+
 - A damaged saved shortlist (or level) is ignored and a fresh one dealt, and the picks are built as plain text, never as page markup.
 - The shortlist is only redrawn when something in it changed, not on every change to the page; resizing the window no longer piles up refits.
 - A second copy of the script does nothing, and the console says once if the game's board or keyboard can't be found.
 
 ### [1.0.1] - 2026-10-11
+
 #### Fixed
+
 - With a dark-mode extension like Dark Reader or Noir, the shortlist was dark text on a dark page; it now switches to light text whenever the page behind it is dark.
 
 ### [1.0.0] - 2026-10-10
+
 #### Fixed
+
 - The shortlist was nearly invisible in Wordle's dark theme; it now uses the game's own text color.
 - Tapping picks quickly could briefly re-enable the buttons while a word was still being entered; the level button is now also locked during entry.
 - A tab left open on today's puzzle past midnight could mix two days into one recap.
 - Button outlines show on iPhones and iPads older than iOS 16.2.
 
 ### [0.1.0] - 2026-10-09
+
 #### Added
+
 - First version: a starting word picked at random from the likely answers, then 5 picks each turn, all possible answers, each with roughly how many answers it would leave. Tap a pick to play it; 🎲 deals new picks; ▾ tucks them away. The picks always fit hard mode, the script never looks up the answer, and the board shrinks on short screens so the keyboard stays in view.
 - Levels, switchable any time: Easy (picks from the best 10, with hints), Medium (the best 30, with hints) and Hard (any possible answer, no hints).
 - A line above the picks with how many answers still fit, and a recap when the puzzle is over: guesses, how often you played the best pick, and the easiest level used.
@@ -79,11 +101,15 @@ Versions below 1.0.0 are pre-release.
 ### [Unreleased]
 
 ### [1.2.4] - 2026-10-14
+
 #### Fixed
+
 - On a phone, adding Define to the button row no longer shrinks every button to its text: the buttons now share the row's full width, and only lose padding if the row is still too tight.
 
 ### [1.2.3] - 2026-10-13
+
 #### Fixed
+
 - Damaged saved marks, maybe colors or guesses no longer break the palette: anything not in the shape the script saves is ignored.
 - A lookup that fails unexpectedly says it couldn't reach Wiktionary or Wikidata instead of staying on "Looking it up…".
 - A tile class like "unselected" no longer counts as selected.
@@ -91,51 +117,74 @@ Versions below 1.0.0 are pre-release.
 - Saving that fails (private browsing, storage full) is noted in the console, and a second copy of the script does nothing.
 
 ### [1.2.2] - 2026-10-13
+
 #### Changed
+
 - With the Guide button on, the game's **Deselect All** button reads **Deselect**, so on a phone Definition, Shuffle, Deselect, Submit and Guide all fit on one line with their names (Guide only shortens to **ⓘ** on the narrowest screens). Turning the Guide button off puts the full label back.
 
 ### [1.2.1] - 2026-10-13
+
 #### Changed
+
 - The color guide moved from the palette's **ⓘ** to a **Guide** button next to the game's Submit button, and opens over the board like a definition. On a narrow phone the row tightens up to fit, and it shortens to **ⓘ** when Define is showing too. Turn it off with "Color guide button" in settings.
 
 ### [1.2.0] - 2026-10-13
+
 #### Added
+
 - Color guide: the **ⓘ** button (behind **⋯** on a phone) shows what kinds of groups each color tends to be, from yellow's plain synonyms and obvious sets to purple's wordplay. General tendencies, nothing about the day's puzzle. Can be turned off in settings.
 
 ### [1.1.3] - 2026-10-13
+
 #### Fixed
+
 - A word Wiktionary lists as two separate words of different origin now shows the main meaning of each, not just the first five of the first. LASH shows "to bind with a rope… so as to fasten" next to the whip meanings instead of hiding it behind Show all. Words saved by earlier versions are looked up again to pick this up.
 
 ### [1.1.2] - 2026-10-13
+
 #### Changed
+
 - Definition lookups now tell Wikimedia which script is asking (its name and this repo's link, nothing about you), as Wikimedia asks of browser scripts. A word's first lookup may take a fraction of a second longer.
 
 ### [1.1.1] - 2026-10-13
+
 #### Changed
+
 - The definition panel now covers the whole board, from its top row down to just above the game's buttons, and follows it as you scroll.
+
 #### Fixed
+
 - Definitions with sub-senses (like CUP's "customary unit of measure") no longer repeat the sub-senses inside them, and fractions like 1⁄16 keep their 1. Words saved by 1.1.0 are looked up again to pick this up.
 - Names and titles no longer list unrelated entries that only share an abbreviation or nickname with the word (SLIGHT: "snub"; WEE: "Western equine encephalitis"), or entries with no description.
 - A lookup that never answers now gives up after 15 seconds with a "Couldn't reach" message instead of saying "Looking it up…" forever.
 
 ### [1.1.0] - 2026-10-13
+
 #### Added
-- Definition button: with one tile selected, a **Definition** button appears before the game's Shuffle button and opens a panel just above the game's buttons with the word's common meanings from Wiktionary, grouped by part of speech, with rarer ones behind **Show all**, then up to three people, places or titles with that name from Wikidata. Its lowercase, Capitalized and ALL-CAPS Wiktionary entries are combined, so MARS shows the verb and the planet. Nothing is looked up until you tap, and answers are kept on your device for 60 days. In a definition like "plural of *end*", the word can be tapped to look it up. On narrow phones it's labeled **Define** so all four buttons fit on one line. Can be turned off in settings.
+
+- Definition button: with one tile selected, a **Definition** button appears before the game's Shuffle button and opens a panel just above the game's buttons with the word's common meanings from Wiktionary, grouped by part of speech, with rarer ones behind **Show all**, then up to three people, places or titles with that name from Wikidata. Its lowercase, Capitalized and ALL-CAPS Wiktionary entries are combined, so MARS shows the verb and the planet. Nothing is looked up until you tap, and answers are kept on your device for 60 days. In a definition like "plural of _end_", the word can be tapped to look it up. On narrow phones it's labeled **Define** so all four buttons fit on one line. Can be turned off in settings.
 
 ### [1.0.2] - 2026-10-11
+
 #### Fixed
+
 - The settings panel still had the old name at the top; it now says Palette settings.
 
 ### [1.0.1] - 2026-10-10
+
 #### Fixed
+
 - Color buttons with no tiles yet had no name for screen readers.
 
 ### [1.0.0] - 2026-10-10
+
 #### Changed
+
 - Renamed from Connections Color Marker to Connections Palette. Your colors and settings carry over, and updates keep coming from the same place. If your userscript manager ever lists both names, delete Connections Color Marker.
 - The color and ⌫ buttons have names and hover tips, and the chosen color and **?** say they're on, for screen readers.
 
 #### Fixed
+
 - Keyboard shortcuts no longer fire while you type in a search box or other field on the page (typing "g" could submit a guess).
 - Before the board appeared, a cookie banner or other checkbox form could open the palette and get rearranged.
 - Guess history showed words like R&B as "RB".
@@ -143,11 +192,15 @@ Versions below 1.0.0 are pre-release.
 - Moving to another puzzle without reloading kept a color you'd tapped and maybe mode switched on.
 
 ### [0.7.8] - 2026-10-09
+
 #### Fixed
+
 - Go pressed right after a solve could fail with a shake, because the game ignores taps while it animates; Go now taps the tiles again if they don't register.
 
 ### [0.7.7] - 2026-10-09
+
 #### Fixed
+
 - With the same puzzle open in two tabs, turning a split tile into a single color in one tab could leave it with no color at all in both.
 - Moving to another puzzle date without reloading the page could erase that puzzle's saved colors.
 - The hover tip for "Ask before going out of order" was blank.
@@ -155,107 +208,148 @@ Versions below 1.0.0 are pre-release.
 - Several quick guesses in a row no longer pile up background checks.
 
 #### Changed
+
 - Clearer hover tips for maybe colors, keyboard shortcuts and the Off sort mode.
 
 ### [0.7.6] - 2026-10-09
+
 #### Changed
+
 - Clearer script description in your userscript manager.
 
 ### [0.7.5] - 2026-10-08
+
 #### Changed
+
 - On phones, **⋯** swaps the palette row for sort, 📜, ⚙ and hide (and **‹** swaps back) instead of adding a second row that covered the game's Shuffle and Submit buttons.
 - The "Keyboard shortcuts" setting is hidden on touch-only devices, where it does nothing.
 
 ### [0.7.4] - 2026-10-08
+
 #### Fixed
+
 - A tap on Go just after an out-of-order **Sure?** ran out could submit the next color instead; Go now ignores taps for a moment after **Sure?** expires, and **Sure?** waits 4 seconds instead of 3.
 - Auto-fill also finishes the last color when some of its tiles are already marked or split (it used to need all 4 blank).
 - The ⌫ and ▾ icons are larger.
 
 ### [0.7.3] - 2026-10-08
+
 #### Changed
+
 - Split tiles with the same colors (say, every green-or-blue) now sit side by side when sorting, ordered by your sort order.
 
 ### [0.7.2] - 2026-10-08
+
 #### Changed
+
 - With sorting on, tiles hold still while maybe mode (**?**) is on, so they don't jump rows while you're adding options; they re-sort when you turn it off.
 
 ### [0.7.1] - 2026-10-08
+
 #### Fixed
+
 - With sorting on, split tiles stay together in a row after your colors instead of being scattered across the board.
 
 ### [0.7.0] - 2026-10-08
+
 #### Changed
+
 - Maybe colors split the tile's outline like a pie instead of adding corner dots: yellow-or-green is half yellow, half green; three options get a third each. A tile is either decided (one color) or split; only decided tiles count toward Go, auto-fill and the 4-per-color limit. With **?** on, tapping a color adds it to or removes it from the selected tiles' options; down to one option, the tile is decided again.
 - When a color is solved it drops out of every split, so a yellow-or-green tile becomes green once yellow is solved.
 - Maybe dots saved by 0.6 become splits.
 - The open palette has two rows: the colors and Go on top, the tools below. On phones it stays one row (colors, ⌫, ↶, ?, Go), with sort, 📜, ⚙ and hide behind **⋯**.
 
 ### [0.6.2] - 2026-10-08
+
 #### Fixed
+
 - ⌫ on tiles that only have maybe dots now clears them, instead of appearing to do nothing.
 - The **?** button is filled in while maybe mode is on, so it's harder to forget it's active.
 - On phones, the open palette is one full-width row instead of wrapping a lone ▾ onto a second row over the game's Shuffle/Submit buttons.
 - Maybe dots are a little larger with a darker outline, so light blue and yellow show on the cream tiles.
 
 ### [0.6.1] - 2026-10-08
+
 #### Fixed
+
 - The settings panel had grown taller than a laptop screen; descriptions are now one line each, with the full explanation on hover.
 
 ### [0.6.0] - 2026-10-08
+
 #### Added
+
 - Maybe colors setting: with **?** on, tapping colors adds small "maybe" dots to the selected tiles, several per tile, on top of the main mark. They don't count toward Go, auto-fill or the 4-per-color limit, follow swaps and undo, and drop out once a color is solved. Keys: M for maybe mode, Shift+1–4 for a single maybe. Off by default.
 
 #### Changed
+
 - The palette wraps onto a second row when it would be wider than the screen.
 
 ### [0.5.0] - 2026-10-08
+
 #### Added
+
 - Guess history setting: 📜 on the palette lists your wrong guesses for the puzzle with one-aways flagged, and re-entering one reminds you whether it was one away. Off by default.
 
 #### Changed
+
 - Wrong guesses are now remembered whether or not the "One away" marks are on, so turning either setting on mid-puzzle shows what you've already tried.
 
 ### [0.4.0] - 2026-10-08
+
 #### Changed
+
 - Marked tiles show only the colored outline; the small corner dot now appears only when "Show color letters" is on, carrying the letter.
 
 ### [0.3.2] - 2026-10-08
+
 #### Fixed
+
 - The settings panel is now the intended width, so it fits narrow phones.
 - On phones, the tucked-away 🎨 button sits higher off the board so it no longer covers NYT's buttons and banners.
 - Today's puzzle left open past midnight keeps saving to its own day.
 - Two tabs open on the same puzzle stay in sync.
 
 ### [0.3.1] - 2026-10-08
+
 #### Fixed
+
 - Full colors on the palette are no longer dimmed, and solved ones are easier to read, especially in dark mode.
 
 ### [0.3.0] - 2026-10-08
+
 #### Added
+
 - Undo (↶ or Z) reverses your last color change.
 - "Show color letters" setting puts Y/G/B/P on each mark and on the palette, so the colors can be told apart without color.
 - Dark theme for the palette and settings when a dark-mode extension like Dark Reader is on.
 
 #### Fixed
+
 - Dark-mode extensions like Dark Reader no longer darken the marks and palette colors (blue was nearly invisible).
 - The script now only reacts to changes in the game itself, not the rest of the page.
 
 ### [0.2.1] - 2026-10-08
+
 #### Fixed
+
 - When an out-of-order "Sure?" times out, the color you picked is let go too, so tapping it again picks it instead of cancelling it.
 - The ⚙ settings icon was hard to see; it's now larger.
 
 ### [0.2.0] - 2026-10-08
+
 #### Added
+
 - Settings panel (⚙ on the palette) to turn features on or off: "One away" marks, auto-fill, fixing colors after a solve, the Go button, the out-of-order check, keyboard shortcuts, and which side the palette sits on. Choices are saved in your browser.
 
 #### Changed
+
 - "One away" marks are now off by default; turn them on in settings.
 - Clear moved from the palette into the settings panel, next to a new Reset settings.
 
 ### [0.1.0] - 2026-10-08
+
 #### Added
+
 - Mark tiles with yellow, green, blue or purple from a floating palette; at most 4 tiles per color.
 - Swap two colors everywhere, or exchange a tile into a full color with one tap.
 - Auto-fill the last 4 tiles once three colors are complete.

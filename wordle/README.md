@@ -30,11 +30,11 @@ The picks are drawn at random from the best possible answers, so some are better
 
 Tap the level in the line above the picks (**Medium ▸**) to switch it, any time. The new level deals a fresh shortlist, or a fresh start before your first guess. Your choice is remembered for the next puzzles, and the recap names the easiest level you used (a start word counts once you play it), so dropping to Easy for one turn shows.
 
-| Level | Starting word | Picks come from | Hints and count |
-| --- | --- | --- | --- |
-| Easy | one of the 10 best openers, with its hint | the 10 best possible answers | shown |
-| Medium (default) | any likely answer, no hint | the 30 best | shown |
-| Hard | your choice of 5 random words from the whole guess list (about 4,600), not just likely answers | any possible answer | hidden: you're on your own |
+| Level            | Starting word                                                                                  | Picks come from              | Hints and count            |
+| ---------------- | ---------------------------------------------------------------------------------------------- | ---------------------------- | -------------------------- |
+| Easy             | one of the 10 best openers, with its hint                                                      | the 10 best possible answers | shown                      |
+| Medium (default) | any likely answer, no hint                                                                     | the 30 best                  | shown                      |
+| Hard             | your choice of 5 random words from the whole guess list (about 4,600), not just likely answers | any possible answer          | hidden: you're on your own |
 
 <details>
 <summary>Screenshot: Hard</summary>
@@ -44,10 +44,10 @@ Tap the level in the line above the picks (**Medium ▸**) to switch it, any tim
 
 ## Buttons
 
-| Button | Does |
-| --- | --- |
-| 🎲 | Deal a different shortlist for this turn |
-| ▾ | Tuck the shortlist away; tap **🎲 Shortlist** to bring it back |
+| Button | Does                                                           |
+| ------ | -------------------------------------------------------------- |
+| 🎲     | Deal a different shortlist for this turn                       |
+| ▾      | Tuck the shortlist away; tap **🎲 Shortlist** to bring it back |
 
 ## Good to know
 
