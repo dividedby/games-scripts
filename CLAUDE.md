@@ -67,4 +67,3 @@ until it has run in the real game, desktop and phone width, not only in jsdom: s
 | Code style                               | `pnpm format:check`                                                      |
 
 Ideas: Idea Inbox is issue #1 (label `idea-inbox`); protocol in `docs/agents/idea-inbox.md`.
-A plainly-scoped bug, or a "tracked" issue, skips the Inbox: file it as `needs-triage`.
