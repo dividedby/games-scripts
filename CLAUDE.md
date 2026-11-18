@@ -52,8 +52,9 @@ test against the simulated board for new behavior; `pnpm test` passing. It isn't
 until it has run in the real game, desktop and phone width, not only in jsdom (Chrome,
 the built-in browser, or the `mobile-safari` skill). Test on 2023 archive puzzles
 (`/games/wordle/2023-MM-DD`), never today's Wordle, and leave puzzles the owner opened
-unsolved; installed copies update only when the owner updates them, so ask before
-testing a new version. Release steps: skill `release`.
+unsolved. Wordle colors a row only after its flip animation, which Chrome skips in a
+hidden tab, so keep the tab in front. Installed copies update only when the owner
+updates them, so ask before testing a new version. Release steps: skill `release`.
 
 ## Where things live
 
