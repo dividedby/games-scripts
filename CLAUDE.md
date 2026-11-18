@@ -49,8 +49,11 @@ A user-facing change moves these together in the same PR: the script's `@version
 when what a user sees changes (add a root `README.md` row for a new script); its
 `greasyfork-description.md` when the listing text or "New in" section goes stale; a
 test against the simulated board for new behavior; `pnpm test` passing. It isn't done
-until it has run in the real game, desktop and phone width, not only in jsdom: skill
-`test-in-real-game`. Release steps: skill `release`.
+until it has run in the real game, desktop and phone width, not only in jsdom (Chrome,
+the built-in browser, or the `mobile-safari` skill). Test on 2023 archive puzzles
+(`/games/wordle/2023-MM-DD`), never today's Wordle, and leave puzzles the owner opened
+unsolved; installed copies update only when the owner updates them, so ask before
+testing a new version. Release steps: skill `release`.
 
 ## Where things live
 
@@ -58,7 +61,6 @@ until it has run in the real game, desktop and phone width, not only in jsdom: s
 | ---------------------------------------- | ------------------------------------------------------------------------ |
 | Userscript engineering (checklist)       | `~/.claude/rules/userscripts.md`, `docs/agents/userscript-guidelines.md` |
 | Deliberate exceptions to the checklist   | `.claude/rules/userscripts-local.md`                                     |
-| Testing in the real game                 | skill `test-in-real-game`                                                |
 | Release, version bump, Greasy Fork check | skill `release` (manual: `/release`)                                     |
 | Wordle word lists                        | `.claude/rules/wordle.md`                                                |
 | Issue tracker, triage labels             | `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`           |
