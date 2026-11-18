@@ -4,7 +4,7 @@ Userscripts for browser word and puzzle games, one folder per game. Each `*.user
 file is the deliverable: it installs into Tampermonkey (desktop) or the Userscripts
 app (Safari on iPhone) and updates itself from its raw URL on `main`
 (`docs/adr/0001`). The scripts are also on Greasy Fork, whose installs update from
-Greasy Fork (`docs/adr/0002`). Domain terms: `CONTEXT.md`.
+Greasy Fork (`docs/adr/0002`). Domain terms: `GLOSSARY.md`.
 
 Scripts: `connections/connections-color-marker.user.js` (Connections Palette; the file
 keeps its pre-1.0 name), `wordle/wordle-shortlist.user.js`,
