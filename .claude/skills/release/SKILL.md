@@ -20,7 +20,7 @@ Unfinished work stays on a branch.
 3. Check the script's `README.md` and `greasyfork-description.md` ("New in" section)
    match the new behavior.
 4. `pnpm test` and `pnpm format:check` pass; the change has run in the real game
-   (skill `test-in-real-game`).
+   (CLAUDE.md, Definition of done).
 5. Merge via the usual PR flow (`~/.claude/branching-flow.md`).
 6. Greasy Fork can lag `main` by a day or more. Check the version it serves at
    `greasyfork.org/en/scripts/<id>.json` (Connections 599362, Wordle 599505,
