@@ -65,7 +65,6 @@ iPhone, iPad or Mac, then click **Install** above.
 The full guide and changelog are on
 [GitHub](https://github.com/dividedby/games-scripts/tree/main/wordle#readme), where you
 can also report issues. Word lists from NYT WordleBot via
-[WordGamesBot](https://github.com/WordGamesBot/wordgamesbot.github.io). Licensed GPL v3
-or later.
+[WordGamesBot](https://github.com/WordGamesBot/wordgamesbot.github.io). Licensed MIT.
 
 Find it useful? You can [send a tip via PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=dividedbygit@gmail.com&item_name=Wordle+Shortlist+Donation). Thank you!

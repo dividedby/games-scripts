@@ -4,7 +4,7 @@
 // @author       dividedby
 // @description  Minute Cryptic with your phone's own keyboard, and a quicker scribble space: shuffle the letters right in the boxes, send them into a circle with one tap, and put them back
 // @version      0.1.0
-// @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
+// @license      MIT
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
 // @contributionURL     https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=dividedbygit@gmail.com&item_name=Minute+Cryptic+Plus+Donation

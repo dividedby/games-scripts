@@ -4,7 +4,7 @@
 // @author       dividedby
 // @description  Color-code NYT Connections tiles as you work out the groups, then submit them in the order you choose, like purple first for a reverse rainbow
 // @version      1.2.4
-// @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
+// @license      MIT
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
 // @contributionURL     https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=dividedbygit@gmail.com&item_name=Connections+Palette+Donation
