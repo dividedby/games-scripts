@@ -13,10 +13,10 @@ Unfinished work stays on a branch.
 1. `@version` in the script header: past 1.0, new capability → minor, fix → patch. Minute
    Cryptic Plus stays 0.x until the owner calls it ready. Never touch `@namespace`,
    `@updateURL` or `@downloadURL`, and never move or rename the `.user.js` file.
-2. `CHANGELOG.md`: under the script's section, roll its `### [Unreleased]` entries into a
-   new `### [x.y.z] - YYYY-MM-DD` section (typed `####` headings: Added, Changed,
-   Fixed, ...) and leave a fresh empty `### [Unreleased]` above it. Style:
-   `docs/agents/changelog-guideline.md`.
+2. `<script folder>/CHANGELOG.md`: roll its `## [Unreleased]` entries into a new
+   `## [x.y.z] - YYYY-MM-DD` section (typed `###` headings: Added, Changed, Fixed, ...)
+   and leave a fresh empty `## [Unreleased]` above it. The root `CHANGELOG.md` only holds
+   changes that apply to every script. Style: `docs/agents/changelog-guideline.md`.
 3. Check the script's `README.md` and `greasyfork-description.md` ("New in" section)
    match the new behavior.
 4. `pnpm test` and `pnpm format:check` pass; the change has run in the real game

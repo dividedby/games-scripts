@@ -1204,7 +1204,7 @@ test("Definition: shows before Shuffle with one tile selected, looks the word up
     'only a "plural of" target is a link',
   );
   assert.ok(
-    shown.some((t) => /eyelash\.$/.test(t)),
+    shown.some((t) => t.endsWith("eyelash.")),
     "footnote markers dropped",
   );
   assert.ok(

@@ -45,7 +45,7 @@ pnpm install
 pnpm test
 ```
 
-Changes are listed in the [changelog](CHANGELOG.md). Bugs and ideas go in the [issues](https://github.com/dividedby/games-scripts/issues).
+Each script's changes are listed in the `CHANGELOG.md` in its folder (changes that apply to every script are in the [root changelog](CHANGELOG.md)). Bugs and ideas go in the [issues](https://github.com/dividedby/games-scripts/issues).
 
 ## License
 
