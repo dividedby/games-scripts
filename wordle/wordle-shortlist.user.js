@@ -802,7 +802,7 @@ zonedzoneszooms
       }
     }
     if (board.over) {
-      state = { ...(saved || {}), sig, picks: [], at: Date.now() };
+      state = { ...saved, sig, picks: [], at: Date.now() };
       ls.set(picksKey(), state);
     } else if (
       force ||

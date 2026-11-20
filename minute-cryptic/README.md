@@ -7,7 +7,7 @@ Two things for [Minute Cryptic](https://www.minutecryptic.com) in the browser, m
 
 It never looks at the answer and gives no hints: it only moves the letters you've typed.
 
-**Install:** [GitHub](https://raw.githubusercontent.com/dividedby/games-scripts/main/minute-cryptic/minute-cryptic-plus.user.js) (see [Installing](../README.md#installing)) · [Changelog](../CHANGELOG.md#minute-cryptic-plus)
+**Install:** [GitHub](https://raw.githubusercontent.com/dividedby/games-scripts/main/minute-cryptic/minute-cryptic-plus.user.js) (see [Installing](../README.md#installing)) · [Changelog](CHANGELOG.md)
 
 ## Your own keyboard
 

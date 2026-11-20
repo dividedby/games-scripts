@@ -20,7 +20,8 @@ No bundler, no build step. Use pnpm.
 
 - `pnpm test`: behavior tests that load each script into jsdom against a simulated board.
 - `pnpm format:check` (Prettier; `pnpm format` writes). CI: `.github/workflows/format.yml`.
-- Lint: no linter; `pnpm format:check` is the only static check.
+- `pnpm lint`: oxlint (default rules, warnings fail). CI job `lint` in `.github/workflows/test.yml`.
+- CI `secret-scan` (gitleaks over the commits in the change) also runs in `test.yml`.
 - `pnpm update-words`: rebuild the Wordle word block (see `.claude/rules/wordle.md`).
 
 ## Hard rules
@@ -46,7 +47,7 @@ No bundler, no build step. Use pnpm.
 ## Definition of done
 
 A user-facing change moves these together in the same PR: the script's `@version`;
-`CHANGELOG.md` (entry under the script's `### [Unreleased]`); the script's `README.md`
+the script folder's `CHANGELOG.md` (entry under its `## [Unreleased]`); the script's `README.md`
 when what a user sees changes (add a root `README.md` row for a new script); its
 `greasyfork-description.md` when the listing text or "New in" section goes stale; a
 test against the simulated board for new behavior; `pnpm test` passing. It isn't done
@@ -68,6 +69,6 @@ updates them, so ask before testing a new version. Release steps: skill `release
 | Issue tracker, triage labels             | `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`           |
 | Domain docs, changelog style             | `docs/agents/domain.md`, `docs/agents/changelog-guideline.md`            |
 | Idea intake                              | below                                                                    |
-| Code style                               | `pnpm format:check`                                                      |
+| Code style                               | `pnpm format:check`, `pnpm lint`                                         |
 
 Ideas: Idea Inbox is issue #1 (label `idea-inbox`); protocol in `docs/agents/idea-inbox.md`.

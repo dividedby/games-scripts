@@ -8,7 +8,7 @@ import { readFileSync, writeFileSync, appendFileSync } from "node:fs";
 const SOURCE =
   "https://raw.githubusercontent.com/WordGamesBot/wordgamesbot.github.io/main/WordLists/NYT/";
 const SCRIPT = new URL("../wordle-shortlist.user.js", import.meta.url);
-const CHANGELOG = new URL("../../CHANGELOG.md", import.meta.url);
+const CHANGELOG = new URL("../CHANGELOG.md", import.meta.url);
 
 async function list(file) {
   const res = await fetch(SOURCE + file);
@@ -85,31 +85,19 @@ if (changed) {
   if (!parts.length) parts.push("the wider guess list changed");
   const entry = `- Word lists updated from NYT WordleBot: ${parts.join(", ")}.`;
   let log = readFileSync(CHANGELOG, "utf8");
-  const head = log.indexOf("## Wordle Shortlist\n");
-  if (head < 0)
-    throw new Error('CHANGELOG.md has no "## Wordle Shortlist" section');
-  let sectionEnd = log.indexOf("\n## ", head + 1); // the next script's section
-  if (sectionEnd < 0) sectionEnd = log.length;
-  let unrel = log.indexOf("### [Unreleased]", head);
-  if (unrel < 0 || unrel > sectionEnd) {
-    // no Unreleased heading in this section: add one
-    const at = head + "## Wordle Shortlist\n".length;
-    log = log.slice(0, at) + "\n### [Unreleased]\n" + log.slice(at);
-    unrel = at + 1;
+  const unrel = log.indexOf("## [Unreleased]\n\n");
+  if (unrel < 0)
+    throw new Error('wordle/CHANGELOG.md has no "## [Unreleased]" section');
+  const body = unrel + "## [Unreleased]\n\n".length;
+  const next = log.indexOf("\n## ", body - 1); // the newest version's heading
+  const changedAt = log.indexOf("### Changed\n\n", body);
+  if (changedAt >= 0 && (next < 0 || changedAt < next)) {
+    const at = changedAt + "### Changed\n\n".length;
+    log = log.slice(0, at) + entry + "\n" + log.slice(at);
+  } else {
+    log =
+      log.slice(0, body) + "### Changed\n\n" + entry + "\n\n" + log.slice(body);
   }
-  const next = log.indexOf("\n### ", unrel + 1);
-  const section = log.slice(unrel, next < 0 ? undefined : next);
-  const changedAt = section.indexOf("#### Changed\n");
-  log =
-    changedAt >= 0
-      ? log.slice(0, unrel + changedAt + 13) +
-        entry +
-        "\n" +
-        log.slice(unrel + changedAt + 13)
-      : log.slice(0, unrel + 16) +
-        "\n#### Changed\n" +
-        entry +
-        log.slice(unrel + 16);
   writeFileSync(CHANGELOG, log);
   lines.push(`Version ${version}.`);
 }
