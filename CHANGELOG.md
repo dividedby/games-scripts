@@ -5,7 +5,14 @@ one section per script.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/),
 and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-Versions below 1.0.0 are pre-release.
+Versions below 1.0.0 are pre-release. Changes that apply to every script go under
+the top-level Unreleased section; the rest go under the script's own section.
+
+## [Unreleased]
+
+### Changed
+
+- The licence is now MIT (was GPL-3.0). Releases before this change stay under GPL-3.0.
 
 ## Minute Cryptic Plus
 

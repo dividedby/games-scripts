@@ -20,6 +20,7 @@ No bundler, no build step. Use pnpm.
 
 - `pnpm test`: behavior tests that load each script into jsdom against a simulated board.
 - `pnpm format:check` (Prettier; `pnpm format` writes). CI: `.github/workflows/format.yml`.
+- Lint: no linter; `pnpm format:check` is the only static check.
 - `pnpm update-words`: rebuild the Wordle word block (see `.claude/rules/wordle.md`).
 
 ## Hard rules

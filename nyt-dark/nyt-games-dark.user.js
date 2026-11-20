@@ -4,7 +4,7 @@
 // @author       dividedby
 // @description  A proper dark mode for NYT Games in the browser (Connections, Wordle and the rest), using NYT's own dark colors so the game colors stay true
 // @version      1.1.1
-// @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
+// @license      MIT
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
 // @contributionURL     https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=dividedbygit@gmail.com&item_name=NYT+Games+Dark+Donation

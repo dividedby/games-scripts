@@ -4,7 +4,7 @@
 // @author       dividedby
 // @description  NYT Wordle with a nudge: a random starting word, then a shortlist of possible answers to choose from each turn, so you still make the call
 // @version      1.1.0
-// @license      GPL version 3 or any later version; http://www.gnu.org/copyleft/gpl.html
+// @license      MIT
 // @homepageURL  https://github.com/dividedby/games-scripts
 // @supportURL   https://github.com/dividedby/games-scripts/issues
 // @contributionURL     https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=dividedbygit@gmail.com&item_name=Wordle+Shortlist+Donation

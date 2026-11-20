@@ -49,4 +49,4 @@ Changes are listed in the [changelog](CHANGELOG.md). Bugs and ideas go in the [i
 
 ## License
 
-GPL-3.0-or-later. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
