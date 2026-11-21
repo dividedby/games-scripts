@@ -3,6 +3,12 @@ name: update Wordle word lists
 # Once a month, refresh Wordle Shortlist's word lists from WordGamesBot (NYT WordleBot's
 # lists). If they changed, open a pull request with the new lists, a version bump and a
 # changelog line. Nothing is released until that pull request is merged into main.
+#
+# The pull request is opened with the workflow token, and a push or pull request made with
+# that token starts no workflow runs, so `ci-ok` and `format` (which main's ruleset requires)
+# would never report on it. The last step starts test.yml and format.yml on the branch by
+# workflow_dispatch, the one event that token may trigger; their checks land on the pull
+# request's head commit.
 on:
   schedule:
     - cron: "17 14 1 * *" # the 1st of each month, 14:17 UTC
@@ -11,6 +17,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  actions: write
 
 jobs:
   update:
@@ -28,6 +35,7 @@ jobs:
       - if: steps.words.outputs.changed == 'true'
         run: pnpm test
       - if: steps.words.outputs.changed == 'true'
+        id: pr
         uses: peter-evans/create-pull-request@v7
         with:
           branch: update-wordle-words
@@ -42,3 +50,12 @@ jobs:
             ${{ steps.words.outputs.summary }}
 
             Tests passed. Merging this releases the new version.
+      - name: Run the required checks on the pull request
+        if: steps.pr.outputs.pull-request-operation == 'created' || steps.pr.outputs.pull-request-operation == 'updated'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh workflow run test.yml --ref update-wordle-words
+          gh workflow run format.yml --ref update-wordle-words
