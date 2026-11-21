@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  # update-wordle-words.yml starts this on its pull request's branch: that workflow's
+  # push and pull request use the workflow token, which starts no runs.
+  workflow_dispatch:
 
 permissions:
   contents: read
